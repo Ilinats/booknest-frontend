@@ -3,45 +3,28 @@ package com.example.booknest
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.booknest.ui.theme.BookNestTheme
+import androidx.activity.viewModels
+import androidx.compose.material3.MaterialTheme
+import androidx.navigation.compose.rememberNavController
+import com.example.booknest.navigation.NavGraph
+import com.example.booknest.viewmodel.SignupViewModel
+import com.example.booknest.viewmodel.LoginViewModel
 
 class MainActivity : ComponentActivity() {
+    private val signupViewModel: SignupViewModel by viewModels()
+    private val loginViewModel: LoginViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContent {
-            BookNestTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+            MaterialTheme {
+                val navController = rememberNavController()
+                NavGraph(
+                    navController = navController,
+                    signupViewModel = signupViewModel,
+                    loginViewModel = loginViewModel
+                )
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    BookNestTheme {
-        Greeting("Android")
     }
 }
