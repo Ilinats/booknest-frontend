@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.booknest.network.LoginRequest
 import com.example.booknest.network.RetrofitInstance
+import com.example.booknest.network.TokenStorage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -28,6 +29,8 @@ class LoginViewModel : ViewModel() {
 
                 if (response.isSuccessful && response.body() != null) {
                     if (!response.body()!!.accessToken.isNullOrEmpty()) {
+                        val token = response.body()!!.accessToken!!
+                        TokenStorage.saveToken(token)
                         val userName = response.body()!!.user.username
                         _loginState.value = LoginUiState.Success("Welcome $userName! Logged in successfully!")
                         onLoginComplete(true)
