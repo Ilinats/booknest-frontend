@@ -10,7 +10,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.booknest.navigation.Screen // Make sure Screen.Home and Screen.Landing are defined
+import com.example.booknest.navigation.Screen
 import com.example.booknest.viewmodel.LoginUiState
 import com.example.booknest.viewmodel.LoginViewModel
 
@@ -55,8 +55,7 @@ fun LoginScreen(navController: NavController, viewModel: LoginViewModel) {
                 onClick = {
                     viewModel.loginUser(identifier, password) { success ->
                         if (success) {
-                            // Assuming Screen.Home and Screen.Landing will be available
-                            navController.navigate(Screen.Home.route) {
+                            navController.navigate(Screen.Main.route) {
                                 popUpTo(Screen.Landing.route) { inclusive = true }
                             }
                         }
@@ -80,13 +79,10 @@ fun LoginScreen(navController: NavController, viewModel: LoginViewModel) {
                         modifier = Modifier.padding(top = 8.dp)
                     )
                 }
-                // Success state is handled by navigation in the button's onClick
                 else -> {} 
             }
 
             TextButton(onClick = { 
-                // Navigate to the start of the sign-up flow
-                // Assuming AccountTypeScreen is the start of signup and Landing is where user chose Login/Signup
                 navController.navigate(Screen.AccountType.route) {
                      popUpTo(Screen.Landing.route) { inclusive = false }
                 }

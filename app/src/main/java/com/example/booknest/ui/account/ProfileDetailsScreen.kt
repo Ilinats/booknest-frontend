@@ -43,7 +43,7 @@ fun ProfileDetailsScreen(navController: NavController, viewModel: SignupViewMode
                 label = { Text("Username") },
                 modifier = Modifier.fillMaxWidth(0.85f)
             )
-            OutlinedTextField(
+            OutlinedTextField( //promeni go na datepickerstate
                 value = birthDate,
                 onValueChange = { birthDate = it },
                 label = { Text("Birth Date (YYYY-MM-DD)") },

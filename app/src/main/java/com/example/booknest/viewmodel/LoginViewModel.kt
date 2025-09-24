@@ -1,10 +1,11 @@
 package com.example.booknest.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.booknest.data.AuthManager
 import com.example.booknest.network.LoginRequest
 import com.example.booknest.network.RetrofitInstance
-import com.example.booknest.network.TokenStorage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -16,7 +17,7 @@ sealed class LoginUiState {
     data class Error(val error: String) : LoginUiState()
 }
 
-class LoginViewModel : ViewModel() {
+class LoginViewModel(private val authManager: AuthManager) : ViewModel() {
     private val _loginState = MutableStateFlow<LoginUiState>(LoginUiState.Idle)
     val loginState: StateFlow<LoginUiState> = _loginState
 
@@ -28,10 +29,10 @@ class LoginViewModel : ViewModel() {
                 val response = RetrofitInstance.api.login(loginRequest)
 
                 if (response.isSuccessful && response.body() != null) {
-                    if (!response.body()!!.accessToken.isNullOrEmpty()) {
-                        val token = response.body()!!.accessToken!!
-                        TokenStorage.saveToken(token)
-                        val userName = response.body()!!.user.username
+                    val loginResponse = response.body()!!
+                    if (!loginResponse.accessToken.isNullOrEmpty()) {
+                        authManager.login(loginResponse)
+                        val userName = loginResponse.user.username
                         _loginState.value = LoginUiState.Success("Welcome $userName! Logged in successfully!")
                         onLoginComplete(true)
                     } else {
@@ -53,5 +54,15 @@ class LoginViewModel : ViewModel() {
                 onLoginComplete(false)
             }
         }
+    }
+}
+
+class LoginViewModelFactory(private val authManager: AuthManager) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(LoginViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return LoginViewModel(authManager) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

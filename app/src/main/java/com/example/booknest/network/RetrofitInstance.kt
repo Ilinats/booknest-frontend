@@ -1,5 +1,6 @@
 package com.example.booknest.network
 
+import com.example.booknest.data.AuthManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -16,20 +17,7 @@ object TokenCache {
     var accessToken: String? = null
 }
 
-class AuthInterceptor : Interceptor {
-    override fun intercept(chain: Interceptor.Chain): Response {
-        val originalRequest = chain.request()
-        val token = TokenCache.accessToken
-
-        val requestBuilder = originalRequest.newBuilder()
-        if (token != null) {
-            requestBuilder.addHeader("Authorization", "Bearer $token")
-        }
-
-        val request = requestBuilder.build()
-        return chain.proceed(request)
-    }
-}
+// This class is now in AuthInterceptor.kt
 
 object RetrofitInstance {
 
@@ -39,24 +27,35 @@ object RetrofitInstance {
         level = HttpLoggingInterceptor.Level.BODY
     }
 
-    private val authInterceptor = AuthInterceptor()
+    private var authInterceptor: AuthInterceptor? = null
 
-    private val client = OkHttpClient.Builder()
-        .addInterceptor(loggingInterceptor)
-        .addInterceptor(authInterceptor)
-        .build()
+    private fun createClient(): OkHttpClient {
+        return OkHttpClient.Builder()
+            .addInterceptor(loggingInterceptor)
+            .apply {
+                authInterceptor?.let { addInterceptor(it) }
+            }
+            .build()
+    }
 
-    private val retrofit by lazy {
-        Retrofit.Builder()
+    private var retrofit: Retrofit? = null
+
+    fun initialize(authManager: AuthManager) {
+        authInterceptor = AuthInterceptor(authManager)
+        retrofit = Retrofit.Builder()
             .baseUrl(BASE_URL)
-            .client(client)
+            .client(createClient())
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }
 
-    val api: ApiService by lazy {
-        retrofit.create(ApiService::class.java)
-    }
+    val api: ApiService
+        get() {
+            if (retrofit == null) {
+                throw IllegalStateException("RetrofitInstance not initialized. Call initialize() first.")
+            }
+            return retrofit!!.create(ApiService::class.java)
+        }
 }
 
 // Usage instructions (not code):
