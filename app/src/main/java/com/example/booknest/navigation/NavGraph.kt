@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.example.booknest.data.AuthManager
 import com.example.booknest.ui.account.AccountTypeScreen
 import com.example.booknest.ui.account.BioScreen
 import com.example.booknest.ui.account.GenresScreen
@@ -11,7 +12,7 @@ import com.example.booknest.ui.account.LandingScreen
 import com.example.booknest.ui.account.LoginScreen
 import com.example.booknest.ui.account.PersonalInfoScreen
 import com.example.booknest.ui.account.ProfileDetailsScreen
-import com.example.booknest.ui.home.HomeScreen
+import com.example.booknest.ui.main.MainScreen
 import com.example.booknest.viewmodel.LoginViewModel
 import com.example.booknest.viewmodel.SignupViewModel
 
@@ -19,7 +20,8 @@ import com.example.booknest.viewmodel.SignupViewModel
 fun NavGraph(
     navController: NavHostController,
     signupViewModel: SignupViewModel,
-    loginViewModel: LoginViewModel
+    loginViewModel: LoginViewModel,
+    authManager: AuthManager
 ) {
     NavHost(navController, startDestination = Screen.Landing.route) {
         composable(Screen.Landing.route) {
@@ -43,8 +45,8 @@ fun NavGraph(
         composable(Screen.Genres.route) {
             GenresScreen(navController, signupViewModel)
         }
-        composable(Screen.Home.route) {
-            HomeScreen()
+        composable(Screen.Main.route) {
+            MainScreen(authManager)
         }
     }
 }
