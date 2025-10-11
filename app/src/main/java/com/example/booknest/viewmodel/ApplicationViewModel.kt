@@ -42,12 +42,21 @@ class ApplicationViewModel(private val authManager: AuthManager) : ViewModel() {
                 val response = RetrofitInstance.api.getMyApplications()
                 if (response.isSuccessful && response.body() != null) {
                     val apiResponse = response.body()!!
+                    println("DEBUG: Applications API response - success: ${apiResponse.success}, data size: ${apiResponse.data?.size ?: 0}")
                     if (apiResponse.success) {
-                        _myApplications.value = apiResponse.data ?: emptyList()
+                        // Applications are already properly mapped by the serializers
+                        val applications = apiResponse.data ?: emptyList()
+                        _myApplications.value = applications
+                        println("DEBUG: Applications loaded: ${applications.size} applications")
+                        applications.forEach { app ->
+                            println("DEBUG: Application ${app.id} - status: ${app.status}, book: ${app.bookTitle}, author: ${app.authorName}")
+                        }
                     } else {
+                        println("DEBUG: Applications API error: ${apiResponse.message}")
                         _snackbarEvent.emit(apiResponse.message ?: "Failed to load applications")
                     }
                 } else {
+                    println("DEBUG: Applications API error: ${response.code()} - ${response.message()}")
                     _snackbarEvent.emit("Failed to load applications: ${response.message()}")
                 }
             } catch (e: Exception) {
@@ -354,6 +363,27 @@ class ApplicationViewModel(private val authManager: AuthManager) : ViewModel() {
             } finally {
                 _isLoading.value = false
             }
+        }
+    }
+    
+    // Helper functions for mapping string status to enums
+    private fun mapStringToApplicationStatus(status: String?): ApplicationStatus {
+        return when (status?.lowercase()) {
+            "pending" -> ApplicationStatus.PENDING
+            "approved" -> ApplicationStatus.APPROVED
+            "rejected" -> ApplicationStatus.REJECTED
+            "withdrawn" -> ApplicationStatus.WITHDRAWN
+            else -> ApplicationStatus.PENDING
+        }
+    }
+    
+    private fun mapStringToReadingStatus(status: String?): ReadingStatus {
+        return when (status?.lowercase()) {
+            "not_started" -> ReadingStatus.NOT_STARTED
+            "currently_reading" -> ReadingStatus.CURRENTLY_READING
+            "for_review" -> ReadingStatus.FOR_REVIEW
+            "reviewed" -> ReadingStatus.REVIEWED
+            else -> ReadingStatus.NOT_STARTED
         }
     }
 }

@@ -66,8 +66,8 @@ fun BookApplicationDetailScreen(
     // Filter applications based on selected tab
     val filteredApplications = remember(selectedTab, bookApplications) {
         when (selectedTab) {
-            0 -> bookApplications.filter { it.status == ApplicationStatus.PENDING }
-            1 -> bookApplications.filter { it.status == ApplicationStatus.APPROVED }
+            0 -> bookApplications.filter { it.status == "pending" }
+            1 -> bookApplications.filter { it.status == "approved" }
             2 -> bookApplications.filter { it.reviewSubmittedAt != null }
             3 -> bookApplications // All for statistics
             else -> bookApplications
@@ -325,15 +325,8 @@ fun ApplicantCard(
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Show actual genres from the book
-                application.book?.bookGenres?.take(3)?.forEach { bookGenre ->
-                    bookGenre.genre?.name?.let { genreName ->
-                        GenreTag(genreName)
-                    }
-                } ?: run {
-                    // Fallback if no genres available
-                    GenreTag("General")
-                }
+                // Show fallback genres since bookGenres is not available in the current model
+                GenreTag("General")
             }
             
             Spacer(modifier = Modifier.height(12.dp))
@@ -485,15 +478,8 @@ fun ApprovedReaderCard(application: Application) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Show actual genres from the book
-                application.book?.bookGenres?.take(3)?.forEach { bookGenre ->
-                    bookGenre.genre?.name?.let { genreName ->
-                        GenreTag(genreName)
-                    }
-                } ?: run {
-                    // Fallback if no genres available
-                    GenreTag("General")
-                }
+                // Show fallback genres since bookGenres is not available in the current model
+                GenreTag("General")
             }
             
             Spacer(modifier = Modifier.height(12.dp))

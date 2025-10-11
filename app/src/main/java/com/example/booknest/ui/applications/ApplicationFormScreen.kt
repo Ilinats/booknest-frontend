@@ -166,7 +166,7 @@ fun ApplicationFormScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "Age Rating: ${book.ageRating.value}",
+                            text = "Age Rating: ${book.ageRating ?: "N/A"}",
                             style = MaterialTheme.typography.bodySmall
                         )
                         Text(
@@ -175,7 +175,7 @@ fun ApplicationFormScreen(
                         )
                     }
                     Text(
-                        text = "Application Deadline: ${formatDate(book.applicationDeadline)}",
+                        text = "Application Deadline: ${book.applicationDeadline?.let { formatDate(it) } ?: "Not specified"}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary
                     )

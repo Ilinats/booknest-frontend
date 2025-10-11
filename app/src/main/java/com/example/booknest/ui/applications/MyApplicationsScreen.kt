@@ -53,12 +53,43 @@ fun MyApplicationsScreen(
 
     // Filter applications based on selected tab
     val filteredApplications = remember(selectedTab, myApplications) {
+        println("DEBUG: Filtering applications - total: ${myApplications.size}, selectedTab: $selectedTab")
+        myApplications.forEach { app ->
+            println("DEBUG: Application ${app.id} - status: ${app.status}, readingStatus: ${app.readingStatus}")
+        }
         when (selectedTab) {
-            0 -> myApplications.filter { it.status == ApplicationStatus.PENDING }
-            1 -> myApplications.filter { it.status == ApplicationStatus.APPROVED }
-            2 -> myApplications.filter { it.status == ApplicationStatus.APPROVED && it.readingStatus == ReadingStatus.REVIEWED }
-            3 -> myApplications.filter { it.status == ApplicationStatus.REJECTED }
-            else -> myApplications
+            0 -> {
+                val pending = myApplications.filter { 
+                    val isPending = it.status == "pending"
+                    println("DEBUG: Application ${it.id} - status: ${it.status}, isPending: $isPending")
+                    isPending
+                }
+                println("DEBUG: Pending applications: ${pending.size}")
+                pending
+            }
+            1 -> {
+                val approved = myApplications.filter { 
+                    val isApproved = it.status == "approved"
+                    println("DEBUG: Application ${it.id} - status: ${it.status}, isApproved: $isApproved")
+                    isApproved
+                }
+                println("DEBUG: Approved applications: ${approved.size}")
+                approved
+            }
+            2 -> {
+                val completed = myApplications.filter { it.status == "approved" && it.readingStatus == "reviewed" }
+                println("DEBUG: Completed applications: ${completed.size}")
+                completed
+            }
+            3 -> {
+                val rejected = myApplications.filter { it.status == "rejected" }
+                println("DEBUG: Rejected applications: ${rejected.size}")
+                rejected
+            }
+            else -> {
+                println("DEBUG: All applications: ${myApplications.size}")
+                myApplications
+            }
         }
     }
 
@@ -154,7 +185,7 @@ fun ApplicationCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = application.book?.title ?: "Unknown Book",
+                    text = application.bookTitle,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f),
@@ -281,9 +312,9 @@ fun ApplicationDetails(application: Application) {
 fun ApplicationProgress(application: Application) {
     val steps = listOf(
         "Applied" to (application.appliedAt != null),
-        "Approved" to (application.status == ApplicationStatus.APPROVED),
+        "Approved" to (application.status == "approved"),
         "Copy Received" to (application.copyReceivedAt != null),
-        "Reading" to (application.readingStatus != ReadingStatus.NOT_STARTED),
+        "Reading" to (application.readingStatus != "not_started"),
         "Reviewed" to (application.reviewSubmittedAt != null)
     )
 
@@ -344,7 +375,7 @@ fun ApplicationActions(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         // Reading status selector
-        if (application.status == ApplicationStatus.APPROVED) {
+        if (application.status == "approved") {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -355,7 +386,13 @@ fun ApplicationActions(
                     modifier = Modifier.align(Alignment.CenterVertically)
                 )
                 ReadingStatusSelector(
-                    currentStatus = application.readingStatus,
+                    currentStatus = when (application.readingStatus) {
+                        "not_started" -> ReadingStatus.NOT_STARTED
+                        "currently_reading" -> ReadingStatus.CURRENTLY_READING
+                        "for_review" -> ReadingStatus.FOR_REVIEW
+                        "reviewed" -> ReadingStatus.REVIEWED
+                        else -> ReadingStatus.NOT_STARTED
+                    },
                     onStatusChange = onUpdateReadingStatus
                 )
             }
@@ -405,7 +442,7 @@ fun ApplicationActions(
             }
 
             // Withdraw button (only for pending applications)
-            if (application.status == ApplicationStatus.PENDING) {
+            if (application.status == "pending") {
                 OutlinedButton(
                     onClick = onWithdraw,
                     modifier = Modifier.weight(1f)
@@ -451,27 +488,37 @@ fun ReadingStatusSelector(
 }
 
 @Composable
-fun StatusChip(status: ApplicationStatus) {
+fun StatusChip(status: String?) {
     val (backgroundColor, textColor, statusText) = when (status) {
-        ApplicationStatus.PENDING -> Triple(
+        "pending" -> Triple(
             MaterialTheme.colorScheme.secondaryContainer,
             MaterialTheme.colorScheme.onSecondaryContainer,
             "Pending"
         )
-        ApplicationStatus.APPROVED -> Triple(
+        "approved" -> Triple(
             MaterialTheme.colorScheme.primaryContainer,
             MaterialTheme.colorScheme.onPrimaryContainer,
             "Approved"
         )
-        ApplicationStatus.REJECTED -> Triple(
+        "rejected" -> Triple(
             MaterialTheme.colorScheme.errorContainer,
             MaterialTheme.colorScheme.onErrorContainer,
             "Rejected"
         )
-        ApplicationStatus.WITHDRAWN -> Triple(
+        "withdrawn" -> Triple(
             MaterialTheme.colorScheme.surfaceVariant,
             MaterialTheme.colorScheme.onSurfaceVariant,
             "Withdrawn"
+        )
+        null -> Triple(
+            MaterialTheme.colorScheme.surfaceVariant,
+            MaterialTheme.colorScheme.onSurfaceVariant,
+            "Unknown"
+        )
+        else -> Triple(
+            MaterialTheme.colorScheme.surfaceVariant,
+            MaterialTheme.colorScheme.onSurfaceVariant,
+            "Unknown"
         )
     }
 
@@ -562,7 +609,7 @@ fun ApprovedApplicationsContent(
                 statusIndicator = Color.Green,
                 actionButton = {
                     when (application.readingStatus) {
-                        ReadingStatus.NOT_STARTED -> {
+                        "not_started" -> {
                             OutlinedButton(
                                 onClick = { 
                                     applicationViewModel.updateReadingStatus(application.id, ReadingStatus.CURRENTLY_READING)
@@ -571,7 +618,7 @@ fun ApprovedApplicationsContent(
                                 Text("Start")
                             }
                         }
-                        ReadingStatus.CURRENTLY_READING -> {
+                        "currently_reading" -> {
                             OutlinedButton(
                                 onClick = { 
                                     applicationViewModel.updateReadingStatus(application.id, ReadingStatus.FOR_REVIEW)
@@ -580,7 +627,7 @@ fun ApprovedApplicationsContent(
                                 Text("To Review")
                             }
                         }
-                        ReadingStatus.FOR_REVIEW -> {
+                        "for_review" -> {
                             OutlinedButton(
                                 onClick = { /* TODO: Navigate to review screen */ }
                             ) {
@@ -677,13 +724,13 @@ fun SimpleApplicationCard(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
-                text = application.book?.title ?: "Unknown Book",
+                text = application.bookTitle,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
             
             Text(
-                text = "By ${application.book?.author?.username ?: "Unknown Author"}",
+                text = "By ${application.authorName}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
