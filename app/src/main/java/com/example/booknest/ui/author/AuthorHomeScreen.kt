@@ -277,7 +277,7 @@ fun AuthorHomeScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                     
                     if (myBooks.isNotEmpty()) {
-                        val mostPopularBook = myBooks.maxByOrNull { it.availableCopies } ?: myBooks.first()
+                        val mostPopularBook = myBooks.maxByOrNull { it.availableCopies ?: 0 } ?: myBooks.first()
                         Text(
                             text = mostPopularBook.title,
                             style = MaterialTheme.typography.titleLarge,
@@ -336,7 +336,7 @@ fun BookCard(book: Book, onClick: () -> Unit) {
             )
             
             Text(
-                text = book.status.name.lowercase().replaceFirstChar { it.uppercase() },
+                text = book.status?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "Unknown",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

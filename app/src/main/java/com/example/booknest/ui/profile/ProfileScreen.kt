@@ -196,7 +196,7 @@ fun ProfileContent(
         
         // Profile Stats
         profile.stats?.let { stats ->
-            ProfileStatsSection(stats = stats)
+            ProfileStatsSection(stats = stats, isOwnProfile = isOwnProfile)
         }
         
         // Profile Details
@@ -291,7 +291,8 @@ fun ProfileHeader(
 
 @Composable
 fun ProfileStatsSection(
-    stats: com.example.booknest.network.UserStats
+    stats: com.example.booknest.network.UserStats,
+    isOwnProfile: Boolean
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -308,7 +309,12 @@ fun ProfileStatsSection(
             )
             
             if (stats.userType == "author") {
-                ProfileAuthorStatsGrid(stats = stats)
+                if (isOwnProfile) {
+                    ProfileAuthorStatsGrid(stats = stats)
+                } else {
+                    // For other authors, show only public stats
+                    ProfilePublicAuthorStatsGrid(stats = stats)
+                }
             } else {
                 ProfileReaderStatsGrid(stats = stats)
             }
@@ -327,6 +333,33 @@ fun ProfileAuthorStatsGrid(
         "Total Applications" to stats.totalApplications,
         "Approved Applications" to stats.approvedApplications,
         "Pending Applications" to stats.pendingApplications,
+        "Total Reviews" to (stats.totalReviews ?: 0),
+        "Average Rating" to (stats.averageRating ?: 0.0)
+    )
+    
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        modifier = Modifier.height(200.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(statItems.size) { index ->
+            val (title, value) = statItems[index]
+            StatCard(
+                title = title,
+                value = if (title == "Average Rating") String.format("%.1f", value) else value.toString()
+            )
+        }
+    }
+}
+
+@Composable
+fun ProfilePublicAuthorStatsGrid(
+    stats: com.example.booknest.network.UserStats
+) {
+    val statItems = listOf(
+        "Total Books" to (stats.totalBooks ?: 0),
+        "Published Books" to (stats.publishedBooks ?: 0),
         "Total Reviews" to (stats.totalReviews ?: 0),
         "Average Rating" to (stats.averageRating ?: 0.0)
     )

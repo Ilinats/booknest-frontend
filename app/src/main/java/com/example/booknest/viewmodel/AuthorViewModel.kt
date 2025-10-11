@@ -232,7 +232,7 @@ class AuthorViewModel(private val authManager: AuthManager) : ViewModel() {
     private fun updateQuickStats() {
         val books = _myBooks.value
         val totalBooks = books.size
-        val activeBooks = books.count { it.status.name == "ACTIVE" }
+        val activeBooks = books.count { it.status?.name == "ACTIVE" }
         val totalApplications = _bookStats.value.values.sumOf { it.totalApplications }
         
         _quickStats.value = QuickStats(

@@ -63,14 +63,16 @@ class GoogleAuthViewModel(
                             )
                             
                             // Store user data and tokens in AuthManager
-                            if (response.user != null && response.accessToken != null && response.refreshToken != null) {
+                            if (response.data != null) {
                                 authManager.login(
                                     com.example.booknest.network.LoginSuccessResponse(
                                         success = response.success,
                                         message = response.message,
-                                        user = response.user,
-                                        accessToken = response.accessToken,
-                                        refreshToken = response.refreshToken
+                                        data = com.example.booknest.network.LoginData(
+                                            user = response.data.user,
+                                            accessToken = response.data.accessToken,
+                                            refreshToken = response.data.refreshToken
+                                        )
                                     )
                                 )
                             }

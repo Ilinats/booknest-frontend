@@ -53,11 +53,9 @@ fun HomeNavGraph(
         
         // Profile and Stats screens
         composable(
-            route = "profile/{userId?}",
+            route = "profile/{userId}",
             arguments = listOf(navArgument("userId") { 
                 type = NavType.StringType
-                nullable = true
-                defaultValue = null
             })
         ) { backStackEntry ->
             val userId = backStackEntry.arguments?.getString("userId")

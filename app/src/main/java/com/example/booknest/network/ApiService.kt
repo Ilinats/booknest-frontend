@@ -2,12 +2,20 @@ package com.example.booknest.network
 
 import com.example.booknest.viewmodel.SignupData
 import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.encoding.Decoder
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.PUT
+import retrofit2.http.PATCH
 import retrofit2.http.Path
 import retrofit2.http.Query
 import retrofit2.http.DELETE
@@ -21,19 +29,31 @@ data class UserData(
     val lastName: String?,
     val userType: String?,
     val birthDate: String? = null,
+    val emailVerified: Boolean = false,
     val bio: String? = null,
     val avatarUrl: String? = null,
-    val isVerified: Boolean = false,
-    val emailVerified: Boolean = false,
-    val createdAt: String?,
-    val updatedAt: String?,
-    val lastLogin: String? = null,
-    val isActive: Boolean = true
+    val profilePictureUrl: String? = null,
+    val googleId: String? = null,
+    val address: UserAddress? = null
+)
+
+@Serializable
+data class UserAddress(
+    val street: String?,
+    val city: String?,
+    val state: String?,
+    val zipCode: String?,
+    val country: String?
 )
 
 data class LoginSuccessResponse(
     val success: Boolean,
     val message: String?,
+    val data: LoginData
+)
+
+@Serializable
+data class LoginData(
     val user: UserData,
     val accessToken: String,
     val refreshToken: String
@@ -78,6 +98,7 @@ enum class SelectionMethod(val value: String) {
     FIRST_COME("first_come"), 
     LOTTERY("lottery") 
 }
+@Serializable
 enum class BookStatus(val value: String) {
     DRAFT("draft"),
     ACTIVE("active"),
@@ -86,6 +107,7 @@ enum class BookStatus(val value: String) {
     ARCHIVED("archived")
 }
 
+@Serializable
 enum class ApplicationStatus(val value: String) {
     PENDING("pending"),
     APPROVED("approved"),
@@ -93,6 +115,7 @@ enum class ApplicationStatus(val value: String) {
     WITHDRAWN("withdrawn")
 }
 
+@Serializable
 enum class ReadingStatus(val value: String) {
     NOT_STARTED("not_started"),
     CURRENTLY_READING("currently_reading"),
@@ -197,7 +220,6 @@ object ReviewTypeSerializer : KSerializer<ReviewType> {
     }
 }
 
-// Book related data models
 @Serializable
 data class Book(
     val id: String,
@@ -207,23 +229,46 @@ data class Book(
     val fullDescription: String?,
     val coverImageUrl: String?,
     val pageCount: Int?,
-    val ageRating: AgeRating,
-    val distributionType: DistributionType,
+    val ageRating: String?,
+    val distributionType: String?,
     val fileUrl: String?,
     val fileSize: String?,
     val fileType: String?,
-    val totalCopies: Int,
-    val availableCopies: Int,
-    val applicationDeadline: String,
-    val reviewDeadlineDays: Int,
+    val totalCopies: Int? = null,
+    val availableCopies: Int? = null,
+    val applicationDeadline: String? = null,
+    val reviewDeadlineDays: Int? = null,
     val selectionCriteria: String?,
-    val selectionMethod: SelectionMethod,
-    val status: BookStatus,
-    val createdAt: String,
-    val updatedAt: String,
+    @Serializable(with = SelectionMethodSerializer::class)
+    val selectionMethod: SelectionMethod?,
+    @Serializable(with = BookStatusSerializer::class)
+    val status: BookStatus?,
+    val createdAt: String? = null,
+    val updatedAt: String? = null,
     val publishedAt: String?,
     val seriesId: String?,
-    val seriesOrder: Int?
+    val seriesOrder: Int?,
+    val seriesName: String?,
+    val authorName: String? = null,
+    val author: BookAuthor? = null,
+    val rating: Double? = null,
+    val genres: List<Genre>? = null
+)
+
+@Serializable
+data class BookAuthor(
+    val id: String,
+    val username: String,
+    val name: String,
+    val bio: String?,
+    val profilePictureUrl: String?
+)
+
+@Serializable
+data class Genre(
+    val id: Int,
+    val name: String,
+    val description: String?
 )
 
 data class Series(
@@ -307,28 +352,37 @@ data class BookAnalytics(
     val timeToComplete: Double?
 )
 
-// Application and Review data models
 @Serializable
 data class Application(
     val id: String,
-    val bookId: String,
-    val readerId: String?,
-    @Serializable(with = ApplicationStatusSerializer::class)
-    val status: ApplicationStatus,
-    val applicationMessage: String? = null,
-    val authorNotes: String? = null,
+    val status: String,
     val appliedAt: String,
     val respondedAt: String? = null,
+    val applicationMessage: String? = null,
+    val authorNotes: String? = null,
+    val bookId: String,
+    val bookTitle: String,
+    val bookCoverImageUrl: String?,
+    val authorName: String,
+    val readingStatus: String,
+    val readingStartedAt: String? = null,
+    val readingCompletedAt: String? = null,
     val copySentAt: String? = null,
     val copyReceivedAt: String? = null,
     val reviewSubmittedAt: String? = null,
-    @Serializable(with = ReadingStatusSerializer::class)
-    val readingStatus: ReadingStatus,
-    val readingStartedAt: String? = null,
-    val readingCompletedAt: String? = null,
+    val reader: ApplicationReader? = null,
     val book: Book? = null,
-    val reader: UserData? = null,
     val review: Review? = null
+)
+
+@Serializable
+data class ApplicationReader(
+    val id: String,
+    val username: String,
+    val email: String,
+    val firstName: String,
+    val lastName: String,
+    val profilePictureUrl: String?
 )
 
 @Serializable
@@ -394,14 +448,14 @@ data class ApplicationCheckApplication(
     val id: String,
     val status: String,
     val appliedAt: String,
-    val applicationMessage: String?,
-    val authorNotes: String?,
-    val respondedAt: String?,
-    val book: ApplicationBook
+    val applicationMessage: String? = null,
+    val authorNotes: String? = null,
+    val respondedAt: String? = null,
+    val book: ApplicationCheckBook? = null
 )
 
 @Serializable
-data class ApplicationBook(
+data class ApplicationCheckBook(
     val id: String,
     val title: String,
     val authorId: String
@@ -896,7 +950,12 @@ data class GoogleAuthRequest(
 data class GoogleAuthResponse(
     val success: Boolean,
     val message: String?,
-    val user: UserData? = null,
-    val accessToken: String? = null,
-    val refreshToken: String? = null
+    val data: GoogleAuthData?
+)
+
+@Serializable
+data class GoogleAuthData(
+    val user: UserData,
+    val accessToken: String,
+    val refreshToken: String
 )
