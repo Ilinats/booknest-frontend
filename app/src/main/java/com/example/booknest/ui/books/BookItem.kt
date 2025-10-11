@@ -25,6 +25,8 @@ fun BookItem(
         modifier = Modifier
             .width(120.dp)
             .clickable { 
+                println("DEBUG: BookItem clicked - book.id: ${book.id}, book.title: ${book.title}")
+                println("DEBUG: Navigating to: ${Screen.BookDetails.createRoute(book.id)}")
                 navController?.navigate(Screen.BookDetails.createRoute(book.id))
             },
         elevation = CardDefaults.cardElevation(2.dp)
@@ -41,7 +43,7 @@ fun BookItem(
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = "by ${book.author?.username ?: "Unknown"}",
+                text = "by ${book.authorName ?: book.author?.username ?: "Unknown Author"}",
                 style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis

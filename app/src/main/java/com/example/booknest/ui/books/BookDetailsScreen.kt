@@ -3,6 +3,7 @@ package com.example.booknest.ui.books
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -21,9 +22,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.booknest.data.AuthManager
+import com.example.booknest.navigation.Screen
 import com.example.booknest.network.*
 import com.example.booknest.viewmodel.ApplicationViewModel
 import com.example.booknest.viewmodel.ApplicationViewModelFactory
+import com.example.booknest.viewmodel.BookViewModel
+import com.example.booknest.viewmodel.BookViewModelFactory
 import com.example.booknest.viewmodel.ReviewViewModel
 import com.example.booknest.viewmodel.ReviewViewModelFactory
 import kotlinx.coroutines.flow.collectLatest
@@ -41,6 +45,9 @@ fun BookDetailsScreen(
     ),
     reviewViewModel: ReviewViewModel = viewModel(
         factory = ReviewViewModelFactory(authManager)
+    ),
+    bookViewModel: BookViewModel = viewModel(
+        factory = BookViewModelFactory(authManager)
     )
 ) {
     var book by remember { mutableStateOf<Book?>(null) }
@@ -52,6 +59,7 @@ fun BookDetailsScreen(
 
     // Load book details, reviews, and user's applications
     LaunchedEffect(bookId) {
+        println("DEBUG: BookDetailsScreen - bookId: $bookId")
         try {
             val response = RetrofitInstance.api.getBookDetails(bookId)
             if (response.isSuccessful && response.body() != null) {
@@ -65,14 +73,95 @@ fun BookDetailsScreen(
             }
             isLoading = false
         } catch (e: Exception) {
+            println("DEBUG: Book details API failed: ${e.message}")
             isLoading = false
         }
         
-        // Check if user has already applied for this book
+        // Check if user has already applied for this book (this will also provide book info as fallback)
         applicationViewModel.checkApplication(bookId)
         
         applicationViewModel.snackbarEvent.collectLatest { message ->
             snackbarHostState.showSnackbar(message)
+        }
+    }
+    
+    // Use book data from main screen as primary fallback if main API failed
+    LaunchedEffect(bookViewModel.books, bookViewModel.featuredBooks, bookViewModel.recommendedBooks, bookViewModel.newReleases) {
+        if (book == null) {
+            println("DEBUG: Trying to find book in main screen data")
+            println("DEBUG: books.value size: ${bookViewModel.books.value.size}")
+            println("DEBUG: featuredBooks.value size: ${bookViewModel.featuredBooks.value.size}")
+            println("DEBUG: recommendedBooks.value size: ${bookViewModel.recommendedBooks.value.size}")
+            println("DEBUG: newReleases.value size: ${bookViewModel.newReleases.value.size}")
+            
+            val allBooks = bookViewModel.books.value + 
+                          bookViewModel.featuredBooks.value + 
+                          bookViewModel.recommendedBooks.value + 
+                          bookViewModel.newReleases.value
+            
+            println("DEBUG: Total books available: ${allBooks.size}")
+            println("DEBUG: Looking for bookId: $bookId")
+            println("DEBUG: Available book IDs: ${allBooks.map { it.id }}")
+            
+            val foundBook = allBooks.find { it.id == bookId }
+            if (foundBook != null) {
+                println("DEBUG: Found book in main screen data: $foundBook")
+                book = foundBook
+            } else {
+                println("DEBUG: Book not found in main screen data")
+            }
+        }
+    }
+    
+    // Use book info from application check as secondary fallback if main API failed and main screen data not available
+    LaunchedEffect(applicationViewModel.applicationCheck) {
+        applicationViewModel.applicationCheck.collect { appCheck ->
+            println("DEBUG: Application check fallback - book is null: ${book == null}")
+            println("DEBUG: Application check fallback - appCheck: $appCheck")
+            println("DEBUG: Application check fallback - appCheck?.application: ${appCheck?.application}")
+            println("DEBUG: Application check fallback - appCheck?.application?.book: ${appCheck?.application?.book}")
+            
+            // Only run fallback if book is null AND we have application check data
+            if (book == null && appCheck?.application?.book != null) {
+                val bookFromApp = appCheck.application.book
+                println("DEBUG: Creating fallback book from application check: $bookFromApp")
+                // Create a minimal Book object from the application check response
+                book = Book(
+                    id = bookFromApp.id,
+                    authorId = bookFromApp.authorId,
+                    title = bookFromApp.title,
+                    shortDescription = null,
+                    fullDescription = null,
+                    coverImageUrl = null,
+                    pageCount = null,
+                    ageRating = null,
+                    distributionType = null,
+                    fileUrl = null,
+                    fileSize = null,
+                    fileType = null,
+                    totalCopies = null,
+                    availableCopies = null,
+                    applicationDeadline = null,
+                    reviewDeadlineDays = null,
+                    selectionCriteria = null,
+                    selectionMethod = null,
+                    status = null,
+                    createdAt = null,
+                    updatedAt = null,
+                    publishedAt = null,
+                    seriesId = null,
+                    seriesOrder = null,
+                    seriesName = null,
+                    authorName = null,
+                    author = null,
+                    rating = null
+                )
+                println("DEBUG: Application check fallback book created: $book")
+            } else if (book == null) {
+                println("DEBUG: No book data available in application check")
+            } else {
+                println("DEBUG: Book already exists, not using application check fallback")
+            }
         }
     }
 
@@ -170,20 +259,16 @@ fun BookDetailsContent(
             // Convert ApplicationCheckApplication to Application-like object
             Application(
                 id = check.application.id,
-                status = ApplicationStatus.valueOf(check.application.status.uppercase()),
-                appliedAt = check.application.appliedAt,
-                applicationMessage = check.application.applicationMessage,
-                authorNotes = check.application.authorNotes,
-                respondedAt = check.application.respondedAt,
                 bookId = book.id,
-                readerId = null,
-                reader = null,
-                book = book,
-                review = null,
-                copySentAt = null,
-                copyReceivedAt = null,
-                reviewSubmittedAt = null,
-                readingStatus = ReadingStatus.NOT_STARTED,
+                bookTitle = book.title,
+                bookCoverImageUrl = book.coverImageUrl,
+                authorName = book.author?.username ?: "Unknown Author",
+                status = check.application.status,
+                appliedAt = check.application.appliedAt,
+                applicationMessage = null,
+                authorNotes = null,
+                respondedAt = null,
+                readingStatus = "not_started",
                 readingStartedAt = null,
                 readingCompletedAt = null
             )
@@ -196,7 +281,7 @@ fun BookDetailsContent(
     val isApplicationDeadlinePassed = remember(book.applicationDeadline) {
         try {
             val deadlineFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
-            val deadline = deadlineFormat.parse(book.applicationDeadline)
+            val deadline = book.applicationDeadline?.let { deadlineFormat.parse(it) }
             val now = Date()
             deadline?.before(now) ?: true
         } catch (e: Exception) {
@@ -236,7 +321,7 @@ fun BookDetailsContent(
                 println("DEBUG: userApplication = $userApplication")
                 println("DEBUG: userApplication?.status = ${userApplication?.status}")
                 println("DEBUG: isApplicationDeadlinePassed = $isApplicationDeadlinePassed")
-                println("DEBUG: showWithdrawButton = ${!isApplicationDeadlinePassed && userApplication?.status == ApplicationStatus.PENDING}")
+                println("DEBUG: showWithdrawButton = ${!isApplicationDeadlinePassed && userApplication?.status == "pending"}")
             }
             
             ApplicationInfoSection(
@@ -244,8 +329,8 @@ fun BookDetailsContent(
                 userApplication = userApplication,
                 onApplyClick = onApplyClick,
                 onWithdrawClick = onWithdrawClick,
-                showApplyButton = !isApplicationDeadlinePassed && (userApplication == null || userApplication.status == ApplicationStatus.WITHDRAWN),
-                showWithdrawButton = !isApplicationDeadlinePassed && userApplication?.status == ApplicationStatus.PENDING
+                showApplyButton = !isApplicationDeadlinePassed && (userApplication == null || userApplication.status == "withdrawn"),
+                showWithdrawButton = !isApplicationDeadlinePassed && userApplication?.status == "pending"
             )
         }
 
@@ -315,14 +400,15 @@ fun BookHeaderSection(book: Book) {
             )
             
             Text(
-                text = "by ${book.author?.username ?: "Unknown Author"}",
+                text = "by ${book.author?.name ?: book.authorName ?: "Unknown Author"}",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             
-            book.series?.let { series ->
+            // Series info not available in current model
+            if (book.seriesId != null) {
                 Text(
-                    text = "Book ${book.seriesOrder ?: 1} of ${series.name}",
+                    text = "Book ${book.seriesOrder ?: 1} of Series",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -333,29 +419,58 @@ fun BookHeaderSection(book: Book) {
 
 @Composable
 fun GenreTagsSection(book: Book) {
-    val genres = book.bookGenres?.mapNotNull { it.genre?.name } ?: emptyList()
-    
-    if (genres.isNotEmpty()) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            genres.take(3).forEach { genre ->
-                Box(
-                    modifier = Modifier
-                        .background(
-                            MaterialTheme.colorScheme.secondaryContainer,
-                            RoundedCornerShape(16.dp)
-                        )
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    Text(
-                        text = genre,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                }
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(horizontal = 4.dp)
+    ) {
+        if (book.genres.isNullOrEmpty()) {
+            // Show fallback genre if no genres available
+            item {
+                GenreTag(
+                    text = "General",
+                    isPrimary = false
+                )
+            }
+        } else {
+            // Show actual genres from the book
+            items(book.genres.size) { index ->
+                val genre = book.genres[index]
+                GenreTag(
+                    text = genre.name,
+                    isPrimary = true
+                )
             }
         }
+    }
+}
+
+@Composable
+fun GenreTag(
+    text: String,
+    isPrimary: Boolean
+) {
+    Box(
+        modifier = Modifier
+            .background(
+                if (isPrimary) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant
+                },
+                RoundedCornerShape(20.dp)
+            )
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Medium,
+            color = if (isPrimary) {
+                MaterialTheme.colorScheme.onPrimaryContainer
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            }
+        )
     }
 }
 
@@ -381,9 +496,9 @@ fun BookMetadataSection(book: Book) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         MetadataRow(label = "Pages", value = book.pageCount?.toString() ?: "N/A")
         Divider()
-        MetadataRow(label = "Age", value = book.ageRating.value.uppercase())
+        MetadataRow(label = "Age", value = book.ageRating?.uppercase() ?: "N/A")
         Divider()
-        MetadataRow(label = "Distribution", value = book.distributionType.value.replaceFirstChar { it.uppercase() })
+        MetadataRow(label = "Distribution", value = book.distributionType?.replaceFirstChar { it.uppercase() } ?: "N/A")
     }
 }
 
@@ -429,14 +544,14 @@ fun ApplicationInfoSection(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = "Slots Filled: ${book.totalCopies - book.availableCopies}/${book.totalCopies}",
+                    text = "Slots Filled: ${(book.totalCopies ?: 0) - (book.availableCopies ?: 0)}/${book.totalCopies ?: 0}",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 
                 Text(
-                    text = "Application Deadline: ${formatDate(book.applicationDeadline)}",
+                    text = "Application Deadline: ${book.applicationDeadline?.let { formatDate(it) } ?: "Not specified"}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
@@ -458,7 +573,7 @@ fun ApplicationInfoSection(
         }
         
         when {
-            userApplication?.status == ApplicationStatus.APPROVED -> {
+            userApplication?.status == "approved" -> {
                 Text(
                     text = "✅ Application Approved! Check your email for the book copy.",
                     style = MaterialTheme.typography.bodyMedium,
@@ -466,7 +581,7 @@ fun ApplicationInfoSection(
                     modifier = Modifier.fillMaxWidth()
                 )
             }
-            userApplication?.status == ApplicationStatus.REJECTED -> {
+            userApplication?.status == "rejected" -> {
                 Text(
                     text = "❌ Application Rejected",
                     style = MaterialTheme.typography.bodyMedium,
@@ -474,7 +589,7 @@ fun ApplicationInfoSection(
                     modifier = Modifier.fillMaxWidth()
                 )
             }
-            userApplication?.status == ApplicationStatus.WITHDRAWN -> {
+            userApplication?.status == "withdrawn" -> {
                 Text(
                     text = "Application Withdrawn",
                     style = MaterialTheme.typography.bodyMedium,
@@ -523,7 +638,7 @@ fun AboutAuthorSection(book: Book, navController: NavController) {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = book.author?.username?.firstOrNull()?.uppercase() ?: "?",
+                    text = "?",
                     color = Color.White,
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
@@ -537,7 +652,7 @@ fun AboutAuthorSection(book: Book, navController: NavController) {
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    text = book.author?.username ?: "Unknown Author",
+                    text = book.author?.name ?: book.authorName ?: "Unknown Author",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -554,7 +669,10 @@ fun AboutAuthorSection(book: Book, navController: NavController) {
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             OutlinedButton(
-                onClick = { /* TODO: Follow author */ },
+                onClick = { 
+                    // TODO: Implement follow author functionality
+                    // For now, show a toast message
+                },
                 modifier = Modifier.weight(1f)
             ) {
                 Text("Follow Author")
@@ -569,22 +687,6 @@ fun AboutAuthorSection(book: Book, navController: NavController) {
                 modifier = Modifier.weight(1f)
             ) {
                 Text("View Profile")
-            }
-        }
-        
-        // Add stats button for authors
-        book.author?.userType?.let { userType ->
-            if (userType == "author") {
-                OutlinedButton(
-                    onClick = { 
-                        book.author?.id?.let { authorId ->
-                            navController.navigate("stats/$authorId")
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("View Author Statistics")
-                }
             }
         }
     }
