@@ -8,9 +8,15 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.booknest.data.AuthManager
+import com.example.booknest.ui.applications.MyApplicationsScreen
+import com.example.booknest.ui.books.BookDetailsScreen
 import com.example.booknest.ui.books.BookListScreen
 import com.example.booknest.ui.home.HomeScreen
-import com.example.booknest.ui.myapplications.MyApplicationsScreen
+import com.example.booknest.ui.profile.ProfileEditScreen
+import com.example.booknest.ui.profile.ProfileScreen
+import com.example.booknest.ui.profile.StatsScreen
+import com.example.booknest.ui.analytics.AuthorAnalyticsScreen
+import com.example.booknest.ui.analytics.BookAnalyticsScreen
 
 @Composable
 fun HomeNavGraph(
@@ -23,7 +29,7 @@ fun HomeNavGraph(
             HomeScreen(navController, authManager)
         }
         composable(route = BottomBarScreen.MyApplications.route) {
-            MyApplicationsScreen()
+            MyApplicationsScreen(navController, authManager)
         }
         composable(
             route = BottomBarScreen.Browse.route,
@@ -35,6 +41,56 @@ fun HomeNavGraph(
                 authManager = authManager,
                 searchQuery = searchQuery
             )
+        }
+        
+        composable(
+            route = "book_details/{bookId}",
+            arguments = listOf(navArgument("bookId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val bookId = backStackEntry.arguments?.getString("bookId") ?: ""
+            BookDetailsScreen(navController, authManager, bookId)
+        }
+        
+        // Profile and Stats screens
+        composable(
+            route = "profile/{userId?}",
+            arguments = listOf(navArgument("userId") { 
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            })
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId")
+            ProfileScreen(navController, authManager, userId)
+        }
+        
+        composable("profile_edit") {
+            ProfileEditScreen(navController, authManager)
+        }
+        
+        composable(
+            route = "stats/{authorId?}",
+            arguments = listOf(navArgument("authorId") { 
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            })
+        ) { backStackEntry ->
+            val authorId = backStackEntry.arguments?.getString("authorId")
+            StatsScreen(navController, authManager, authorId)
+        }
+        
+        // Analytics screens
+        composable(
+            route = "book_analytics/{bookId}",
+            arguments = listOf(navArgument("bookId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val bookId = backStackEntry.arguments?.getString("bookId") ?: ""
+            BookAnalyticsScreen(navController, authManager, bookId)
+        }
+        
+        composable("author_analytics") {
+            AuthorAnalyticsScreen(navController, authManager)
         }
     }
 }

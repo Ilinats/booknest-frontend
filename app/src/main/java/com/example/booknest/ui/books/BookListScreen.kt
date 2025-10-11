@@ -133,7 +133,7 @@ fun BookListScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(books) { book ->
-                        BookItem(book = book)
+                        BookItem(book = book, navController = navController)
                     }
                 }
             }
