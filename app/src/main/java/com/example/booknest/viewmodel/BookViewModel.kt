@@ -60,9 +60,14 @@ class BookViewModel(private val authManager: AuthManager) : ViewModel() {
             try {
                 _isLoading.value = true
                 val response = RetrofitInstance.api.getRecommendedBooks(10)
-                if (response.isSuccessful) {
-                    _recommendedBooks.value = response.body() ?: emptyList()
-                    println("Recommended books loaded: ${response.body()?.size ?: 0} books")
+                if (response.isSuccessful && response.body() != null) {
+                    val apiResponse = response.body()!!
+                    if (apiResponse.success) {
+                        _recommendedBooks.value = apiResponse.data ?: emptyList()
+                        println("Recommended books loaded: ${apiResponse.data?.size ?: 0} books")
+                    } else {
+                        println("Recommended books API error: ${apiResponse.message}")
+                    }
                 } else {
                     println("Recommended books API error: ${response.code()} - ${response.message()}")
                     val errorBody = response.errorBody()?.string()
@@ -96,8 +101,11 @@ class BookViewModel(private val authManager: AuthManager) : ViewModel() {
                     take = 10,
                     status = "active"
                 )
-                if (response.isSuccessful) {
-                    _newReleases.value = response.body() ?: emptyList()
+                if (response.isSuccessful && response.body() != null) {
+                    val apiResponse = response.body()!!
+                    if (apiResponse.success) {
+                        _newReleases.value = apiResponse.data ?: emptyList()
+                    }
                 } else {
                     println("New releases API error: ${response.code()} - ${response.message()}")
                 }
@@ -132,8 +140,11 @@ class BookViewModel(private val authManager: AuthManager) : ViewModel() {
                     take,
                     status = "active"
                 )
-                if (response.isSuccessful) {
-                    _books.value = response.body() ?: emptyList()
+                if (response.isSuccessful && response.body() != null) {
+                    val apiResponse = response.body()!!
+                    if (apiResponse.success) {
+                        _books.value = apiResponse.data ?: emptyList()
+                    }
                 }
             } catch (e: Exception) {
                 // Handle error
@@ -145,8 +156,11 @@ class BookViewModel(private val authManager: AuthManager) : ViewModel() {
         viewModelScope.launch {
             try {
                 val response = RetrofitInstance.api.getFeaturedBooks()
-                if (response.isSuccessful) {
-                    _featuredBooks.value = response.body() ?: emptyList()
+                if (response.isSuccessful && response.body() != null) {
+                    val apiResponse = response.body()!!
+                    if (apiResponse.success) {
+                        _featuredBooks.value = apiResponse.data ?: emptyList()
+                    }
                 }
             } catch (e: Exception) {
                 // Handle error
@@ -158,8 +172,11 @@ class BookViewModel(private val authManager: AuthManager) : ViewModel() {
         viewModelScope.launch {
             try {
                 val response = RetrofitInstance.api.searchBooks(query, skip, take)
-                if (response.isSuccessful) {
-                    _books.value = response.body() ?: emptyList()
+                if (response.isSuccessful && response.body() != null) {
+                    val apiResponse = response.body()!!
+                    if (apiResponse.success) {
+                        _books.value = apiResponse.data ?: emptyList()
+                    }
                 }
             } catch (e: Exception) {
                 // Handle error
@@ -171,8 +188,11 @@ class BookViewModel(private val authManager: AuthManager) : ViewModel() {
         viewModelScope.launch {
             try {
                 val response = RetrofitInstance.api.getBookDetails(bookId)
-                if (response.isSuccessful) {
-                    _bookDetails.value = response.body()
+                if (response.isSuccessful && response.body() != null) {
+                    val apiResponse = response.body()!!
+                    if (apiResponse.success) {
+                        _bookDetails.value = apiResponse.data
+                    }
                 }
             } catch (e: Exception) {
                 // Handle error
