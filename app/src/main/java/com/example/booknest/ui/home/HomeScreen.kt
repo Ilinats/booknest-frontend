@@ -48,6 +48,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.booknest.data.AuthManager
 import com.example.booknest.navigation.BottomBarScreen
+import com.example.booknest.navigation.Screen
 import com.example.booknest.ui.books.BookItem
 import com.example.booknest.viewmodel.BookViewModel
 import com.example.booknest.viewmodel.BookViewModelFactory
@@ -93,7 +94,17 @@ fun HomeScreen(
                     }) {
                         Icon(Icons.Filled.Search, contentDescription = "Search")
                     }
-                    IconButton(onClick = { /* TODO: Navigate to profile */ }) {
+                    IconButton(onClick = { 
+                        currentUser?.id?.let { userId ->
+                            try {
+                                navController.navigate(Screen.Profile.createRoute(userId))
+                            } catch (e: Exception) {
+                                println("Navigation error: ${e.message}")
+                                // Fallback navigation
+                                navController.navigate("profile/$userId")
+                            }
+                        }
+                    }) {
                         Icon(
                             Icons.Filled.AccountCircle, 
                             contentDescription = "Profile",
@@ -173,7 +184,7 @@ fun HomeScreen(
                             contentPadding = PaddingValues(horizontal = 4.dp)
                         ) {
                             items(recommendedBooks) { book ->
-                                BookItem(book = book)
+                                BookItem(book = book, navController = navController)
                             }
                         }
                     }
@@ -205,7 +216,7 @@ fun HomeScreen(
                             contentPadding = PaddingValues(horizontal = 4.dp)
                         ) {
                             items(newReleases) { book ->
-                                BookItem(book = book)
+                                BookItem(book = book, navController = navController)
                             }
                         }
                     }
