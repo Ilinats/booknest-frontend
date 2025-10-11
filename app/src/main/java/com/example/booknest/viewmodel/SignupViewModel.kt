@@ -7,28 +7,31 @@ import com.example.booknest.network.GenreDto
 import com.example.booknest.network.RetrofitInstance
 import com.example.booknest.network.TokenStorage
 import com.example.booknest.network.UpsertPreferenceRequest
-import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
+@Serializable
 data class AddressDto(
-    @SerializedName("streetAddress")
+    @SerialName("streetAddress")
     var streetAddress: String,
-    @SerializedName("city")
+    @SerialName("city")
     var city: String,
-    @SerializedName("postalCode")
+    @SerialName("postalCode")
     var postalCode: String,
-    @SerializedName("country")
+    @SerialName("country")
     var country: String? = null,
-    @SerializedName("isPrimary")
+    @SerialName("isPrimary")
     var isPrimary: Boolean? = true
 )
 
+@Serializable
 data class SignupData(
-    @SerializedName("userType")
+    @SerialName("userType")
     var accountType: String? = null,
     var firstName: String? = null,
     var lastName: String? = null,
@@ -38,7 +41,7 @@ data class SignupData(
     var birthDate: String? = null,
     var address: AddressDto? = null,
     var bio: String? = null,
-    @SerializedName("avatarUrl")
+    @SerialName("avatarUrl")
     var profilePicture: String? = null,
     var genres: List<String>? = null
 )
@@ -76,8 +79,20 @@ class SignupViewModel : ViewModel() {
     fun fetchAvailableGenres() {
         viewModelScope.launch {
             try {
-                val genresResponse = RetrofitInstance.api.getGenres()
-                _availableGenres.value = genresResponse
+                val response = RetrofitInstance.api.getGenres()
+                if (response.isSuccessful && response.body() != null) {
+                    val apiResponse = response.body()!!
+                    if (apiResponse.success) {
+                        _availableGenres.value = apiResponse.data ?: emptyList()
+                        println("Genres loaded successfully: ${apiResponse.data?.size ?: 0} genres")
+                    } else {
+                        println("Genres API error: ${apiResponse.message}")
+                        _availableGenres.value = emptyList()
+                    }
+                } else {
+                    println("Genres API error: ${response.code()} - ${response.message()}")
+                    _availableGenres.value = emptyList()
+                }
             } catch (e: Exception) {
                 _availableGenres.value = emptyList()
                 println("Error fetching genres: ${e.localizedMessage}")
@@ -103,9 +118,15 @@ class SignupViewModel : ViewModel() {
                     isActive = isActive
                 )
                 val response = RetrofitInstance.api.addGenre(createGenreRequest)
-                if (response.isSuccessful && response.body()?.success == true) {
-                    _createGenreUiState.value = CreateGenreUiState.Success(response.body()?.message ?: "Genre created successfully!")
-                    fetchAvailableGenres()
+                if (response.isSuccessful && response.body() != null) {
+                    val apiResponse = response.body()!!
+                    if (apiResponse.success) {
+                        _createGenreUiState.value = CreateGenreUiState.Success(apiResponse.message ?: "Genre created successfully!")
+                        fetchAvailableGenres()
+                    } else {
+                        val errorMsg = apiResponse.message ?: "Failed to create genre"
+                        _createGenreUiState.value = CreateGenreUiState.Error(errorMsg)
+                    }
                 } else {
                     val errorMsg = response.body()?.message ?: "Failed to create genre: ${response.code()}"
                     _createGenreUiState.value = CreateGenreUiState.Error(errorMsg)
@@ -167,12 +188,16 @@ class SignupViewModel : ViewModel() {
             try {
                 val response = RetrofitInstance.api.register(signupData)
                 if (response.isSuccessful && response.body() != null) {
-                    val token = response.body()?.accessToken
-                    if (!token.isNullOrEmpty()) {
-                        TokenStorage.saveToken(token)
+                    val apiResponse = response.body()!!
+                    if (apiResponse.success) {
+                        // Registration successful - user will need to login separately
+                        _signupState.value = SignupUiState.Success(apiResponse.message ?: "Registration successful! Please login to continue.")
+                        onComplete(true, null)
+                    } else {
+                        val errorMsg = apiResponse.message ?: "Registration failed"
+                        _signupState.value = SignupUiState.Error(errorMsg)
+                        onComplete(false, errorMsg)
                     }
-                    _signupState.value = SignupUiState.Success(response.body()?.message)
-                    onComplete(true, null)
                 } else {
                     _signupState.value = SignupUiState.Error("Server error: ${response.code()}")
                     onComplete(false, "Server error")
@@ -223,6 +248,12 @@ class SignupViewModel : ViewModel() {
                         allSucceeded = false
                         val errorBodyMessage = response.body()?.message
                         firstErrorMessage = firstErrorMessage ?: errorBodyMessage ?: "Failed to save a genre preference: ${response.code()}"
+                    } else if (response.body() != null) {
+                        val apiResponse = response.body()!!
+                        if (!apiResponse.success) {
+                            allSucceeded = false
+                            firstErrorMessage = firstErrorMessage ?: apiResponse.message ?: "Failed to save a genre preference"
+                        }
                     }
                 }
 

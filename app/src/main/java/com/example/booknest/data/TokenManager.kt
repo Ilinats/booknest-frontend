@@ -29,14 +29,22 @@ class TokenManager {
                 )
                 
                 if (response.isSuccessful && response.body() != null) {
-                    val refreshResponse = response.body()!!
-                    println("Token refresh successful")
-                    // Update only the tokens, keep existing user data
-                    userRepository.updateTokens(
-                        accessToken = refreshResponse.accessToken,
-                        refreshToken = refreshResponse.refreshToken
-                    )
-                    return@withLock true
+                    val apiResponse = response.body()!!
+                    if (apiResponse.success && apiResponse.data != null) {
+                        val refreshResponse = apiResponse.data
+                        println("Token refresh successful")
+                        // Update only the tokens, keep existing user data
+                        userRepository.updateTokens(
+                            accessToken = refreshResponse.accessToken,
+                            refreshToken = refreshResponse.refreshToken
+                        )
+                        return@withLock true
+                    } else {
+                        println("Token refresh failed: ${apiResponse.message}")
+                        // Refresh token is invalid, user needs to login again
+                        userRepository.clearUserData()
+                        return@withLock false
+                    }
                 } else {
                     println("Token refresh failed: ${response.code()} - ${response.message()}")
                     val errorBody = response.errorBody()?.string()
