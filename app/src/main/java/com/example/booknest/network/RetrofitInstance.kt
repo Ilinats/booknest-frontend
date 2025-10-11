@@ -17,11 +17,9 @@ object TokenCache {
     var accessToken: String? = null
 }
 
-// This class is now in AuthInterceptor.kt
-
 object RetrofitInstance {
 
-    private const val BASE_URL = "http://10.0.2.2:3000/"
+    private const val BASE_URL = "http://192.168.1.23:3000/"
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
@@ -40,8 +38,12 @@ object RetrofitInstance {
 
     private var retrofit: Retrofit? = null
 
-    fun initialize(authManager: AuthManager) {
-        authInterceptor = AuthInterceptor(authManager)
+    fun initialize(authManager: AuthManager?) {
+        authInterceptor = authManager?.let { AuthInterceptor(it) }
+        val json = Json {
+            ignoreUnknownKeys = true
+            coerceInputValues = true
+        }
         retrofit = Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(createClient())
@@ -57,14 +59,3 @@ object RetrofitInstance {
             return retrofit!!.create(ApiService::class.java)
         }
 }
-
-// Usage instructions (not code):
-// 1. In your Application class, call TokenStorage.init(context) in onCreate().
-// 2. Observe TokenStorage.getTokenFlow() and update TokenCache.accessToken whenever it changes.
-//    Example (in Application class):
-//    CoroutineScope(Dispatchers.IO).launch {
-//        TokenStorage.getTokenFlow().collect { token ->
-//            TokenCache.accessToken = token
-//        }
-//    }
-// 3. Use TokenStorage.saveToken(token) after login, and TokenStorage.clearToken() on logout.
