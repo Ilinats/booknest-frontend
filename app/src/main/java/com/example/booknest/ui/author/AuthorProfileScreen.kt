@@ -51,8 +51,8 @@ fun AuthorProfileScreen(
             fullDescription = null,
             coverImageUrl = null,
             pageCount = null,
-            ageRating = com.example.booknest.network.AgeRating.ALL,
-            distributionType = com.example.booknest.network.DistributionType.DIGITAL,
+            ageRating = "all",
+            distributionType = "digital",
             fileUrl = null,
             fileSize = null,
             fileType = null,
@@ -67,7 +67,8 @@ fun AuthorProfileScreen(
             updatedAt = "",
             publishedAt = null,
             seriesId = null,
-            seriesOrder = null
+            seriesOrder = null,
+            seriesName = null
         ),
         Book(
             id = "2",
@@ -77,8 +78,8 @@ fun AuthorProfileScreen(
             fullDescription = null,
             coverImageUrl = null,
             pageCount = null,
-            ageRating = com.example.booknest.network.AgeRating.ALL,
-            distributionType = com.example.booknest.network.DistributionType.DIGITAL,
+            ageRating = "all",
+            distributionType = "digital",
             fileUrl = null,
             fileSize = null,
             fileType = null,
@@ -93,7 +94,8 @@ fun AuthorProfileScreen(
             updatedAt = "",
             publishedAt = null,
             seriesId = null,
-            seriesOrder = null
+            seriesOrder = null,
+            seriesName = null
         )
     )
 

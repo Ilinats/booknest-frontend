@@ -8,6 +8,9 @@ import java.io.IOException
 
 class AuthInterceptor(private val authManager: AuthManager) : Interceptor {
     
+    // Track if we're already in a refresh attempt to prevent infinite loops
+    private var isRefreshing = false
+    
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
         val token = TokenCache.accessToken
@@ -20,10 +23,23 @@ class AuthInterceptor(private val authManager: AuthManager) : Interceptor {
         val request = requestBuilder.build()
         var response = chain.proceed(request)
 
-        if (response.code == 401 && token != null) {
+        // Only attempt refresh if we get 401, have a token, and aren't already refreshing
+        // Also exclude auth endpoints from token refresh logic
+        val isAuthEndpoint = originalRequest.url.toString().contains("/auth/")
+        if (response.code == 401 && token != null && !isRefreshing && !isAuthEndpoint) {
             println("Received 401, attempting token refresh...")
             response.close()
             
+            // Check if this is a refresh token request to avoid infinite loops
+            if (originalRequest.url.toString().contains("/auth/refresh-token")) {
+                println("Refresh token request failed with 401, clearing user data")
+                runBlocking {
+                    authManager.logout()
+                }
+                throw IOException("Refresh token expired, user needs to login again")
+            }
+            
+            isRefreshing = true
             try {
                 val refreshSuccess = runBlocking {
                     authManager.refreshTokenIfNeeded()
@@ -42,11 +58,19 @@ class AuthInterceptor(private val authManager: AuthManager) : Interceptor {
                     }
                 } else {
                     println("Token refresh failed, user needs to login again")
+                    runBlocking {
+                        authManager.logout()
+                    }
                     throw IOException("Token refresh failed")
                 }
             } catch (e: Exception) {
                 println("Token refresh exception: ${e.message}")
+                runBlocking {
+                    authManager.logout()
+                }
                 throw IOException("Token refresh failed: ${e.message}")
+            } finally {
+                isRefreshing = false
             }
         }
 

@@ -317,14 +317,14 @@ class ReviewViewModel(private val authManager: AuthManager) : ViewModel() {
     }
 
     fun canSubmitReview(application: Application): Boolean {
-        return application.status == ApplicationStatus.APPROVED && 
+        return application.status == "approved" && 
                application.copyReceivedAt != null &&
                application.reviewSubmittedAt == null
     }
 
     fun canUpdateReadingStatus(application: Application, newStatus: ReadingStatus): Boolean {
         return when (application.status) {
-            ApplicationStatus.APPROVED -> true
+            "approved" -> true
             else -> false
         }
     }

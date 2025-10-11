@@ -181,17 +181,17 @@ fun ApplicationStats(applications: List<Application>) {
             )
             StatItem(
                 label = "Pending",
-                value = applications.count { it.status == ApplicationStatus.PENDING }.toString(),
+                value = applications.count { it.status == "pending" }.toString(),
                 icon = Icons.Filled.DateRange
             )
             StatItem(
                 label = "Approved",
-                value = applications.count { it.status == ApplicationStatus.APPROVED }.toString(),
+                value = applications.count { it.status == "approved" }.toString(),
                 icon = Icons.Filled.CheckCircle
             )
             StatItem(
                 label = "Rejected",
-                value = applications.count { it.status == ApplicationStatus.REJECTED }.toString(),
+                value = applications.count { it.status == "rejected" }.toString(),
                 icon = Icons.Filled.Close
             )
         }
@@ -339,7 +339,7 @@ fun AuthorApplicationActions(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         when (application.status) {
-            ApplicationStatus.PENDING -> {
+            "pending" -> {
                 Button(
                     onClick = onApprove,
                     modifier = Modifier.weight(1f),
@@ -369,7 +369,7 @@ fun AuthorApplicationActions(
                     Text("Reject")
                 }
             }
-            ApplicationStatus.APPROVED -> {
+            "approved" -> {
                 if (application.copySentAt == null) {
                     Button(
                         onClick = onMarkSent,
@@ -397,7 +397,7 @@ fun AuthorApplicationActions(
             }
             else -> {
                 Text(
-                    text = "Application ${application.status.value.replaceFirstChar { it.uppercase() }}",
+                    text = "Application ${application.status?.replaceFirstChar { it.uppercase() } ?: "Unknown"}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.align(Alignment.CenterVertically)

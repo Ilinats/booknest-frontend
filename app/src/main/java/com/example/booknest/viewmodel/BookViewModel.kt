@@ -80,6 +80,8 @@ class BookViewModel(private val authManager: AuthManager) : ViewModel() {
             }
         }
     }
+    
+    
 
     fun getNewReleases() {
         viewModelScope.launch {
@@ -155,15 +157,31 @@ class BookViewModel(private val authManager: AuthManager) : ViewModel() {
     fun getFeaturedBooks() {
         viewModelScope.launch {
             try {
-                val response = RetrofitInstance.api.getFeaturedBooks()
+                // Use browseBooks endpoint to get featured books
+                val response = RetrofitInstance.api.browseBooks(
+                    query = null,
+                    genreId = null,
+                    ageRating = null,
+                    distributionType = null,
+                    publishedFrom = null,
+                    publishedTo = null,
+                    skip = null,
+                    take = 10,
+                    status = "active"
+                )
                 if (response.isSuccessful && response.body() != null) {
                     val apiResponse = response.body()!!
                     if (apiResponse.success) {
                         _featuredBooks.value = apiResponse.data ?: emptyList()
+                        println("Featured books loaded: ${apiResponse.data?.size ?: 0} books")
+                    } else {
+                        println("Featured books API error: ${apiResponse.message}")
                     }
+                } else {
+                    println("Featured books API error: ${response.code()} - ${response.message()}")
                 }
             } catch (e: Exception) {
-                // Handle error
+                println("Featured books exception: ${e.message}")
             }
         }
     }

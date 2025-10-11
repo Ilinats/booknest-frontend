@@ -63,14 +63,14 @@ class AuthManager(private val userRepository: UserRepository, private val apiSer
     }
     
     suspend fun login(loginResponse: LoginSuccessResponse) {
-        println("DEBUG: AuthManager.login() called with user: ${loginResponse.user.username}")
-        println("DEBUG: Access token: ${loginResponse.accessToken?.take(20)}...")
-        println("DEBUG: Refresh token: ${loginResponse.refreshToken?.take(20)}...")
+        println("DEBUG: AuthManager.login() called with user: ${loginResponse.data.user.username}")
+        println("DEBUG: Access token: ${loginResponse.data.accessToken?.take(20)}...")
+        println("DEBUG: Refresh token: ${loginResponse.data.refreshToken?.take(20)}...")
         
         userRepository.saveUserData(
-            userData = loginResponse.user,
-            accessToken = loginResponse.accessToken,
-            refreshToken = loginResponse.refreshToken
+            userData = loginResponse.data.user,
+            accessToken = loginResponse.data.accessToken,
+            refreshToken = loginResponse.data.refreshToken
         )
         
         println("DEBUG: User data saved to repository")
@@ -183,12 +183,11 @@ class AuthManager(private val userRepository: UserRepository, private val apiSer
                 val authResponse = response.body()!!
                 if (authResponse.success) {
                     // Store user data and tokens if they exist
-                    if (authResponse.user != null && 
-                        authResponse.accessToken != null && authResponse.refreshToken != null) {
+                    if (authResponse.data != null) {
                         userRepository.saveUserData(
-                            userData = authResponse.user,
-                            accessToken = authResponse.accessToken,
-                            refreshToken = authResponse.refreshToken
+                            userData = authResponse.data.user,
+                            accessToken = authResponse.data.accessToken,
+                            refreshToken = authResponse.data.refreshToken
                         )
                     }
                     Result.success(authResponse)
