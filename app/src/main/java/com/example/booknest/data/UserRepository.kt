@@ -86,4 +86,10 @@ class UserRepository(private val context: Context) {
             preferences[REFRESH_TOKEN_KEY] = refreshToken
         }
     }
+    
+    suspend fun updateUserData(userData: UserData) {
+        context.dataStore.edit { preferences ->
+            preferences[USER_DATA_KEY] = json.encodeToString(userData)
+        }
+    }
 }
