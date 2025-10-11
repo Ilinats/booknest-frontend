@@ -17,8 +17,15 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        
+        // Google OAuth credentials
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"300466679791-ed4b905e3dth0hjf7kv7lkl2atti5k1i.apps.googleusercontent.com\"")
     }
 
+    buildFeatures {
+        buildConfig = true
+    }
+    
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -65,6 +72,11 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.serialization.json)
+    implementation("com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter:1.0.0")
+    implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("com.google.android.gms:play-services-auth:20.7.0")
+    implementation("com.google.android.gms:play-services-auth-api-phone:18.0.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
