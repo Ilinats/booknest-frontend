@@ -30,13 +30,20 @@ class LoginViewModel(private val authManager: AuthManager) : ViewModel() {
 
                 if (response.isSuccessful && response.body() != null) {
                     val loginResponse = response.body()!!
-                    if (!loginResponse.accessToken.isNullOrEmpty()) {
+                    println("DEBUG: Login response received - success: ${loginResponse.success}, hasAccessToken: ${!loginResponse.accessToken.isNullOrEmpty()}")
+                    println("DEBUG: User data: ${loginResponse.user}")
+                    println("DEBUG: Access token: ${loginResponse.accessToken?.take(20)}...")
+                    
+                    if (loginResponse.success && !loginResponse.accessToken.isNullOrEmpty()) {
+                        println("DEBUG: Calling authManager.login()")
                         authManager.login(loginResponse)
                         val userName = loginResponse.user.username
-                        _loginState.value = LoginUiState.Success("Welcome $userName! Logged in successfully!")
+                        _loginState.value = LoginUiState.Success(loginResponse.message ?: "Welcome $userName! Logged in successfully!")
                         onLoginComplete(true)
                     } else {
-                        _loginState.value = LoginUiState.Error("Login failed: Invalid response from server.")
+                        val errorMessage = loginResponse.message ?: "Login failed"
+                        println("DEBUG: Login failed - success: ${loginResponse.success}, message: $errorMessage")
+                        _loginState.value = LoginUiState.Error(errorMessage)
                         onLoginComplete(false)
                     }
                 } else {
