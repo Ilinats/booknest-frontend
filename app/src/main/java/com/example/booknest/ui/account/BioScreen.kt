@@ -48,14 +48,11 @@ fun BioScreen(navController: NavController, viewModel: SignupViewModel) {
                     viewModel.updateBio(bio.ifBlank { null }, null)
                     viewModel.submitSignup { success, error ->
                         if (success) {
-                            if (viewModel.signupData.accountType == "reader") {
-                                navController.navigate(Screen.Genres.route) {
-                                    popUpTo(Screen.AccountType.route) { inclusive = false }
-                                }
-                            } else {
-                                navController.navigate(Screen.Home.route) {
-                                    popUpTo(Screen.AccountType.route) { inclusive = true }
-                                }
+                            // Navigate to email verification after successful registration
+                            // Pass the email from signup data
+                            val userEmail = viewModel.signupData.email
+                            navController.navigate("email_verification?email=$userEmail") {
+                                popUpTo(Screen.AccountType.route) { inclusive = false }
                             }
                         }
                     }

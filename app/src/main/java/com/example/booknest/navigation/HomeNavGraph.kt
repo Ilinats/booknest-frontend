@@ -17,6 +17,9 @@ import com.example.booknest.ui.profile.ProfileScreen
 import com.example.booknest.ui.profile.StatsScreen
 import com.example.booknest.ui.analytics.AuthorAnalyticsScreen
 import com.example.booknest.ui.analytics.BookAnalyticsScreen
+import com.example.booknest.ui.friends.FriendsScreen
+import com.example.booknest.ui.profile.PrivacySettingsScreen
+import com.example.booknest.ui.profile.SocialMediaManagementScreen
 
 @Composable
 fun HomeNavGraph(
@@ -41,6 +44,9 @@ fun HomeNavGraph(
                 authManager = authManager,
                 searchQuery = searchQuery
             )
+        }
+        composable(route = BottomBarScreen.Friends.route) {
+            FriendsScreen(navController, authManager)
         }
         
         composable(
@@ -89,6 +95,21 @@ fun HomeNavGraph(
         
         composable("author_analytics") {
             AuthorAnalyticsScreen(navController, authManager)
+        }
+        
+        // Friend screens
+        composable("friends") {
+            FriendsScreen(navController, authManager)
+        }
+        
+        // Privacy settings
+        composable("privacy_settings") {
+            PrivacySettingsScreen(navController, authManager)
+        }
+        
+        // Social media management
+        composable("social_media_management") {
+            SocialMediaManagementScreen(navController, authManager)
         }
     }
 }

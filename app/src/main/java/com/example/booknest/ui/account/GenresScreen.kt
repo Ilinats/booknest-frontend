@@ -134,9 +134,7 @@ fun GenresScreen(navController: NavController, viewModel: SignupViewModel) {
                             scope.launch {
                                 snackbarHostState.showSnackbar(message ?: "Genres saved successfully!")
                             }
-                            navController.navigate(Screen.Main.route) {
-                                popUpTo(Screen.Landing.route) { inclusive = true }
-                            }
+                            navController.navigate(Screen.SocialMedia.route)
                         } else {
                             scope.launch {
                                 snackbarHostState.showSnackbar(message ?: "Failed to save genres.")
