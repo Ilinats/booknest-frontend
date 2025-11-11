@@ -52,6 +52,12 @@ import com.example.booknest.navigation.Screen
 import com.example.booknest.ui.books.BookItem
 import com.example.booknest.viewmodel.BookViewModel
 import com.example.booknest.viewmodel.BookViewModelFactory
+import com.example.booknest.viewmodel.FriendViewModel
+import com.example.booknest.viewmodel.FriendViewModelFactory
+import com.example.booknest.viewmodel.AuthorFollowViewModel
+import com.example.booknest.viewmodel.AuthorFollowViewModelFactory
+import com.example.booknest.network.UserActivity
+import com.example.booknest.ui.components.ActivityItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,6 +66,12 @@ fun HomeScreen(
     authManager: AuthManager,
     bookViewModel: BookViewModel = viewModel(
         factory = BookViewModelFactory(authManager)
+    ),
+    friendViewModel: FriendViewModel = viewModel(
+        factory = FriendViewModelFactory(authManager)
+    ),
+    authorFollowViewModel: AuthorFollowViewModel = viewModel(
+        factory = AuthorFollowViewModelFactory(authManager)
     )
 ) {
     val recommendedBooks by bookViewModel.recommendedBooks.collectAsState()
@@ -67,11 +79,21 @@ fun HomeScreen(
     val isLoading by bookViewModel.isLoading.collectAsState()
     val currentUser by authManager.currentUser.collectAsState()
     
+    // Friend activity data
+    val friendsActivity by friendViewModel.friendsActivity.collectAsState()
+    val friendsActivityLoading by friendViewModel.isLoading.collectAsState()
+    
+    // Books from followed authors
+    val booksFromFollowedAuthors by authorFollowViewModel.booksFromFollowedAuthors.collectAsState()
+    val followedAuthorsLoading by authorFollowViewModel.isLoading.collectAsState()
+    
     var searchQuery by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         bookViewModel.getRecommendedBooks()
         bookViewModel.getNewReleases()
+        friendViewModel.loadFriendsActivity()
+        authorFollowViewModel.loadBooksFromFollowedAuthors()
     }
 
     Scaffold(
@@ -219,6 +241,84 @@ fun HomeScreen(
                                 BookItem(book = book, navController = navController)
                             }
                         }
+                    }
+                }
+            }
+
+            // Books from Followed Authors Section
+            item {
+                Column {
+                    Text(
+                        text = "From Authors You Follow",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                    
+                    if (followedAuthorsLoading && booksFromFollowedAuthors.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    } else if (booksFromFollowedAuthors.isNotEmpty()) {
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            contentPadding = PaddingValues(horizontal = 4.dp)
+                        ) {
+                            items(booksFromFollowedAuthors) { book ->
+                                BookItem(book = book, navController = navController)
+                            }
+                        }
+                    } else {
+                        Text(
+                            text = "Follow some authors to see their latest books here!",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                }
+            }
+
+            // Friends Activity Feed Section
+            item {
+                Column {
+                    Text(
+                        text = "Friends Activity",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                    
+                    if (friendsActivityLoading && friendsActivity.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    } else if (friendsActivity.isNotEmpty()) {
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            contentPadding = PaddingValues(horizontal = 4.dp)
+                        ) {
+                            items(friendsActivity) { activity ->
+                                ActivityItem(activity = activity, navController = navController)
+                            }
+                        }
+                    } else {
+                        Text(
+                            text = "Add some friends to see their activity here!",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(16.dp)
+                        )
                     }
                 }
             }
