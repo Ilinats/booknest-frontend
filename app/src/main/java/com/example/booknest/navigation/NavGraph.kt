@@ -11,6 +11,7 @@ import com.example.booknest.ui.account.AccountTypeScreen
 import com.example.booknest.ui.account.BioScreen
 import com.example.booknest.ui.account.GenresScreen
 import com.example.booknest.ui.account.LandingScreen
+import com.example.booknest.ui.account.SocialMediaScreen
 import com.example.booknest.ui.account.LoginScreen
 import com.example.booknest.ui.account.PersonalInfoScreen
 import com.example.booknest.ui.account.ProfileDetailsScreen
@@ -41,15 +42,16 @@ fun NavGraph(
             LoginScreen(navController, loginViewModel, authManager)
         }
         composable(
-            route = Screen.EmailVerification.route,
-            arguments = listOf(navArgument("token") { 
+            route = "email_verification?email={email}",
+            arguments = listOf(navArgument("email") { 
                 type = NavType.StringType
                 nullable = true
                 defaultValue = null
             })
         ) { backStackEntry ->
-            val token = backStackEntry.arguments?.getString("token")
-            EmailVerificationScreen(navController, authManager, token)
+            val email = backStackEntry.arguments?.getString("email")
+            val userEmail = email ?: authManager.getCurrentUser()?.email
+            EmailVerificationScreen(navController, authManager, userEmail)
         }
         composable(Screen.AccountType.route) {
             AccountTypeScreen(navController, signupViewModel)
@@ -65,6 +67,9 @@ fun NavGraph(
         }
         composable(Screen.Genres.route) {
             GenresScreen(navController, signupViewModel)
+        }
+        composable(Screen.SocialMedia.route) {
+            SocialMediaScreen(navController, authManager)
         }
         composable(Screen.Main.route) {
             // Check user type and show appropriate main screen

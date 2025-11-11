@@ -7,6 +7,7 @@ import com.example.booknest.network.GenreDto
 import com.example.booknest.network.RetrofitInstance
 import com.example.booknest.network.TokenStorage
 import com.example.booknest.network.UpsertPreferenceRequest
+import com.example.booknest.data.AuthManager
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.coroutines.async
@@ -31,8 +32,7 @@ data class AddressDto(
 
 @Serializable
 data class SignupData(
-    @SerialName("userType")
-    var accountType: String? = null,
+    var userType: String? = null,
     var firstName: String? = null,
     var lastName: String? = null,
     var email: String? = null,
@@ -60,7 +60,9 @@ sealed class CreateGenreUiState {
     data class Error(val error: String) : CreateGenreUiState()
 }
 
-class SignupViewModel : ViewModel() {
+class SignupViewModel(
+    private val authManager: AuthManager
+) : ViewModel() {
     var signupData = SignupData()
 
     private val _signupState = MutableStateFlow<SignupUiState>(SignupUiState.Idle)
@@ -142,7 +144,7 @@ class SignupViewModel : ViewModel() {
     }
 
     fun updateAccountType(type: String) {
-        signupData = signupData.copy(accountType = type)
+        signupData = signupData.copy(userType = type)
     }
 
     fun updatePersonalInfo(first: String, last: String, email: String, password: String) {
@@ -187,18 +189,31 @@ class SignupViewModel : ViewModel() {
             _signupState.value = SignupUiState.Loading
             try {
                 val response = RetrofitInstance.api.register(signupData)
+                println("DEBUG: Registration response code: ${response.code()}")
+                println("DEBUG: Registration response successful: ${response.isSuccessful}")
                 if (response.isSuccessful && response.body() != null) {
                     val apiResponse = response.body()!!
-                    if (apiResponse.success) {
-                        // Registration successful - user will need to login separately
-                        _signupState.value = SignupUiState.Success(apiResponse.message ?: "Registration successful! Please login to continue.")
+                    println("DEBUG: Registration API response: $apiResponse")
+                    println("DEBUG: API response success: ${apiResponse.success}")
+                    println("DEBUG: API response message: ${apiResponse.message}")
+                    if (apiResponse.success && apiResponse.data != null) {
+                        val registerResponse = apiResponse.data!!
+                        println("DEBUG: Registration data: $registerResponse")
+                        // Registration successful - save user data and tokens
+                        authManager.updateCurrentUser(registerResponse.user)
+                        authManager.saveTokens(registerResponse.accessToken, registerResponse.refreshToken)
+                        println("DEBUG: User data and tokens saved during registration")
+                        
+                        _signupState.value = SignupUiState.Success(apiResponse.message ?: "Registration successful!")
                         onComplete(true, null)
                     } else {
                         val errorMsg = apiResponse.message ?: "Registration failed"
+                        println("DEBUG: Registration failed - API success: ${apiResponse.success}, data: ${apiResponse.data}")
                         _signupState.value = SignupUiState.Error(errorMsg)
                         onComplete(false, errorMsg)
                     }
                 } else {
+                    println("DEBUG: Registration response not successful - code: ${response.code()}")
                     _signupState.value = SignupUiState.Error("Server error: ${response.code()}")
                     onComplete(false, "Server error")
                 }
@@ -267,5 +282,17 @@ class SignupViewModel : ViewModel() {
                 onComplete(false, "Network error while saving genres: ${e.localizedMessage}")
             }
         }
+    }
+}
+
+class SignupViewModelFactory(
+    private val authManager: AuthManager
+) : androidx.lifecycle.ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(SignupViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return SignupViewModel(authManager) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

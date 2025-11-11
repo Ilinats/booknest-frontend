@@ -36,7 +36,8 @@ class AuthInterceptor(private val authManager: AuthManager) : Interceptor {
                 runBlocking {
                     authManager.logout()
                 }
-                throw IOException("Refresh token expired, user needs to login again")
+                // Return the original 401 response instead of throwing an exception
+                return response
             }
             
             isRefreshing = true
@@ -61,14 +62,16 @@ class AuthInterceptor(private val authManager: AuthManager) : Interceptor {
                     runBlocking {
                         authManager.logout()
                     }
-                    throw IOException("Token refresh failed")
+                    // Return the original 401 response instead of throwing an exception
+                    return response
                 }
             } catch (e: Exception) {
                 println("Token refresh exception: ${e.message}")
                 runBlocking {
                     authManager.logout()
                 }
-                throw IOException("Token refresh failed: ${e.message}")
+                // Return the original 401 response instead of throwing an exception
+                return response
             } finally {
                 isRefreshing = false
             }

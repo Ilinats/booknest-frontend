@@ -2,216 +2,207 @@ package com.example.booknest.ui.auth
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Face
 import androidx.compose.material3.*
+import androidx.compose.ui.unit.size
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.booknest.ui.components.CodeInputField
+import com.example.booknest.ui.components.ResendCodeButton
 import com.example.booknest.data.AuthManager
 import com.example.booknest.viewmodel.EmailVerificationViewModel
 import com.example.booknest.viewmodel.EmailVerificationViewModelFactory
+import com.example.booknest.navigation.Screen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EmailVerificationScreen(
     navController: NavController,
     authManager: AuthManager,
-    verificationToken: String? = null,
+    userEmail: String? = null,
     viewModel: EmailVerificationViewModel = viewModel(
-        factory = EmailVerificationViewModelFactory(authManager)
+        factory = EmailVerificationViewModelFactory(authManager, userEmail)
     )
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
     
-    var tokenText by remember { mutableStateOf(verificationToken ?: "") }
-    var isTokenVisible by remember { mutableStateOf(false) }
+    // Get current user email for display
+    val currentUser = authManager.getCurrentUser()
+    val displayEmail = userEmail ?: currentUser?.email ?: "your email"
     
-    // Handle initial token from deep link
-    LaunchedEffect(verificationToken) {
-        verificationToken?.let { token ->
-            tokenText = token
-            viewModel.verifyEmail(token)
-        }
-    }
-    
-    // Handle UI state changes
-    LaunchedEffect(uiState.isVerified) {
-        if (uiState.isVerified) {
-            // Navigate back or to main screen after successful verification
-            navController.popBackStack()
-        }
-    }
-    
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Spacer(modifier = Modifier.height(32.dp))
-        
-        // Logo/Icon
-        Icon(
-            imageVector = Icons.Default.Email,
-            contentDescription = "Email Verification",
-            modifier = Modifier.size(80.dp),
-            tint = MaterialTheme.colorScheme.primary
-        )
-        
-        // Title
-        Text(
-            text = "Verify Your Email",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
-        )
-        
-        // Subtitle
-        Text(
-            text = "Please verify your email address to continue using BookNest",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
-        
-        // Status Text
-        Text(
-            text = when {
-                uiState.isLoading -> "Verifying your email..."
-                uiState.isVerified -> "✓ Email verified successfully!"
-                uiState.error != null -> uiState.error!!
-                uiState.message != null -> uiState.message!!
-                else -> "Enter the verification token from your email or click the verification link"
-            },
-            style = MaterialTheme.typography.bodyMedium,
-            color = when {
-                uiState.isVerified -> Color(0xFF4CAF50) // Green for success
-                uiState.error != null -> MaterialTheme.colorScheme.error
-                else -> MaterialTheme.colorScheme.onSurfaceVariant
-            },
-            textAlign = TextAlign.Center
-        )
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Token Input Field
-        OutlinedTextField(
-            value = tokenText,
-            onValueChange = { tokenText = it },
-            label = { Text("Verification Token") },
-            placeholder = { Text("Enter verification token") },
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.CheckCircle,
-                    contentDescription = "Token"
-                )
-            },
-            trailingIcon = {
-                IconButton(onClick = { isTokenVisible = !isTokenVisible }) {
-                    Icon(
-                        imageVector = if (isTokenVisible) Icons.Default.Face else Icons.Default.Delete,
-                        contentDescription = if (isTokenVisible) "Hide token" else "Show token"
-                    )
+    // Handle verification success
+    LaunchedEffect(uiState.isVerificationSuccessful) {
+        println("DEBUG: LaunchedEffect triggered - isVerificationSuccessful: ${uiState.isVerificationSuccessful}")
+        if (uiState.isVerificationSuccessful) {
+            println("DEBUG: Email verification successful, navigating...")
+            // Check if user is a reader (needs genre selection) or author (goes to main)
+            val currentUser = authManager.getCurrentUser()
+            println("DEBUG: Current user type: ${currentUser?.userType}")
+            if (currentUser?.userType == "reader") {
+                println("DEBUG: Navigating to genres screen")
+                navController.navigate(Screen.Genres.route) {
+                    popUpTo("email_verification") { inclusive = true }
                 }
-            },
-            visualTransformation = if (isTokenVisible) VisualTransformation.None else PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-            enabled = !uiState.isLoading && !uiState.isVerified,
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-        
-        // Progress Indicator
-        if (uiState.isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(24.dp),
-                color = MaterialTheme.colorScheme.primary
+            } else {
+                println("DEBUG: Navigating to main screen")
+                navController.navigate("main") {
+                    popUpTo("email_verification") { inclusive = true }
+                }
+            }
+        }
+    }
+    
+    // Handle snackbar messages
+    LaunchedEffect(uiState.snackbarMessage) {
+        uiState.snackbarMessage?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            viewModel.clearSnackbarMessage()
+        }
+    }
+    
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Email Verification") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                }
             )
-        }
-        
-        // Verify Button
-        Button(
-            onClick = {
-                if (tokenText.isNotBlank()) {
-                    viewModel.verifyEmail(tokenText)
-                }
-            },
-            enabled = !uiState.isLoading && !uiState.isVerified && tokenText.isNotBlank(),
-            modifier = Modifier.fillMaxWidth()
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(24.dp)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Text("Verify Email")
-        }
-        
-        // Secondary Actions Row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // Resend Email Button
-            OutlinedButton(
+            // Header
+            Text(
+                text = "Check your email",
+                style = MaterialTheme.typography.headlineMedium,
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Bold
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Text(
+                text = "We sent a 6-digit code to\n$displayEmail",
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            // Email icon
+            Icon(
+                imageVector = Icons.Default.Email,
+                contentDescription = "Email",
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            // 6-digit code input
+            var enteredCode by remember { mutableStateOf("") }
+            CodeInputField(
+                onCodeChange = { code ->
+                    enteredCode = code
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Verify button
+            Button(
                 onClick = {
-                    val currentUser = authManager.getCurrentUser()
-                    currentUser?.email?.let { email ->
-                        viewModel.resendVerificationEmail(email)
+                    if (enteredCode.length == 6 && enteredCode.all { it.isDigit() }) {
+                        viewModel.verifyEmail(enteredCode)
                     }
                 },
-                enabled = !uiState.isLoading && !uiState.isVerified,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.fillMaxWidth(),
+                enabled = enteredCode.length == 6 && enteredCode.all { it.isDigit() } && !uiState.isLoading
             ) {
-                Text("Resend Email")
+                if (uiState.isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text("Verify Code")
+                }
             }
             
-            // Check Status Button
-            OutlinedButton(
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Resend code button
+            ResendCodeButton(
+                onResend = {
+                    viewModel.resendVerificationCode()
+                },
+                cooldownSeconds = 60,
+                modifier = Modifier.fillMaxWidth()
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Help text
+            Text(
+                text = "Didn't receive the code? Check your spam folder or try resending.",
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Skip for now button
+            TextButton(
                 onClick = {
+                    // Skip email verification and proceed to next step
                     val currentUser = authManager.getCurrentUser()
-                    currentUser?.let { user ->
-                        viewModel.checkVerificationStatus(user.id)
+                    if (currentUser?.userType == "reader") {
+                        navController.navigate(Screen.Genres.route) {
+                            popUpTo("email_verification") { inclusive = true }
+                        }
+                    } else {
+                        navController.navigate("main") {
+                            popUpTo("email_verification") { inclusive = true }
+                        }
                     }
                 },
-                enabled = !uiState.isLoading && !uiState.isVerified,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Check Status")
+                Text("Skip for now")
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Loading indicator
+            if (uiState.isLoading) {
+                CircularProgressIndicator()
             }
         }
-        
-        // Back to Login Button
-        TextButton(
-            onClick = { navController.popBackStack() },
-            enabled = !uiState.isLoading
-        ) {
-            Text("Back to Login")
-        }
-        
-        Spacer(modifier = Modifier.height(32.dp))
-        
-        // Help Text
-        Text(
-            text = "If you didn't receive the email, check your spam folder or try resending it.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
     }
 }
