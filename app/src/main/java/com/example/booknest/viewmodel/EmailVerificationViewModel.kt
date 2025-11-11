@@ -3,9 +3,7 @@ package com.example.booknest.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.booknest.data.AuthManager
-import com.example.booknest.network.EmailVerificationResponse
-import com.example.booknest.network.ResendVerificationResponse
-import com.example.booknest.network.VerificationStatusResponse
+import com.example.booknest.network.VerifyEmailDto
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,98 +11,119 @@ import kotlinx.coroutines.launch
 
 data class EmailVerificationUiState(
     val isLoading: Boolean = false,
-    val isVerified: Boolean = false,
+    val isVerificationSuccessful: Boolean = false,
     val error: String? = null,
-    val message: String? = null
+    val snackbarMessage: String? = null
 )
 
 class EmailVerificationViewModel(
-    private val authManager: AuthManager
+    private val authManager: AuthManager,
+    private val userEmail: String? = null
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(EmailVerificationUiState())
     val uiState: StateFlow<EmailVerificationUiState> = _uiState.asStateFlow()
     
-    private val _snackbarMessage = MutableStateFlow<String?>(null)
-    val snackbarMessage: StateFlow<String?> = _snackbarMessage.asStateFlow()
-    
-    fun checkVerificationStatus(userId: String) {
+    fun verifyEmail(code: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             
-            authManager.getVerificationStatus(userId)
-                .onSuccess { response ->
+            try {
+                val result = authManager.verifyEmail(code)
+                result.onSuccess { response ->
+                    println("DEBUG: Email verification successful in ViewModel")
+                    println("DEBUG: Setting isVerificationSuccessful to true")
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        isVerified = response.emailVerified
+                        isVerificationSuccessful = true
                     )
-                }
-                .onFailure { exception ->
+                    println("DEBUG: State updated - isVerificationSuccessful: ${_uiState.value.isVerificationSuccessful}")
+                    println("DEBUG: EmailVerificationViewModel - SUCCESS STATE SET")
+                }.onFailure { exception ->
+                    println("DEBUG: Email verification failed: ${exception.message}")
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        error = exception.message ?: "Failed to check verification status"
+                        error = exception.message ?: "Verification failed"
+                    )
+                    _uiState.value = _uiState.value.copy(
+                        snackbarMessage = getErrorMessage(exception.message)
                     )
                 }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = e.message ?: "Verification failed"
+                )
+                _uiState.value = _uiState.value.copy(
+                    snackbarMessage = getErrorMessage(e.message)
+                )
+            }
         }
     }
     
-    fun verifyEmail(token: String) {
+    fun resendVerificationCode() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             
-            authManager.verifyEmail(token)
-                .onSuccess { response ->
+            try {
+                val result = authManager.resendVerificationCode(userEmail)
+                result.onSuccess {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false
+                    )
+                    _uiState.value = _uiState.value.copy(
+                        snackbarMessage = "Verification code sent to your email"
+                    )
+                }.onFailure { exception ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        isVerified = true,
-                        message = response.message
+                        error = exception.message ?: "Failed to resend code"
                     )
-                    _snackbarMessage.value = response.message ?: "Email verified successfully!"
-                }
-                .onFailure { exception ->
                     _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = exception.message ?: "Email verification failed"
+                        snackbarMessage = getErrorMessage(exception.message)
                     )
-                    _snackbarMessage.value = exception.message ?: "Email verification failed"
                 }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = e.message ?: "Failed to resend code"
+                )
+                _uiState.value = _uiState.value.copy(
+                    snackbarMessage = getErrorMessage(e.message)
+                )
+            }
         }
     }
     
-    fun resendVerificationEmail(email: String) {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            
-            authManager.resendVerificationEmail(email)
-                .onSuccess { response ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        message = response.message
-                    )
-                    _snackbarMessage.value = response.message ?: "Verification email sent!"
-                }
-                .onFailure { exception ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = exception.message ?: "Failed to resend verification email"
-                    )
-                    _snackbarMessage.value = exception.message ?: "Failed to resend verification email"
-                }
-        }
+    fun clearSnackbarMessage() {
+        _uiState.value = _uiState.value.copy(snackbarMessage = null)
     }
     
-    fun clearMessage() {
-        _snackbarMessage.value = null
+    private fun getErrorMessage(error: String?): String {
+        return when {
+            error?.contains("Invalid or expired verification code", ignoreCase = true) == true -> 
+                "Code is invalid or expired. Please try again."
+            error?.contains("Code must be exactly 6 digits", ignoreCase = true) == true -> 
+                "Please enter a 6-digit code"
+            error?.contains("Email is already verified", ignoreCase = true) == true -> 
+                "Email is already verified"
+            error?.contains("User not found", ignoreCase = true) == true -> 
+                "No account found with this email"
+            error?.contains("Too many requests", ignoreCase = true) == true -> 
+                "Too many attempts. Please wait before trying again."
+            else -> error ?: "An error occurred. Please try again."
+        }
     }
 }
 
 class EmailVerificationViewModelFactory(
-    private val authManager: AuthManager
+    private val authManager: AuthManager,
+    private val userEmail: String? = null
 ) : androidx.lifecycle.ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(EmailVerificationViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return EmailVerificationViewModel(authManager) as T
+            return EmailVerificationViewModel(authManager, userEmail) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

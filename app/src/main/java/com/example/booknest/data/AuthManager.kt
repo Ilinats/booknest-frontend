@@ -14,6 +14,10 @@ import com.example.booknest.network.ResendVerificationRequest
 import com.example.booknest.network.ResendVerificationResponse
 import com.example.booknest.network.GoogleAuthRequest
 import com.example.booknest.network.GoogleAuthResponse
+import com.example.booknest.network.VerifyEmailDto
+import com.example.booknest.network.RequestPasswordResetDto
+import com.example.booknest.network.ResetPasswordDto
+import com.example.booknest.network.AuthResponse
 import com.example.booknest.network.ApiService
 import retrofit2.Response
 import kotlinx.coroutines.CoroutineScope
@@ -97,51 +101,70 @@ class AuthManager(private val userRepository: UserRepository, private val apiSer
         return tokenManager.isTokenExpired(currentToken)
     }
     
-    // Email Verification Methods
-    suspend fun verifyEmail(token: String): Result<EmailVerificationResponse> {
+    // Email Verification Methods (New 6-digit code system)
+    suspend fun verifyEmail(code: String): Result<AuthResponse> {
+        println("DEBUG: AuthManager.verifyEmail called with code: $code")
         return try {
-            val request = EmailVerificationRequest(token)
+            val request = VerifyEmailDto(code)
+            println("DEBUG: Making API call to verify email")
             val response = apiService.verifyEmail(request)
             
             if (response.isSuccessful && response.body() != null) {
-                val verificationResponse = response.body()!!
-                if (verificationResponse.success) {
-                    // Update user data with verified status if user data is provided
-                    verificationResponse.user?.let { user ->
-                        updateCurrentUser(user)
-                    }
-                    Result.success(verificationResponse)
+                println("DEBUG: API response successful")
+                val verifyResponse = response.body()!!
+                println("DEBUG: Response success: ${verifyResponse.success}")
+                if (verifyResponse.success && verifyResponse.user != null) {
+                    println("DEBUG: Email verification successful in AuthManager")
+                    // Update user data with verified status
+                    updateCurrentUser(verifyResponse.user!!)
+                    
+                    // Check if user has tokens from registration
+                    val currentUser = getCurrentUser()
+                    println("DEBUG: User after email verification: ${currentUser?.email}")
+                    println("DEBUG: User is logged in: ${isUserLoggedIn()}")
+                    
+                    // Create AuthResponse - tokens should already be available from registration
+                    val authResponse = AuthResponse(
+                        user = verifyResponse.user!!,
+                        accessToken = "",
+                        refreshToken = ""
+                    )
+                    println("DEBUG: AuthManager returning success result")
+                    Result.success(authResponse)
                 } else {
-                    // Backend returned success: false
-                    val errorMessage = verificationResponse.message ?: "Email verification failed"
+                    val errorMessage = verifyResponse.message ?: "Email verification failed"
+                    println("DEBUG: Email verification failed - success: ${verifyResponse.success}, user: ${verifyResponse.user}")
                     Result.failure(Exception(errorMessage))
                 }
             } else {
-                // HTTP error or no response body
                 val errorMessage = response.body()?.message ?: "Email verification failed"
+                println("DEBUG: API response not successful - code: ${response.code()}")
                 Result.failure(Exception(errorMessage))
             }
         } catch (e: Exception) {
+            println("DEBUG: Exception in AuthManager.verifyEmail: ${e.message}")
             Result.failure(e)
         }
     }
     
-    suspend fun getVerificationStatus(userId: String): Result<VerificationStatusResponse> {
+    
+    suspend fun resendVerificationCode(email: String? = null): Result<Unit> {
         return try {
-            val response = apiService.getVerificationStatus(userId)
+            val userEmail = email ?: getCurrentUser()?.email ?: return Result.failure(Exception("No user email found"))
+            
+            val request = mapOf("email" to userEmail)
+            val response = apiService.resendVerification(request)
             
             if (response.isSuccessful && response.body() != null) {
-                val statusResponse = response.body()!!
-                if (statusResponse.success) {
-                    Result.success(statusResponse)
+                val apiResponse = response.body()!!
+                if (apiResponse.success) {
+                    Result.success(Unit)
                 } else {
-                    // Backend returned success: false
-                    val errorMessage = statusResponse.message ?: "Failed to get verification status"
+                    val errorMessage = apiResponse.message ?: "Failed to resend verification code"
                     Result.failure(Exception(errorMessage))
                 }
             } else {
-                // HTTP error or no response body
-                val errorMessage = response.body()?.message ?: "Failed to get verification status"
+                val errorMessage = response.body()?.message ?: "Failed to resend verification code"
                 Result.failure(Exception(errorMessage))
             }
         } catch (e: Exception) {
@@ -149,23 +172,25 @@ class AuthManager(private val userRepository: UserRepository, private val apiSer
         }
     }
     
-    suspend fun resendVerificationEmail(email: String): Result<ResendVerificationResponse> {
+    // Password Reset Methods
+    suspend fun requestPasswordReset(): Result<Unit> {
         return try {
-            val request = ResendVerificationRequest(email)
-            val response = apiService.resendVerificationEmail(request)
+            val currentUser = getCurrentUser()
+            val email = currentUser?.email ?: return Result.failure(Exception("No user email found"))
+            
+            val request = RequestPasswordResetDto(email)
+            val response = apiService.requestPasswordReset(request)
             
             if (response.isSuccessful && response.body() != null) {
-                val resendResponse = response.body()!!
-                if (resendResponse.success) {
-                    Result.success(resendResponse)
+                val apiResponse = response.body()!!
+                if (apiResponse.success) {
+                    Result.success(Unit)
                 } else {
-                    // Backend returned success: false
-                    val errorMessage = resendResponse.message ?: "Failed to resend verification email"
+                    val errorMessage = apiResponse.message ?: "Failed to request password reset"
                     Result.failure(Exception(errorMessage))
                 }
             } else {
-                // HTTP error or no response body
-                val errorMessage = response.body()?.message ?: "Failed to resend verification email"
+                val errorMessage = response.body()?.message ?: "Failed to request password reset"
                 Result.failure(Exception(errorMessage))
             }
         } catch (e: Exception) {
@@ -173,7 +198,41 @@ class AuthManager(private val userRepository: UserRepository, private val apiSer
         }
     }
     
-    // Google OAuth Methods
+    suspend fun resetPassword(newPassword: String): Result<AuthResponse> {
+        return try {
+            val request = ResetPasswordDto(code = "123456", newPassword = newPassword)
+            val response = apiService.resetPassword(request)
+            
+            if (response.isSuccessful && response.body() != null) {
+                val apiResponse = response.body()!!
+                if (apiResponse.success && apiResponse.data != null) {
+                    val authResponse = apiResponse.data!!
+                    // Update user data and tokens
+                    updateCurrentUser(authResponse.user)
+                    saveTokens(authResponse.accessToken, authResponse.refreshToken)
+                    Result.success(authResponse)
+                } else {
+                    val errorMessage = apiResponse.message ?: "Password reset failed"
+                    Result.failure(Exception(errorMessage))
+                }
+            } else {
+                val errorMessage = response.body()?.message ?: "Password reset failed"
+                Result.failure(Exception(errorMessage))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
+    suspend fun saveTokens(accessToken: String, refreshToken: String) {
+        val currentUser = getCurrentUser() ?: return
+        userRepository.saveUserData(
+            userData = currentUser,
+            accessToken = accessToken,
+            refreshToken = refreshToken
+        )
+    }
+    
     suspend fun authenticateWithGoogle(idToken: String, userType: String): Result<GoogleAuthResponse> {
         return try {
             val request = GoogleAuthRequest(idToken = idToken, userType = userType)

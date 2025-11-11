@@ -3,14 +3,15 @@ package com.example.booknest.navigation
 sealed class Screen(val route: String) {
     object Landing : Screen("landing")
     object Login : Screen("login")
-    object EmailVerification : Screen("email_verification/{token?}") {
-        fun createRoute(token: String? = null) = if (token != null) "email_verification/$token" else "email_verification"
+    object EmailVerification : Screen("email_verification") {
+        fun createRoute(email: String? = null) = if (email != null) "email_verification?email=$email" else "email_verification"
     }
     object AccountType : Screen("account_type")
     object PersonalInfo : Screen("personal_info")
     object ProfileDetails : Screen("profile_details")
     object Bio : Screen("bio")
     object Genres : Screen("genres")
+    object SocialMedia : Screen("social_media")
     object Home : Screen("home")
     object BookList : Screen("book_list")
     object BookDetails : Screen("book_details/{bookId}") {
@@ -39,4 +40,12 @@ sealed class Screen(val route: String) {
         fun createRoute(bookId: String) = "book_analytics/$bookId"
     }
     object AuthorAnalytics : Screen("author_analytics")
+    
+    // Friend screens
+    object Friends : Screen("friends")
+    object UserProfile : Screen("user_profile/{username}") {
+        fun createRoute(username: String) = "user_profile/$username"
+    }
+    object PrivacySettings : Screen("privacy_settings")
+    object SocialMediaManagement : Screen("social_media_management")
 }

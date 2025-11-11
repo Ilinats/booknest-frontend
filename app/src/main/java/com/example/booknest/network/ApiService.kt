@@ -18,7 +18,10 @@ import retrofit2.http.PUT
 import retrofit2.http.PATCH
 import retrofit2.http.Path
 import retrofit2.http.Query
+import retrofit2.http.Multipart
+import retrofit2.http.Part
 import retrofit2.http.DELETE
+import okhttp3.MultipartBody
 
 @Serializable
 data class UserData(
@@ -692,7 +695,7 @@ data class EnhancedUserStats(
 
 interface ApiService {
     @POST("/auth/register")
-    suspend fun register(@Body data: SignupData): Response<ApiResponse<UserData>>
+    suspend fun register(@Body data: SignupData): Response<ApiResponse<RegisterResponse>>
 
     @POST("/auth/login")
     suspend fun login(@Body data: LoginRequest): Response<LoginSuccessResponse>
@@ -875,19 +878,173 @@ interface ApiService {
     @GET("/books/analytics/author")
     suspend fun getAuthorAnalytics(): Response<ApiResponse<AuthorAnalytics>>
     
-    // Email Verification Endpoints
-    @POST("/auth/verify-email/mobile")
-    suspend fun verifyEmail(@Body request: EmailVerificationRequest): Response<EmailVerificationResponse>
+    // Email Verification Endpoints (New 6-digit code system)
+    @POST("/auth/verify-email")
+    suspend fun verifyEmail(@Body request: VerifyEmailDto): Response<VerifyEmailResponse>
     
-    @GET("/auth/verification-status/{userId}")
-    suspend fun getVerificationStatus(@Path("userId") userId: String): Response<VerificationStatusResponse>
+    @POST("/auth/request-password-reset")
+    suspend fun requestPasswordReset(@Body request: RequestPasswordResetDto): Response<ApiResponse<Unit>>
+    
+    @POST("/auth/reset-password")
+    suspend fun resetPassword(@Body request: ResetPasswordDto): Response<ApiResponse<AuthResponse>>
     
     @POST("/auth/resend-verification")
-    suspend fun resendVerificationEmail(@Body request: ResendVerificationRequest): Response<ResendVerificationResponse>
+    suspend fun resendVerification(@Body request: Map<String, String>): Response<ApiResponse<Unit>>
+    
+    // File Upload/Download Endpoints
+    @Multipart
+    @POST("/books/{bookId}/upload")
+    suspend fun uploadBookFile(
+        @Path("bookId") bookId: String,
+        @Part file: MultipartBody.Part
+    ): Response<ApiResponse<UploadBookResponse>>
+    
+    @GET("/books/{bookId}/download")
+    suspend fun getBookDownloadUrl(
+        @Path("bookId") bookId: String
+    ): Response<ApiResponse<DownloadBookResponse>>
+    
+    @Multipart
+    @POST("/files/upload")
+    suspend fun uploadFile(
+        @Part file: MultipartBody.Part
+    ): Response<ApiResponse<UploadFileResponse>>
+    
+    @GET("/files/download/{key}")
+    suspend fun getFileDownloadUrl(
+        @Path("key") key: String
+    ): Response<ApiResponse<DownloadFileResponse>>
+    
+    @DELETE("/files/{key}")
+    suspend fun deleteFile(
+        @Path("key") key: String
+    ): Response<ApiResponse<Unit>>
+    
+    @GET("/files/metadata/{key}")
+    suspend fun getFileMetadata(
+        @Path("key") key: String
+    ): Response<ApiResponse<FileMetadataResponse>>
     
     // Google OAuth Endpoint
     @POST("/auth/google")
     suspend fun authenticateWithGoogle(@Body request: GoogleAuthRequest): Response<GoogleAuthResponse>
+    
+    // Friend Management Endpoints
+    @POST("/friends/request/{username}")
+    suspend fun sendFriendRequest(@Path("username") username: String): Response<ApiResponse<FriendRequest>>
+    
+    @POST("/friends/accept/{requesterId}")
+    suspend fun acceptFriendRequest(@Path("requesterId") requesterId: String): Response<ApiResponse<FriendRequest>>
+    
+    @DELETE("/friends/decline/{requesterId}")
+    suspend fun declineFriendRequest(@Path("requesterId") requesterId: String): Response<Unit>
+    
+    @DELETE("/friends/unfriend/{friendId}")
+    suspend fun unfriendUser(@Path("friendId") friendId: String): Response<Unit>
+    
+    @POST("/friends/block/{userId}")
+    suspend fun blockUser(@Path("userId") userId: String): Response<ApiResponse<FriendRequest>>
+    
+    @DELETE("/friends/unblock/{userId}")
+    suspend fun unblockUser(@Path("userId") userId: String): Response<Unit>
+    
+    @GET("/friends")
+    suspend fun getFriends(
+        @Query("status") status: String? = "accepted",
+        @Query("limit") limit: Int? = 20
+    ): Response<ApiResponse<List<FriendRequest>>>
+    
+    @GET("/friends/requests")
+    suspend fun getFriendRequests(
+        @Query("type") type: String? = "received",
+        @Query("limit") limit: Int? = 20
+    ): Response<ApiResponse<List<FriendRequest>>>
+    
+    @GET("/friends/status/{userId}")
+    suspend fun getFriendshipStatus(@Path("userId") userId: String): Response<ApiResponse<FriendshipStatus>>
+    
+    @GET("/friends/search")
+    suspend fun searchUsers(
+        @Query("q") query: String,
+        @Query("limit") limit: Int? = 20
+    ): Response<ApiResponse<List<UserData>>>
+    
+    @GET("/friends/activity")
+    suspend fun getFriendsActivity(
+        @Query("limit") limit: Int? = 50
+    ): Response<ApiResponse<List<UserActivity>>>
+    
+    // User Profile Endpoints
+    @GET("/profiles/me")
+    suspend fun getMyProfile(): Response<ApiResponse<UserProfile>>
+    
+    @PUT("/profiles/me")
+    suspend fun updateMyProfile(@Body profile: UserProfile): Response<ApiResponse<UserProfile>>
+    
+    @GET("/profiles/social-media/options")
+    suspend fun getSocialMediaOptions(): Response<ApiResponse<SocialMediaOptions>>
+    
+    @PUT("/profiles/me/social-media")
+    suspend fun updateSocialMedia(@Body request: UpdateSocialMediaRequest): Response<ApiResponse<UserProfile>>
+    
+    @PUT("/profiles/me/privacy")
+    suspend fun updatePrivacySettings(@Body request: UpdatePrivacyRequest): Response<ApiResponse<UserProfile>>
+    
+    @PUT("/profiles/me/notifications")
+    suspend fun updateNotificationSettings(@Body request: UpdateNotificationRequest): Response<ApiResponse<UserProfile>>
+    
+    @GET("/profiles/user/{username}")
+    suspend fun getPublicUserProfile(@Path("username") username: String): Response<ApiResponse<PublicUserProfile>>
+    
+    @GET("/profiles/me/activity")
+    suspend fun getMyActivity(
+        @Query("limit") limit: Int? = 20
+    ): Response<ApiResponse<List<UserActivity>>>
+    
+    @GET("/profiles/me/activity/public")
+    suspend fun getMyPublicActivity(
+        @Query("limit") limit: Int? = 20
+    ): Response<ApiResponse<List<UserActivity>>>
+    
+    @GET("/profiles/me/activity/recent")
+    suspend fun getMyRecentActivity(
+        @Query("days") days: Int? = 7,
+        @Query("limit") limit: Int? = 50
+    ): Response<ApiResponse<List<UserActivity>>>
+    
+    @GET("/profiles/me/activity/stats")
+    suspend fun getMyActivityStats(): Response<ApiResponse<ActivityStats>>
+    
+    // Author Following Endpoints
+    @POST("/authors/follow/{username}")
+    suspend fun followAuthor(@Path("username") username: String): Response<ApiResponse<AuthorFollow>>
+    
+    @DELETE("/authors/unfollow/{authorId}")
+    suspend fun unfollowAuthor(@Path("authorId") authorId: String): Response<Unit>
+    
+    @GET("/authors/following")
+    suspend fun getFollowedAuthors(): Response<ApiResponse<List<AuthorFollow>>>
+    
+    @GET("/authors/following/with-stats")
+    suspend fun getFollowedAuthorsWithStats(): Response<ApiResponse<List<AuthorFollowWithStats>>>
+    
+    @GET("/authors/followers/{authorId}")
+    suspend fun getAuthorFollowers(@Path("authorId") authorId: String): Response<ApiResponse<List<AuthorFollow>>>
+    
+    @GET("/authors/following/check/{authorId}")
+    suspend fun checkIfFollowingAuthor(@Path("authorId") authorId: String): Response<ApiResponse<Map<String, Boolean>>>
+    
+    @GET("/authors/following/books")
+    suspend fun getBooksFromFollowedAuthors(
+        @Query("limit") limit: Int? = 20
+    ): Response<ApiResponse<List<Book>>>
+    
+    // Enhanced User Search
+    @GET("/users/search")
+    suspend fun searchUsersEnhanced(
+        @Query("q") query: String,
+        @Query("limit") limit: Int? = 20
+    ): Response<ApiResponse<UserSearchResult>>
 }
 
 @Serializable
@@ -958,4 +1115,247 @@ data class GoogleAuthData(
     val user: UserData,
     val accessToken: String,
     val refreshToken: String
+)
+
+// New 6-digit verification code data classes
+@Serializable
+data class VerifyEmailDto(
+    val code: String
+)
+
+@Serializable
+data class RequestPasswordResetDto(
+    val email: String
+)
+
+@Serializable
+data class ResetPasswordDto(
+    val code: String,
+    val newPassword: String
+)
+
+@Serializable
+data class AuthResponse(
+    val user: UserData,
+    val accessToken: String,
+    val refreshToken: String
+)
+
+@Serializable
+data class VerifyEmailResponse(
+    val success: Boolean,
+    val message: String?,
+    val user: UserData?
+)
+
+// File Upload/Download Data Classes
+@Serializable
+data class UploadBookResponse(
+    val book: Book,
+    val file: BookFile
+)
+
+@Serializable
+data class BookFile(
+    val url: String,
+    val size: Long,
+    val type: String,
+    val originalName: String
+)
+
+@Serializable
+data class DownloadBookResponse(
+    val downloadUrl: String,
+    val expiresIn: Int,
+    val fileName: String,
+    val fileSize: String,
+    val fileType: String
+)
+
+@Serializable
+data class UploadFileResponse(
+    val url: String,
+    val key: String,
+    val size: Long,
+    val type: String,
+    val originalName: String
+)
+
+@Serializable
+data class DownloadFileResponse(
+    val downloadUrl: String,
+    val expiresIn: Int,
+    val fileName: String,
+    val fileSize: String,
+    val fileType: String
+)
+
+@Serializable
+data class FileMetadataResponse(
+    val key: String,
+    val url: String,
+    val size: Long,
+    val type: String,
+    val originalName: String,
+    val uploadedAt: String,
+    val lastModified: String
+)
+
+@Serializable
+data class RegisterResponse(
+    val user: UserData,
+    val accessToken: String,
+    val refreshToken: String
+)
+
+// Friend functionality data models
+@Serializable
+data class FriendRequest(
+    val id: String,
+    val requesterId: String,
+    val addresseeId: String,
+    val status: String, // "pending" | "accepted" | "blocked"
+    val createdAt: String,
+    val updatedAt: String,
+    val requester: UserData? = null,
+    val addressee: UserData? = null
+)
+
+@Serializable
+data class FriendshipStatus(
+    val status: String?, // "pending" | "accepted" | "blocked" | null
+    val isRequester: Boolean
+)
+
+@Serializable
+data class UserProfile(
+    val id: String,
+    val userId: String,
+    val socialMedia: SocialMedia? = null,
+    val activityPrivacy: String, // "public" | "friends" | "private"
+    val profilePrivacy: String, // "public" | "friends" | "private"
+    val readingListPrivacy: String, // "public" | "friends" | "private"
+    val reviewsPrivacy: String, // "public" | "friends" | "private"
+    val notificationsEnabled: Boolean,
+    val emailNotifications: Boolean,
+    val createdAt: String,
+    val updatedAt: String
+)
+
+@Serializable
+data class SocialMedia(
+    val instagram: String? = null,
+    val tiktok: String? = null,
+    val youtube: String? = null,
+    val goodreads: String? = null,
+    val custom: List<CustomSocialLink>? = null
+)
+
+@Serializable
+data class CustomSocialLink(
+    val platform: String,
+    val url: String
+)
+
+@Serializable
+data class SocialMediaOption(
+    val key: String,
+    val name: String,
+    val icon: String,
+    val placeholder: String
+)
+
+@Serializable
+data class SocialMediaOptions(
+    val predefined: List<SocialMediaOption>,
+    val custom: CustomSocialOptions
+)
+
+@Serializable
+data class CustomSocialOptions(
+    val enabled: Boolean,
+    val maxCustomLinks: Int,
+    val placeholder: String
+)
+
+@Serializable
+data class UserActivity(
+    val id: String,
+    val userId: String,
+    val activityType: String, // "book_applied" | "book_approved" | "review_posted" | etc.
+    val bookId: String? = null,
+    val applicationId: String? = null,
+    val metadata: Map<String, String>? = null,
+    val createdAt: String,
+    val user: UserData? = null,
+    val book: Book? = null,
+    val application: Application? = null
+)
+
+@Serializable
+data class AuthorFollow(
+    val id: String,
+    val followerId: String,
+    val authorId: String,
+    val createdAt: String,
+    val follower: UserData? = null,
+    val author: UserData? = null
+)
+
+@Serializable
+data class AuthorFollowWithStats(
+    val author: UserData,
+    val follow: AuthorFollow,
+    val stats: AuthorStats
+)
+
+@Serializable
+data class AuthorStats(
+    val totalBooks: Int,
+    val publishedBooks: Int,
+    val totalApplications: Int
+)
+
+@Serializable
+data class ActivityStats(
+    val totalActivities: Int,
+    val activitiesByType: Map<String, Int>,
+    val lastActivity: String
+)
+
+@Serializable
+data class PublicUserProfile(
+    val user: UserData,
+    val profile: UserProfile,
+    val isFriend: Boolean
+)
+
+@Serializable
+data class UserSearchResult(
+    val data: List<UserData>,
+    val total: Int
+)
+
+// Request DTOs
+@Serializable
+data class UpdateSocialMediaRequest(
+    val instagram: String? = null,
+    val tiktok: String? = null,
+    val youtube: String? = null,
+    val goodreads: String? = null,
+    val custom: List<CustomSocialLink>? = null
+)
+
+@Serializable
+data class UpdatePrivacyRequest(
+    val activityPrivacy: String? = null,
+    val profilePrivacy: String? = null,
+    val readingListPrivacy: String? = null,
+    val reviewsPrivacy: String? = null
+)
+
+@Serializable
+data class UpdateNotificationRequest(
+    val notificationsEnabled: Boolean? = null,
+    val emailNotifications: Boolean? = null
 )
