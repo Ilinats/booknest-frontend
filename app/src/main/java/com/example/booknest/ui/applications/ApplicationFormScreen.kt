@@ -17,8 +17,6 @@ import com.example.booknest.data.AuthManager
 import com.example.booknest.network.Book
 import com.example.booknest.viewmodel.ApplicationViewModel
 import com.example.booknest.viewmodel.ApplicationViewModelFactory
-import com.example.booknest.viewmodel.EmailVerificationViewModel
-import com.example.booknest.viewmodel.EmailVerificationViewModelFactory
 import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -30,14 +28,10 @@ fun ApplicationFormScreen(
     applicationViewModel: ApplicationViewModel = viewModel(
         factory = ApplicationViewModelFactory(authManager)
     ),
-    emailVerificationViewModel: EmailVerificationViewModel = viewModel(
-        factory = EmailVerificationViewModelFactory(authManager)
-    )
 ) {
     var applicationMessage by remember { mutableStateOf("") }
     var isSubmitting by remember { mutableStateOf(false) }
-    var isEmailVerified by remember { mutableStateOf(false) }
-    var isCheckingVerification by remember { mutableStateOf(true) }
+    // Email verification is now handled by the new 6-digit system
     val snackbarHostState = remember { SnackbarHostState() }
     val currentUser = authManager.getCurrentUser()
 
@@ -50,20 +44,8 @@ fun ApplicationFormScreen(
         }
     }
     
-    // Check email verification status
-    LaunchedEffect(currentUser) {
-        currentUser?.let { user ->
-            emailVerificationViewModel.checkVerificationStatus(user.id)
-        }
-    }
-    
-    // Listen to email verification status
-    LaunchedEffect(Unit) {
-        emailVerificationViewModel.uiState.collectLatest { uiState ->
-            isEmailVerified = uiState.isVerified
-            isCheckingVerification = uiState.isLoading
-        }
-    }
+    // Email verification is now handled by the new 6-digit system
+    // No need for old verification status checking
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -86,54 +68,8 @@ fun ApplicationFormScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Email verification check
-            if (isCheckingVerification) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                        Text("Checking email verification status...")
-                    }
-                }
-            } else if (!isEmailVerified) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Text(
-                            text = "Email Verification Required",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                        Text(
-                            text = "You must verify your email address before applying for book reviews. Please check your email and verify your account, or visit your profile to resend the verification email.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                        Button(
-                            onClick = { navController.popBackStack() },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Go to Profile")
-                        }
-                    }
-                }
-            } else {
+            // Email verification is now handled by the new 6-digit system
+            // Users must verify their email during registration
                 // Book information
                 Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -245,7 +181,6 @@ fun ApplicationFormScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            } // End of else block for email verification
         }
     }
 }

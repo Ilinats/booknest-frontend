@@ -398,7 +398,26 @@ fun ApplicationActions(
             }
         }
 
-        // Action buttons
+            // Download button for approved applications
+            if (application.status == "approved") {
+                Button(
+                    onClick = { /* TODO: Implement download */ },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.tertiary
+                    )
+                ) {
+                    Icon(
+                        Icons.Filled.Add, // Using Add icon as placeholder
+                        contentDescription = "Download Book",
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Download Book")
+                }
+            }
+
+            // Action buttons
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -608,34 +627,55 @@ fun ApprovedApplicationsContent(
                 application = application,
                 statusIndicator = Color.Green,
                 actionButton = {
-                    when (application.readingStatus) {
-                        "not_started" -> {
-                            OutlinedButton(
-                                onClick = { 
-                                    applicationViewModel.updateReadingStatus(application.id, ReadingStatus.CURRENTLY_READING)
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Download button for all approved applications
+                        Button(
+                            onClick = { /* TODO: Implement download */ },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.tertiary
+                            )
+                        ) {
+                            Icon(
+                                Icons.Filled.Add, // Using Add icon as placeholder
+                                contentDescription = "Download",
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Download")
+                        }
+                        
+                        // Status-specific buttons
+                        when (application.readingStatus) {
+                            "not_started" -> {
+                                OutlinedButton(
+                                    onClick = { 
+                                        applicationViewModel.updateReadingStatus(application.id, ReadingStatus.CURRENTLY_READING)
+                                    }
+                                ) {
+                                    Text("Start")
                                 }
-                            ) {
-                                Text("Start")
                             }
-                        }
-                        "currently_reading" -> {
-                            OutlinedButton(
-                                onClick = { 
-                                    applicationViewModel.updateReadingStatus(application.id, ReadingStatus.FOR_REVIEW)
+                            "currently_reading" -> {
+                                OutlinedButton(
+                                    onClick = { 
+                                        applicationViewModel.updateReadingStatus(application.id, ReadingStatus.FOR_REVIEW)
+                                    }
+                                ) {
+                                    Text("To Review")
                                 }
-                            ) {
-                                Text("To Review")
                             }
-                        }
-                        "for_review" -> {
-                            OutlinedButton(
-                                onClick = { /* TODO: Navigate to review screen */ }
-                            ) {
-                                Text("Review")
+                            "for_review" -> {
+                                OutlinedButton(
+                                    onClick = { /* TODO: Navigate to review screen */ }
+                                ) {
+                                    Text("Review")
+                                }
                             }
-                        }
-                        else -> {
-                            // No button for completed reviews
+                            else -> {
+                                // No additional button for completed reviews
+                            }
                         }
                     }
                 }
@@ -658,7 +698,21 @@ fun CompletedApplicationsContent(
                 application = application,
                 statusIndicator = Color.Green,
                 actionButton = {
-                    // Completed - no action button, just status indicator
+                    // Download button for completed applications
+                    Button(
+                        onClick = { /* TODO: Implement download */ },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.tertiary
+                        )
+                    ) {
+                        Icon(
+                            Icons.Filled.Add, // Using Add icon as placeholder
+                            contentDescription = "Download",
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Download")
+                    }
                 }
             )
         }
