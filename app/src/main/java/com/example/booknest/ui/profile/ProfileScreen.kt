@@ -26,8 +26,6 @@ import com.example.booknest.data.AuthManager
 import com.example.booknest.network.UserProfile
 import com.example.booknest.viewmodel.ProfileViewModel
 import com.example.booknest.viewmodel.ProfileViewModelFactory
-import com.example.booknest.viewmodel.EmailVerificationViewModel
-import com.example.booknest.viewmodel.EmailVerificationViewModelFactory
 import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -39,9 +37,6 @@ fun ProfileScreen(
     profileViewModel: ProfileViewModel = viewModel(
         factory = ProfileViewModelFactory(authManager)
     ),
-    emailVerificationViewModel: EmailVerificationViewModel = viewModel(
-        factory = EmailVerificationViewModelFactory(authManager)
-    )
 ) {
     val currentUser = authManager.getCurrentUser()
     val isOwnProfile = userId == null || userId == currentUser?.id
@@ -56,30 +51,16 @@ fun ProfileScreen(
         }
     }
     
-    // Handle email verification snackbar messages
-    LaunchedEffect(Unit) {
-        emailVerificationViewModel.snackbarMessage.collectLatest { message ->
-            message?.let {
-                snackbarHostState.showSnackbar(it)
-                emailVerificationViewModel.clearMessage()
-            }
-        }
-    }
+    // Email verification is now handled by the new 6-digit system
 
     LaunchedEffect(userId) {
         if (userId != null) {
             profileViewModel.loadUserProfile(userId)
-            // Check email verification status for own profile
-            if (isOwnProfile) {
-                emailVerificationViewModel.checkVerificationStatus(userId)
-            }
+            // Email verification is now handled by the new 6-digit system
         } else {
             currentUser?.let { user ->
                 profileViewModel.loadUserProfile(user.id)
-                // Check email verification status for own profile
-                if (isOwnProfile) {
-                    emailVerificationViewModel.checkVerificationStatus(user.id)
-                }
+                // Email verification is now handled by the new 6-digit system
             }
         }
     }
@@ -159,7 +140,6 @@ fun ProfileScreen(
                     profile = currentState.profile,
                     isOwnProfile = isOwnProfile,
                     currentUser = currentUser,
-                    emailVerificationViewModel = emailVerificationViewModel,
                     modifier = Modifier.padding(paddingValues)
                 )
             }
@@ -173,7 +153,6 @@ fun ProfileContent(
     profile: UserProfile,
     isOwnProfile: Boolean,
     currentUser: com.example.booknest.network.UserData?,
-    emailVerificationViewModel: EmailVerificationViewModel,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -186,13 +165,8 @@ fun ProfileContent(
         // Profile Header
         ProfileHeader(profile = profile, isOwnProfile = isOwnProfile)
         
-        // Email Verification Section (only for own profile)
-        if (isOwnProfile && currentUser?.email != null) {
-            EmailVerificationSection(
-                emailVerificationViewModel = emailVerificationViewModel,
-                userEmail = currentUser.email
-            )
-        }
+        // Email verification is now handled by the new 6-digit system
+        // Users will be prompted to verify their email during registration
         
         // Profile Stats
         profile.stats?.let { stats ->

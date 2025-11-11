@@ -21,6 +21,7 @@ import com.example.booknest.utils.ComposeDeepLinkHandler
 import com.example.booknest.viewmodel.LoginViewModel
 import com.example.booknest.viewmodel.LoginViewModelFactory
 import com.example.booknest.viewmodel.SignupViewModel
+import com.example.booknest.viewmodel.SignupViewModelFactory
 
 class MainActivity : ComponentActivity() {
     private lateinit var authManager: AuthManager
@@ -67,7 +68,9 @@ class MainActivity : ComponentActivity() {
                 }
                 
                 // Create ViewModels with factories
-                val signupViewModel: SignupViewModel by viewModels()
+                val signupViewModel: SignupViewModel = viewModel(
+                    factory = SignupViewModelFactory(authManager)
+                )
                 val loginViewModel: LoginViewModel = viewModel(
                     factory = LoginViewModelFactory(authManager)
                 )
