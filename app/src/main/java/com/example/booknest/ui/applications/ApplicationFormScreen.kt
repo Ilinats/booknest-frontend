@@ -208,7 +208,6 @@ fun ApplicationFormScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            } // End of else block for email verification
         }
     }
 }
