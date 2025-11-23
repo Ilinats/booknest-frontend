@@ -79,6 +79,13 @@ dependencies {
     implementation("com.google.android.gms:play-services-auth:20.7.0")
     implementation("com.google.android.gms:play-services-auth-api-phone:18.0.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+    
+    // WebView for link previews (TikTok, YouTube embeds)
+    implementation("androidx.webkit:webkit:1.9.0")
+    
+    // HTML parsing for meta tags (website previews)
+    implementation("org.jsoup:jsoup:1.17.2")
+    
     implementation(platform("com.google.firebase:firebase-bom:34.5.0"))
     implementation("com.google.firebase:firebase-analytics")
     

@@ -30,6 +30,7 @@ import com.example.booknest.viewmodel.BookViewModel
 import com.example.booknest.viewmodel.BookViewModelFactory
 import com.example.booknest.viewmodel.ReviewViewModel
 import com.example.booknest.viewmodel.ReviewViewModelFactory
+import com.example.booknest.ui.components.ReviewLinkPreview
 import kotlinx.coroutines.flow.collectLatest
 import java.text.SimpleDateFormat
 import java.util.*
@@ -822,11 +823,15 @@ fun ReviewCard(review: Review) {
                     }
                 }
                 ReviewType.LINK -> {
-                    Text(
-                        text = "Review available at external link",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    review.reviewUrls?.forEach { url ->
+                        if (url.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            ReviewLinkPreview(
+                                url = url,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
                 }
             }
         }

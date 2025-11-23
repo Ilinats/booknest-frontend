@@ -1,0 +1,160 @@
+package com.example.booknest.utils
+
+import android.util.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.jsoup.Jsoup
+import java.net.URL
+
+/**
+ * Utility functions for link preview and detection
+ */
+object LinkPreviewUtils {
+    
+    private const val TAG = "LinkPreviewUtils"
+    
+    /**
+     * Detects the type of link (TikTok, YouTube, or Other)
+     */
+    fun detectLinkType(url: String): LinkType {
+        return when {
+            url.contains("tiktok.com", ignoreCase = true) -> LinkType.TIKTOK
+            url.contains("youtube.com", ignoreCase = true) || 
+            url.contains("youtu.be", ignoreCase = true) -> LinkType.YOUTUBE
+            else -> LinkType.OTHER
+        }
+    }
+    
+    /**
+     * Converts YouTube URL to embeddable format
+     */
+    fun getYouTubeEmbedUrl(url: String): String? {
+        return try {
+            val videoId = extractYouTubeVideoId(url)
+            videoId?.let { "https://www.youtube.com/embed/$it" }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error converting YouTube URL", e)
+            null
+        }
+    }
+    
+    /**
+     * Converts TikTok URL to embeddable format
+     * TikTok embeds use the format: https://www.tiktok.com/embed/v2/{videoId}
+     * Video ID is extracted from URLs like: https://www.tiktok.com/@username/video/1234567890
+     */
+    fun getTikTokEmbedUrl(url: String): String? {
+        return try {
+            val urlObj = URL(url)
+            val pathParts = urlObj.path.split("/").filter { it.isNotBlank() }
+            
+            // Find "video" in the path
+            val videoIndex = pathParts.indexOf("video")
+            if (videoIndex != -1 && videoIndex < pathParts.size - 1) {
+                val videoId = pathParts[videoIndex + 1].split("?")[0]
+                if (videoId.isNotBlank()) {
+                    return "https://www.tiktok.com/embed/v2/$videoId"
+                }
+            }
+            
+            // Alternative: try to extract from full URL string
+            val videoRegex = Regex("""/video/(\d+)""")
+            val match = videoRegex.find(url)
+            match?.groupValues?.get(1)?.let { videoId ->
+                return "https://www.tiktok.com/embed/v2/$videoId"
+            }
+            
+            null
+        } catch (e: Exception) {
+            Log.e(TAG, "Error converting TikTok URL", e)
+            null
+        }
+    }
+    
+    /**
+     * Extracts video ID from YouTube URL
+     */
+    private fun extractYouTubeVideoId(url: String): String? {
+        return try {
+            val urlObj = URL(url)
+            when {
+                urlObj.host.contains("youtu.be") -> {
+                    urlObj.path.substringAfter("/")
+                }
+                urlObj.host.contains("youtube.com") -> {
+                    urlObj.query?.split("&")?.find { it.startsWith("v=") }?.substringAfter("v=")
+                        ?: urlObj.path.substringAfter("/watch/")
+                }
+                else -> null
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error extracting YouTube video ID", e)
+            null
+        }
+    }
+    
+    /**
+     * Fetches meta tags from a URL
+     */
+    suspend fun fetchMetaTags(url: String): LinkMetaTags? = withContext(Dispatchers.IO) {
+        try {
+            val doc = Jsoup.connect(url)
+                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                .timeout(10000)
+                .get()
+            
+            val title = doc.select("meta[property=og:title]").attr("content")
+                .takeIf { it.isNotBlank() }
+                ?: doc.select("meta[name=title]").attr("content")
+                .takeIf { it.isNotBlank() }
+                ?: doc.title()
+                .takeIf { it.isNotBlank() }
+            
+            val description = doc.select("meta[property=og:description]").attr("content")
+                .takeIf { it.isNotBlank() }
+                ?: doc.select("meta[name=description]").attr("content")
+                .takeIf { it.isNotBlank() }
+            
+            val imageUrl = doc.select("meta[property=og:image]").attr("content")
+                .takeIf { it.isNotBlank() }
+                ?: doc.select("meta[name=image]").attr("content")
+                .takeIf { it.isNotBlank() }
+                ?: doc.select("link[rel=image_src]").attr("href")
+                .takeIf { it.isNotBlank() }
+            
+            val siteName = doc.select("meta[property=og:site_name]").attr("content")
+                .takeIf { it.isNotBlank() }
+            
+            if (title != null || description != null || imageUrl != null) {
+                LinkMetaTags(
+                    title = title ?: "Link Preview",
+                    description = description,
+                    imageUrl = imageUrl,
+                    siteName = siteName,
+                    url = url
+                )
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching meta tags for $url", e)
+            null
+        }
+    }
+}
+
+enum class LinkType {
+    TIKTOK,
+    YOUTUBE,
+    OTHER
+}
+
+data class LinkMetaTags(
+    val title: String,
+    val description: String?,
+    val imageUrl: String?,
+    val siteName: String?,
+    val url: String
+)
+
+

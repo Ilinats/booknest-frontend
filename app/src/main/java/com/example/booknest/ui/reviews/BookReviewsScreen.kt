@@ -349,20 +349,12 @@ fun ReviewCard(
                 }
                 
                 com.example.booknest.network.ReviewType.LINK -> {
-                    Text(
-                        text = "Review Links:",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
                     review.reviewUrls?.forEach { url ->
                         if (url.isNotBlank()) {
-                            Text(
-                                text = url,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(vertical = 2.dp)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            com.example.booknest.ui.components.ReviewLinkPreview(
+                                url = url,
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
                     }
