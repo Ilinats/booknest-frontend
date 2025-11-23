@@ -78,10 +78,10 @@ fun PrivacySettingsScreen(
     
     LaunchedEffect(myProfile) {
         myProfile?.let { profile ->
-            activityPrivacy = profile.activityPrivacy
-            profilePrivacy = profile.profilePrivacy
-            readingListPrivacy = profile.readingListPrivacy
-            reviewsPrivacy = profile.reviewsPrivacy
+            activityPrivacy = profile.activityPrivacy ?: activityPrivacy
+            profilePrivacy = profile.profilePrivacy ?: profilePrivacy
+            readingListPrivacy = profile.readingListPrivacy ?: readingListPrivacy
+            reviewsPrivacy = profile.reviewsPrivacy ?: reviewsPrivacy
             notificationsEnabled = profile.notificationsEnabled
             emailNotifications = profile.emailNotifications
         }

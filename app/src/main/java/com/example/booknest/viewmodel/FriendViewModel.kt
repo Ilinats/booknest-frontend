@@ -1,6 +1,7 @@
 package com.example.booknest.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.booknest.data.AuthManager
 import com.example.booknest.network.ApiService
@@ -278,11 +279,15 @@ class FriendViewModel(
 
 class FriendViewModelFactory(
     private val authManager: AuthManager
-) {
-    fun create(): FriendViewModel {
-        return FriendViewModel(
-            apiService = authManager.apiService,
-            authManager = authManager
-        )
+) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(FriendViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return FriendViewModel(
+                apiService = authManager.apiService,
+                authManager = authManager
+            ) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

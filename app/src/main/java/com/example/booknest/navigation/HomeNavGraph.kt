@@ -110,6 +110,6 @@ fun HomeNavGraph(
         // Social media management
         composable("social_media_management") {
             SocialMediaManagementScreen(navController, authManager)
-        }
+        }    
     }
 }

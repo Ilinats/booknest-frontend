@@ -498,19 +498,19 @@ data class RefreshTokenResponse(
 )
 
 // Profile and Stats data models
-@Serializable
-data class UserProfile(
-    val id: String,
-    val username: String,
-    val firstName: String?,
-    val lastName: String?,
-    val userType: String,
-    val bio: String?,
-    val avatarUrl: String?,
-    val isVerified: Boolean,
-    val createdAt: String,
-    val stats: UserStats?
-)
+//@Serializable
+//data class UserProfile(
+//    val id: String,
+//    val username: String,
+//    val firstName: String?,
+//    val lastName: String?,
+//    val userType: String,
+//    val bio: String?,
+//    val avatarUrl: String?,
+//    val isVerified: Boolean,
+//    val createdAt: String,
+//    val stats: UserStats?
+//)
 
 @Serializable
 data class UserStats(
@@ -862,9 +862,6 @@ interface ApiService {
     @GET("/users/profile/{userId}")
     suspend fun getUserProfile(@Path("userId") userId: String): Response<ApiResponse<UserProfile>>
 
-    @PATCH("/users/profile/me")
-    suspend fun updateMyProfile(@Body profile: UpdateProfileRequest): Response<ApiResponse<UserData>>
-
     @GET("/users/me/stats")
     suspend fun getMyStats(): Response<ApiResponse<UserStatsResponse>>
 
@@ -903,7 +900,7 @@ interface ApiService {
     suspend fun getBookDownloadUrl(
         @Path("bookId") bookId: String
     ): Response<ApiResponse<DownloadBookResponse>>
-    
+
     @Multipart
     @POST("/files/upload")
     suspend fun uploadFile(
@@ -979,7 +976,7 @@ interface ApiService {
     suspend fun getMyProfile(): Response<ApiResponse<UserProfile>>
     
     @PUT("/profiles/me")
-    suspend fun updateMyProfile(@Body profile: UserProfile): Response<ApiResponse<UserProfile>>
+    suspend fun updateMyProfile(@Body profile: UpdateProfileRequest): Response<ApiResponse<UserProfile>>
     
     @GET("/profiles/social-media/options")
     suspend fun getSocialMediaOptions(): Response<ApiResponse<SocialMediaOptions>>
@@ -1173,6 +1170,17 @@ data class DownloadBookResponse(
 )
 
 @Serializable
+data class ReadBookResponse(
+    val fileUrl: String,
+    val expiresIn: Int,
+    val fileName: String,
+    val fileSize: String,
+    val fileType: String,
+    val bookId: String,
+    val pageCount: Int? = null
+)
+
+@Serializable
 data class UploadFileResponse(
     val url: String,
     val key: String,
@@ -1230,16 +1238,25 @@ data class FriendshipStatus(
 @Serializable
 data class UserProfile(
     val id: String,
-    val userId: String,
-    val socialMedia: SocialMedia? = null,
-    val activityPrivacy: String, // "public" | "friends" | "private"
-    val profilePrivacy: String, // "public" | "friends" | "private"
-    val readingListPrivacy: String, // "public" | "friends" | "private"
-    val reviewsPrivacy: String, // "public" | "friends" | "private"
-    val notificationsEnabled: Boolean,
-    val emailNotifications: Boolean,
+    val userId: String? = null,
+    val username: String? = null,
+    val firstName: String? = null,
+    val lastName: String? = null,
+    val userType: String? = null,
+    val birthDate: String? = null,
+    val bio: String? = null,
+    val avatarUrl: String? = null,
+    val isVerified: Boolean = false,
     val createdAt: String,
-    val updatedAt: String
+    val updatedAt: String? = null,
+    val stats: UserStats? = null,
+    val socialMedia: SocialMedia? = null,
+    val activityPrivacy: String? = null,
+    val profilePrivacy: String? = null,
+    val readingListPrivacy: String? = null,
+    val reviewsPrivacy: String? = null,
+    val notificationsEnabled: Boolean = true,
+    val emailNotifications: Boolean = true
 )
 
 @Serializable

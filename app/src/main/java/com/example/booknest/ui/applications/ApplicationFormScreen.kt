@@ -17,8 +17,6 @@ import com.example.booknest.data.AuthManager
 import com.example.booknest.network.Book
 import com.example.booknest.viewmodel.ApplicationViewModel
 import com.example.booknest.viewmodel.ApplicationViewModelFactory
-import com.example.booknest.viewmodel.EmailVerificationViewModel
-import com.example.booknest.viewmodel.EmailVerificationViewModelFactory
 import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -29,15 +27,10 @@ fun ApplicationFormScreen(
     book: Book,
     applicationViewModel: ApplicationViewModel = viewModel(
         factory = ApplicationViewModelFactory(authManager)
-    ),
-    emailVerificationViewModel: EmailVerificationViewModel = viewModel(
-        factory = EmailVerificationViewModelFactory(authManager)
     )
 ) {
     var applicationMessage by remember { mutableStateOf("") }
     var isSubmitting by remember { mutableStateOf(false) }
-    var isEmailVerified by remember { mutableStateOf(false) }
-    var isCheckingVerification by remember { mutableStateOf(true) }
     val snackbarHostState = remember { SnackbarHostState() }
     val currentUser = authManager.getCurrentUser()
 
@@ -50,21 +43,6 @@ fun ApplicationFormScreen(
         }
     }
     
-    // Check email verification status
-    LaunchedEffect(currentUser) {
-        currentUser?.let { user ->
-            emailVerificationViewModel.checkVerificationStatus(user.id)
-        }
-    }
-    
-    // Listen to email verification status
-    LaunchedEffect(Unit) {
-        emailVerificationViewModel.uiState.collectLatest { uiState ->
-            isEmailVerified = uiState.isVerified
-            isCheckingVerification = uiState.isLoading
-        }
-    }
-
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -86,24 +64,9 @@ fun ApplicationFormScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Email verification check
-            if (isCheckingVerification) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                        Text("Checking email verification status...")
-                    }
-                }
-            } else if (!isEmailVerified) {
+            val isEmailVerified = currentUser?.emailVerified == true
+            
+            if (!isEmailVerified) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
