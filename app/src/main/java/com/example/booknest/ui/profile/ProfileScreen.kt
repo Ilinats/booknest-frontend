@@ -207,16 +207,21 @@ fun ProfileHeader(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
+                val displayName = listOfNotNull(profile.firstName, profile.lastName)
+                    .joinToString(" ")
+                    .ifBlank { profile.username ?: "" }
                 Text(
-                    text = "${profile.firstName ?: ""} ${profile.lastName ?: ""}".trim(),
+                    text = displayName,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold
                 )
-                Text(
-                    text = "@${profile.username}",
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                profile.username?.let { username ->
+                    Text(
+                        text = "@$username",
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 
                 // User Type Badge
                 Row(
@@ -224,7 +229,7 @@ fun ProfileHeader(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = profile.userType.replaceFirstChar { it.uppercase() },
+                        text = profile.userType?.replaceFirstChar { it.uppercase() } ?: "Unknown",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.primary
@@ -434,12 +439,12 @@ fun ProfileDetailsSection(
             
             ProfileDetailItem(
                 label = "Username",
-                value = profile.username
+                value = profile.username ?: "Unknown"
             )
             
             ProfileDetailItem(
                 label = "User Type",
-                value = profile.userType.replaceFirstChar { it.uppercase() }
+                value = profile.userType?.replaceFirstChar { it.uppercase() } ?: "Unknown"
             )
             
             ProfileDetailItem(

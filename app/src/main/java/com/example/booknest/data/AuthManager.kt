@@ -30,7 +30,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-class AuthManager(private val userRepository: UserRepository, private val apiService: ApiService) {
+class AuthManager(private val userRepository: UserRepository, private val _apiService: ApiService) {
+    
+    val apiService: ApiService
+        get() = _apiService
     
     private val _currentUser = MutableStateFlow<UserData?>(null)
     val currentUser: StateFlow<UserData?> = _currentUser.asStateFlow()
@@ -107,7 +110,7 @@ class AuthManager(private val userRepository: UserRepository, private val apiSer
         return try {
             val request = VerifyEmailDto(code)
             println("DEBUG: Making API call to verify email")
-            val response = apiService.verifyEmail(request)
+            val response = _apiService.verifyEmail(request)
             
             if (response.isSuccessful && response.body() != null) {
                 println("DEBUG: API response successful")
@@ -153,7 +156,7 @@ class AuthManager(private val userRepository: UserRepository, private val apiSer
             val userEmail = email ?: getCurrentUser()?.email ?: return Result.failure(Exception("No user email found"))
             
             val request = mapOf("email" to userEmail)
-            val response = apiService.resendVerification(request)
+            val response = _apiService.resendVerification(request)
             
             if (response.isSuccessful && response.body() != null) {
                 val apiResponse = response.body()!!
@@ -179,7 +182,7 @@ class AuthManager(private val userRepository: UserRepository, private val apiSer
             val email = currentUser?.email ?: return Result.failure(Exception("No user email found"))
             
             val request = RequestPasswordResetDto(email)
-            val response = apiService.requestPasswordReset(request)
+            val response = _apiService.requestPasswordReset(request)
             
             if (response.isSuccessful && response.body() != null) {
                 val apiResponse = response.body()!!
@@ -201,7 +204,7 @@ class AuthManager(private val userRepository: UserRepository, private val apiSer
     suspend fun resetPassword(newPassword: String): Result<AuthResponse> {
         return try {
             val request = ResetPasswordDto(code = "123456", newPassword = newPassword)
-            val response = apiService.resetPassword(request)
+            val response = _apiService.resetPassword(request)
             
             if (response.isSuccessful && response.body() != null) {
                 val apiResponse = response.body()!!
@@ -236,7 +239,7 @@ class AuthManager(private val userRepository: UserRepository, private val apiSer
     suspend fun authenticateWithGoogle(idToken: String, userType: String): Result<GoogleAuthResponse> {
         return try {
             val request = GoogleAuthRequest(idToken = idToken, userType = userType)
-            val response = apiService.authenticateWithGoogle(request)
+            val response = _apiService.authenticateWithGoogle(request)
             
             if (response.isSuccessful && response.body() != null) {
                 val authResponse = response.body()!!

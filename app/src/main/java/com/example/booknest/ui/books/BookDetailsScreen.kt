@@ -330,7 +330,8 @@ fun BookDetailsContent(
                 onApplyClick = onApplyClick,
                 onWithdrawClick = onWithdrawClick,
                 showApplyButton = !isApplicationDeadlinePassed && (userApplication == null || userApplication.status == "withdrawn"),
-                showWithdrawButton = !isApplicationDeadlinePassed && userApplication?.status == "pending"
+                showWithdrawButton = !isApplicationDeadlinePassed && userApplication?.status == "pending",
+                navController = navController
             )
         }
 
@@ -529,7 +530,8 @@ fun ApplicationInfoSection(
     onApplyClick: () -> Unit,
     onWithdrawClick: () -> Unit,
     showApplyButton: Boolean,
-    showWithdrawButton: Boolean
+    showWithdrawButton: Boolean,
+    navController: NavController? = null
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // Application info card
@@ -574,12 +576,16 @@ fun ApplicationInfoSection(
         
         when {
             userApplication?.status == "approved" -> {
-                Text(
-                    text = "✅ Application Approved! Check your email for the book copy.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "✅ Application Approved! Check your email for the book copy.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
             userApplication?.status == "rejected" -> {
                 Text(

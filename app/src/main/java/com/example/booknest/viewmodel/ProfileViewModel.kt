@@ -1,6 +1,7 @@
 package com.example.booknest.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.booknest.data.AuthManager
 import com.example.booknest.network.ApiService
@@ -11,8 +12,13 @@ import com.example.booknest.network.PublicUserProfile
 import com.example.booknest.network.UpdateSocialMediaRequest
 import com.example.booknest.network.UpdatePrivacyRequest
 import com.example.booknest.network.UpdateNotificationRequest
+import com.example.booknest.network.UpdateProfileRequest
+import com.example.booknest.network.UserStatsResponse
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
@@ -23,6 +29,12 @@ class ProfileViewModel(
     
     private val _myProfile = MutableStateFlow<UserProfile?>(null)
     val myProfile: StateFlow<UserProfile?> = _myProfile.asStateFlow()
+    
+    private val _currentProfile = MutableStateFlow<UserProfile?>(null)
+    val currentProfile: StateFlow<UserProfile?> = _currentProfile.asStateFlow()
+    
+    private val _profileState = MutableStateFlow<ProfileUiState>(ProfileUiState.Idle)
+    val profileState: StateFlow<ProfileUiState> = _profileState.asStateFlow()
     
     private val _myActivity = MutableStateFlow<List<UserActivity>>(emptyList())
     val myActivity: StateFlow<List<UserActivity>> = _myActivity.asStateFlow()
@@ -36,8 +48,17 @@ class ProfileViewModel(
     private val _activityStats = MutableStateFlow<ActivityStats?>(null)
     val activityStats: StateFlow<ActivityStats?> = _activityStats.asStateFlow()
     
+    private val _statsState = MutableStateFlow<StatsUiState>(StatsUiState.Idle)
+    val statsState: StateFlow<StatsUiState> = _statsState.asStateFlow()
+    
+    private val _currentStats = MutableStateFlow<UserStatsResponse?>(null)
+    val currentStats: StateFlow<UserStatsResponse?> = _currentStats.asStateFlow()
+    
     private val _publicProfile = MutableStateFlow<PublicUserProfile?>(null)
     val publicProfile: StateFlow<PublicUserProfile?> = _publicProfile.asStateFlow()
+    
+    private val _profileEditState = MutableStateFlow<ProfileEditUiState>(ProfileEditUiState.Idle)
+    val profileEditState: StateFlow<ProfileEditUiState> = _profileEditState.asStateFlow()
     
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -45,20 +66,49 @@ class ProfileViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
     
+    private val _snackbarEvent = MutableSharedFlow<String>()
+    val snackbarEvent: SharedFlow<String> = _snackbarEvent.asSharedFlow()
+    
     fun loadMyProfile() {
         viewModelScope.launch {
+            _profileState.value = ProfileUiState.Loading
             try {
                 _isLoading.value = true
                 _error.value = null
                 
                 val response = apiService.getMyProfile()
-                if (response.isSuccessful) {
-                    _myProfile.value = response.body()?.data
+                if (response.isSuccessful && response.body()?.success == true) {
+                    response.body()?.data?.let { profile ->
+                        onProfileLoaded(profile)
+                    } ?: handleProfileError("Profile not found")
                 } else {
-                    _error.value = "Failed to load profile"
+                    handleProfileError(response.body()?.message ?: "Failed to load profile")
                 }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
+                handleProfileError(e.message ?: "Unknown error occurred")
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+    
+    fun loadUserProfile(userId: String) {
+        viewModelScope.launch {
+            _profileState.value = ProfileUiState.Loading
+            try {
+                _isLoading.value = true
+                _error.value = null
+                
+                val response = apiService.getUserProfile(userId)
+                if (response.isSuccessful && response.body()?.success == true) {
+                    response.body()?.data?.let { profile ->
+                        onProfileLoaded(profile)
+                    } ?: handleProfileError("Profile not found")
+                } else {
+                    handleProfileError(response.body()?.message ?: "Failed to load profile")
+                }
+            } catch (e: Exception) {
+                handleProfileError(e.message ?: "Unknown error occurred")
             } finally {
                 _isLoading.value = false
             }
@@ -145,6 +195,48 @@ class ProfileViewModel(
         }
     }
     
+    fun loadMyStats() {
+        viewModelScope.launch {
+            _statsState.value = StatsUiState.Loading
+            try {
+                val response = apiService.getMyStats()
+                if (response.isSuccessful && response.body()?.success == true) {
+                    response.body()?.data?.let { stats ->
+                        _currentStats.value = stats
+                        _statsState.value = StatsUiState.Success(stats)
+                    } ?: handleStatsError("Stats not found")
+                } else {
+                    handleStatsError(response.body()?.message ?: "Failed to load stats")
+                }
+            } catch (e: Exception) {
+                handleStatsError(e.message ?: "Unknown error occurred")
+            }
+        }
+    }
+    
+    fun loadAuthorStats(authorId: String) {
+        viewModelScope.launch {
+            _statsState.value = StatsUiState.Loading
+            try {
+                val response = apiService.getAuthorStats(authorId)
+                if (response.isSuccessful && response.body()?.success == true) {
+                    response.body()?.data?.let { stats ->
+                        val userStatsResponse = UserStatsResponse(
+                            user = stats.author,
+                            stats = stats.stats
+                        )
+                        _currentStats.value = userStatsResponse
+                        _statsState.value = StatsUiState.Success(userStatsResponse)
+                    } ?: handleStatsError("Stats not found")
+                } else {
+                    handleStatsError(response.body()?.message ?: "Failed to load stats")
+                }
+            } catch (e: Exception) {
+                handleStatsError(e.message ?: "Unknown error occurred")
+            }
+        }
+    }
+    
     fun loadPublicUserProfile(username: String) {
         viewModelScope.launch {
             try {
@@ -165,22 +257,35 @@ class ProfileViewModel(
         }
     }
     
-    fun updateMyProfile(profile: UserProfile) {
+    fun updateProfile(
+        firstName: String? = null,
+        lastName: String? = null,
+        birthDate: String? = null,
+        bio: String? = null,
+        avatarUrl: String? = null
+    ) {
         viewModelScope.launch {
+            _profileEditState.value = ProfileEditUiState.Loading
             try {
-                _isLoading.value = true
-                _error.value = null
-                
-                val response = apiService.updateMyProfile(profile)
-                if (response.isSuccessful) {
-                    _myProfile.value = response.body()?.data
+                val request = UpdateProfileRequest(
+                    firstName = firstName,
+                    lastName = lastName,
+                    birthDate = birthDate,
+                    bio = bio,
+                    avatarUrl = avatarUrl
+                )
+                val response = apiService.updateMyProfile(request)
+                if (response.isSuccessful && response.body()?.success == true) {
+                    response.body()?.data?.let { profile ->
+                        onProfileLoaded(profile)
+                        _profileEditState.value = ProfileEditUiState.Success
+                        _snackbarEvent.emit("Profile updated successfully")
+                    } ?: handleProfileEditError("Profile update returned no data")
                 } else {
-                    _error.value = "Failed to update profile"
+                    handleProfileEditError(response.body()?.message ?: "Failed to update profile")
                 }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
-            } finally {
-                _isLoading.value = false
+                handleProfileEditError(e.message ?: "Unknown error occurred")
             }
         }
     }
@@ -189,9 +294,7 @@ class ProfileViewModel(
         viewModelScope.launch {
             try {
                 _isLoading.value = true
-                _error.value = null
-                
-                val request = com.example.booknest.network.UpdateSocialMediaRequest(
+                val request = UpdateSocialMediaRequest(
                     instagram = socialMedia.instagram,
                     tiktok = socialMedia.tiktok,
                     youtube = socialMedia.youtube,
@@ -199,13 +302,16 @@ class ProfileViewModel(
                     custom = socialMedia.custom
                 )
                 val response = apiService.updateSocialMedia(request)
-                if (response.isSuccessful) {
-                    _myProfile.value = response.body()?.data
+                if (response.isSuccessful && response.body()?.success == true) {
+                    response.body()?.data?.let { profile ->
+                        onProfileLoaded(profile)
+                        _snackbarEvent.emit("Social media updated")
+                    } ?: emitErrorMessage("Failed to update social media")
                 } else {
-                    _error.value = "Failed to update social media"
+                    emitErrorMessage(response.body()?.message ?: "Failed to update social media")
                 }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
+                emitErrorMessage(e.message ?: "Unknown error occurred")
             } finally {
                 _isLoading.value = false
             }
@@ -230,13 +336,16 @@ class ProfileViewModel(
                     reviewsPrivacy = reviewsPrivacy
                 )
                 val response = apiService.updatePrivacySettings(request)
-                if (response.isSuccessful) {
-                    _myProfile.value = response.body()?.data
+                if (response.isSuccessful && response.body()?.success == true) {
+                    response.body()?.data?.let { profile ->
+                        onProfileLoaded(profile)
+                        _snackbarEvent.emit("Privacy settings updated")
+                    } ?: emitErrorMessage("Failed to update privacy settings")
                 } else {
-                    _error.value = "Failed to update privacy settings"
+                    emitErrorMessage(response.body()?.message ?: "Failed to update privacy settings")
                 }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
+                emitErrorMessage(e.message ?: "Unknown error occurred")
             } finally {
                 _isLoading.value = false
             }
@@ -257,13 +366,16 @@ class ProfileViewModel(
                     emailNotifications = emailNotifications
                 )
                 val response = apiService.updateNotificationSettings(request)
-                if (response.isSuccessful) {
-                    _myProfile.value = response.body()?.data
+                if (response.isSuccessful && response.body()?.success == true) {
+                    response.body()?.data?.let { profile ->
+                        onProfileLoaded(profile)
+                        _snackbarEvent.emit("Notification settings updated")
+                    } ?: emitErrorMessage("Failed to update notification settings")
                 } else {
-                    _error.value = "Failed to update notification settings"
+                    emitErrorMessage(response.body()?.message ?: "Failed to update notification settings")
                 }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
+                emitErrorMessage(e.message ?: "Unknown error occurred")
             } finally {
                 _isLoading.value = false
             }
@@ -273,15 +385,66 @@ class ProfileViewModel(
     fun clearError() {
         _error.value = null
     }
+    
+    private fun onProfileLoaded(profile: UserProfile) {
+        _myProfile.value = profile
+        _currentProfile.value = profile
+        _profileState.value = ProfileUiState.Success(profile)
+    }
+    
+    private suspend fun handleProfileError(message: String) {
+        _profileState.value = ProfileUiState.Error(message)
+        emitErrorMessage(message)
+    }
+    
+    private suspend fun handleProfileEditError(message: String) {
+        _profileEditState.value = ProfileEditUiState.Error(message)
+        emitErrorMessage(message)
+    }
+    
+    private suspend fun handleStatsError(message: String) {
+        _statsState.value = StatsUiState.Error(message)
+        emitErrorMessage(message)
+    }
+    
+    private suspend fun emitErrorMessage(message: String) {
+        _error.value = message
+        _snackbarEvent.emit(message)
+    }
 }
 
 class ProfileViewModelFactory(
     private val authManager: AuthManager
-) {
-    fun create(): ProfileViewModel {
-        return ProfileViewModel(
-            apiService = authManager.apiService,
-            authManager = authManager
-        )
+) : androidx.lifecycle.ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(ProfileViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return ProfileViewModel(
+                apiService = authManager.apiService,
+                authManager = authManager
+            ) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
+}
+
+sealed class ProfileUiState {
+    object Idle : ProfileUiState()
+    object Loading : ProfileUiState()
+    data class Success(val profile: UserProfile) : ProfileUiState()
+    data class Error(val message: String) : ProfileUiState()
+}
+
+sealed class ProfileEditUiState {
+    object Idle : ProfileEditUiState()
+    object Loading : ProfileEditUiState()
+    object Success : ProfileEditUiState()
+    data class Error(val message: String) : ProfileEditUiState()
+}
+
+sealed class StatsUiState {
+    object Idle : StatsUiState()
+    object Loading : StatsUiState()
+    data class Success(val stats: UserStatsResponse) : StatsUiState()
+    data class Error(val message: String) : StatsUiState()
 }
