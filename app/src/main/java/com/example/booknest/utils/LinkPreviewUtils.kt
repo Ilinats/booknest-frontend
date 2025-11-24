@@ -31,7 +31,10 @@ object LinkPreviewUtils {
     fun getYouTubeEmbedUrl(url: String): String? {
         return try {
             val videoId = extractYouTubeVideoId(url)
-            videoId?.let { "https://www.youtube.com/embed/$it" }
+            videoId?.let { 
+                // Add parameters for better embedding: autoplay=0, modestbranding=1, rel=0
+                "https://www.youtube.com/embed/$it?autoplay=0&modestbranding=1&rel=0&playsinline=1"
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Error converting YouTube URL", e)
             null
@@ -74,21 +77,84 @@ object LinkPreviewUtils {
     /**
      * Extracts video ID from YouTube URL
      */
-    private fun extractYouTubeVideoId(url: String): String? {
+    fun extractYouTubeVideoId(url: String): String? {
         return try {
             val urlObj = URL(url)
             when {
                 urlObj.host.contains("youtu.be") -> {
-                    urlObj.path.substringAfter("/")
+                    urlObj.path.substringAfter("/").split("?")[0]
                 }
                 urlObj.host.contains("youtube.com") -> {
-                    urlObj.query?.split("&")?.find { it.startsWith("v=") }?.substringAfter("v=")
-                        ?: urlObj.path.substringAfter("/watch/")
+                    urlObj.query?.split("&")?.find { it.startsWith("v=") }?.substringAfter("v=")?.split("&")?.get(0)
+                        ?: urlObj.path.substringAfter("/watch/").split("?")[0]
                 }
                 else -> null
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error extracting YouTube video ID", e)
+            null
+        }
+    }
+    
+    /**
+     * Gets YouTube video thumbnail URL
+     */
+    fun getYouTubeThumbnailUrl(videoId: String): String {
+        // Use maxresdefault for best quality, fallback to hqdefault
+        return "https://img.youtube.com/vi/$videoId/maxresdefault.jpg"
+    }
+    
+    /**
+     * Fetches YouTube video metadata using oEmbed API
+     */
+    suspend fun fetchYouTubeMetadata(url: String): YouTubeMetadata? = withContext(Dispatchers.IO) {
+        try {
+            val videoId = extractYouTubeVideoId(url) ?: return@withContext null
+            
+            // Try oEmbed API first
+            try {
+                val oEmbedUrl = "https://www.youtube.com/oembed?url=${java.net.URLEncoder.encode(url, "UTF-8")}&format=json"
+                val connection = java.net.URL(oEmbedUrl).openConnection()
+                connection.connectTimeout = 5000
+                connection.readTimeout = 5000
+                val response = connection.getInputStream().bufferedReader().use { it.readText() }
+                val json = org.json.JSONObject(response)
+                
+                return@withContext YouTubeMetadata(
+                    videoId = videoId,
+                    title = json.optString("title", ""),
+                    authorName = json.optString("author_name", ""),
+                    thumbnailUrl = getYouTubeThumbnailUrl(videoId)
+                )
+            } catch (e: Exception) {
+                Log.d(TAG, "oEmbed failed, trying HTML parsing", e)
+            }
+            
+            // Fallback: parse HTML
+            val doc = Jsoup.connect(url)
+                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                .timeout(10000)
+                .get()
+            
+            val title = doc.select("meta[property=og:title]").attr("content")
+                .takeIf { it.isNotBlank() }
+                ?: doc.title()
+                .takeIf { it.isNotBlank() }
+                ?: "YouTube Video"
+            
+            val authorName = doc.select("link[itemprop=name]").attr("content")
+                .takeIf { it.isNotBlank() }
+                ?: doc.select("a.yt-simple-endpoint.style-scope.yt-formatted-string").firstOrNull()?.text()
+                ?: "YouTube"
+            
+            YouTubeMetadata(
+                videoId = videoId,
+                title = title,
+                authorName = authorName,
+                thumbnailUrl = getYouTubeThumbnailUrl(videoId)
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching YouTube metadata", e)
             null
         }
     }
@@ -155,6 +221,13 @@ data class LinkMetaTags(
     val imageUrl: String?,
     val siteName: String?,
     val url: String
+)
+
+data class YouTubeMetadata(
+    val videoId: String,
+    val title: String,
+    val authorName: String,
+    val thumbnailUrl: String
 )
 
 

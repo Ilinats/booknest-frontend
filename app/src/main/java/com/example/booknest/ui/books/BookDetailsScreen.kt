@@ -26,12 +26,15 @@ import com.example.booknest.navigation.Screen
 import com.example.booknest.network.*
 import com.example.booknest.viewmodel.ApplicationViewModel
 import com.example.booknest.viewmodel.ApplicationViewModelFactory
+import com.example.booknest.viewmodel.AuthorFollowViewModel
+import com.example.booknest.viewmodel.AuthorFollowViewModelFactory
 import com.example.booknest.viewmodel.BookViewModel
 import com.example.booknest.viewmodel.BookViewModelFactory
 import com.example.booknest.viewmodel.ReviewViewModel
 import com.example.booknest.viewmodel.ReviewViewModelFactory
 import com.example.booknest.ui.components.ReviewLinkPreview
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -192,6 +195,7 @@ fun BookDetailsScreen(
             BookDetailsContent(
                 book = book!!,
                 navController = navController,
+                authManager = authManager,
                 applicationViewModel = applicationViewModel,
                 reviewViewModel = reviewViewModel,
                 onApplyClick = { showApplyDialog = true },
@@ -243,6 +247,7 @@ fun BookDetailsScreen(
 fun BookDetailsContent(
     book: Book,
     navController: NavController,
+    authManager: AuthManager,
     applicationViewModel: ApplicationViewModel,
     reviewViewModel: ReviewViewModel,
     onApplyClick: () -> Unit,
@@ -338,7 +343,11 @@ fun BookDetailsContent(
 
         // About the author
         item {
-            AboutAuthorSection(book = book, navController = navController)
+            AboutAuthorSection(
+                book = book, 
+                navController = navController,
+                authManager = authManager
+            )
         }
 
         // Reviews section
@@ -625,7 +634,47 @@ fun ApplicationInfoSection(
 }
 
 @Composable
-fun AboutAuthorSection(book: Book, navController: NavController) {
+fun AboutAuthorSection(
+    book: Book, 
+    navController: NavController,
+    authManager: AuthManager
+) {
+    val authorFollowViewModel: AuthorFollowViewModel = viewModel(
+        factory = AuthorFollowViewModelFactory(authManager)
+    )
+    
+    var isFollowing by remember { mutableStateOf<Boolean?>(null) }
+    val scope = rememberCoroutineScope()
+    
+    // Try to get author info from book.author first, fallback to book.authorId
+    val authorId = book.author?.id ?: book.authorId
+    val authorUsername = book.author?.username
+    
+    // Check if following on load
+    LaunchedEffect(authorId) {
+        // Default to false while checking
+        isFollowing = false
+        if (authorId != null) {
+            authorFollowViewModel.checkIfFollowingAuthor(authorId) { following ->
+                isFollowing = following
+            }
+        }
+    }
+    
+    // Listen for errors and update follow status
+    LaunchedEffect(Unit) {
+        authorFollowViewModel.error.collectLatest { error ->
+            error?.let {
+                // On error, refresh follow status
+                if (authorId != null) {
+                    authorFollowViewModel.checkIfFollowingAuthor(authorId) { following ->
+                        isFollowing = following
+                    }
+                }
+            }
+        }
+    }
+    
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
             text = "About the Author",
@@ -644,8 +693,15 @@ fun AboutAuthorSection(book: Book, navController: NavController) {
                     .background(MaterialTheme.colorScheme.primary),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "?",
+                book.author?.profilePictureUrl?.let { profileUrl ->
+                    AsyncImage(
+                        model = profileUrl,
+                        contentDescription = book.author?.name,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } ?: Text(
+                    text = book.author?.name?.firstOrNull()?.uppercase() ?: "?",
                     color = Color.White,
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
@@ -675,23 +731,33 @@ fun AboutAuthorSection(book: Book, navController: NavController) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            OutlinedButton(
-                onClick = { 
-                    // TODO: Implement follow author functionality
-                    // For now, show a toast message
-                },
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("Follow Author")
+            // Only show Follow button if we have authorId
+            if (authorId != null) {
+                OutlinedButton(
+                    onClick = { 
+                        if (isFollowing == true) {
+                            authorFollowViewModel.unfollowAuthor(authorId)
+                            isFollowing = false
+                        } else {
+                            authorFollowViewModel.followAuthor(authorId)
+                            isFollowing = true
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                    enabled = isFollowing != null
+                ) {
+                    Text(if (isFollowing == true) "Unfollow" else "Follow Author")
+                }
             }
             
             OutlinedButton(
                 onClick = { 
-                    book.author?.id?.let { authorId ->
-                        navController.navigate("profile/$authorId")
+                    authorId?.let { 
+                        navController.navigate("profile/$it")
                     }
                 },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                enabled = authorId != null
             ) {
                 Text("View Profile")
             }
@@ -766,6 +832,13 @@ fun ReviewCard(review: Review) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Reviewer profile picture
+                    val reviewer = review.application?.reader
+                    val reviewerInitial = reviewer?.username?.firstOrNull()?.uppercase() ?: "R"
+                    val reviewerName = reviewer?.username 
+                        ?: "${reviewer?.firstName ?: ""} ${reviewer?.lastName ?: ""}".trim()
+                        .takeIf { it.isNotBlank() }
+                        ?: "Reviewer"
+                    
                     Box(
                         modifier = Modifier
                             .size(32.dp)
@@ -773,8 +846,15 @@ fun ReviewCard(review: Review) {
                             .background(MaterialTheme.colorScheme.primary),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "R", // TODO: Get actual reviewer name
+                        reviewer?.profilePictureUrl?.let { profileUrl ->
+                            AsyncImage(
+                                model = profileUrl,
+                                contentDescription = reviewerName,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } ?: Text(
+                            text = reviewerInitial,
                             color = Color.White,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold
@@ -785,7 +865,7 @@ fun ReviewCard(review: Review) {
                     
                     Column {
                         Text(
-                            text = "Reviewer", // TODO: Get actual reviewer name
+                            text = reviewerName,
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium
                         )
@@ -811,7 +891,8 @@ fun ReviewCard(review: Review) {
             }
             
             // Review content
-            when (review.reviewType) {
+            val reviewType = review.reviewType ?: ReviewType.TEXT
+            when (reviewType) {
                 ReviewType.TEXT -> {
                     review.reviewContent?.let { content ->
                         Text(
@@ -831,6 +912,20 @@ fun ReviewCard(review: Review) {
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
+                    }
+                }
+            }
+            
+            // Show both text and links if both are present
+            if (review.reviewContent != null && review.reviewUrls != null && review.reviewUrls.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                review.reviewUrls.forEach { url ->
+                    if (url.isNotBlank()) {
+                        ReviewLinkPreview(
+                            url = url,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
             }

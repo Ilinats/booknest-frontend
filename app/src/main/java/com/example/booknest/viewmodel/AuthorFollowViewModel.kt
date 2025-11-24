@@ -116,13 +116,13 @@ class AuthorFollowViewModel(
         }
     }
     
-    fun followAuthor(username: String) {
+    fun followAuthor(authorId: String) {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
                 _error.value = null
                 
-                val response = apiService.followAuthor(username)
+                val response = apiService.followAuthor(authorId)
                 if (response.isSuccessful) {
                     // Refresh followed authors
                     loadFollowedAuthors()

@@ -92,23 +92,20 @@ class ApplicationViewModel(private val authManager: AuthManager) : ViewModel() {
 
     fun loadReadingProgress() {
         viewModelScope.launch {
-            _isLoading.value = true
             try {
                 val response = RetrofitInstance.api.getReadingProgress()
                 if (response.isSuccessful && response.body() != null) {
                     val apiResponse = response.body()!!
                     if (apiResponse.success) {
                         _readingProgress.value = apiResponse.data ?: emptyList()
-                    } else {
-                        _snackbarEvent.emit(apiResponse.message ?: "Failed to load reading progress")
                     }
-                } else {
-                    _snackbarEvent.emit("Failed to load reading progress: ${response.message()}")
+                    // Silently fail - reading progress is not critical
                 }
+                // Silently fail on error - reading progress is not critical
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error loading reading progress: ${e.message}")
-            } finally {
-                _isLoading.value = false
+                // Silently fail - reading progress is not critical for the main flow
+                // Just set empty list to avoid errors
+                _readingProgress.value = emptyList()
             }
         }
     }
@@ -221,11 +218,12 @@ class ApplicationViewModel(private val authManager: AuthManager) : ViewModel() {
             try {
                 val response = RetrofitInstance.api.updateReadingStatus(
                     applicationId,
-                    UpdateReadingStatusDto(readingStatus = status)
+                    UpdateReadingStatusDto(readingStatus = status.value)
                 )
                 if (response.isSuccessful) {
                     _snackbarEvent.emit("Reading status updated!")
                     loadMyApplications()
+                    // Load reading progress in background (non-blocking)
                     loadReadingProgress()
                 } else {
                     _snackbarEvent.emit("Failed to update reading status: ${response.message()}")

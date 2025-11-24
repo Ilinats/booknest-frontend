@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -22,6 +23,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -32,6 +34,7 @@ import coil.compose.AsyncImage
 import com.example.booknest.utils.LinkPreviewUtils
 import com.example.booknest.utils.LinkMetaTags
 import com.example.booknest.utils.LinkType
+import com.example.booknest.utils.YouTubeMetadata
 import kotlinx.coroutines.launch
 
 /**
@@ -46,7 +49,13 @@ fun ReviewLinkPreview(
     val linkType = remember(url) { LinkPreviewUtils.detectLinkType(url) }
     
     when (linkType) {
-        LinkType.TIKTOK, LinkType.YOUTUBE -> {
+        LinkType.YOUTUBE -> {
+            YouTubePreviewCard(
+                url = url,
+                modifier = modifier
+            )
+        }
+        LinkType.TIKTOK -> {
             VideoEmbedView(
                 url = url,
                 linkType = linkType,
@@ -71,7 +80,221 @@ fun ReviewLinkPreview(
 }
 
 /**
- * WebView component for embedding TikTok and YouTube videos
+ * YouTube preview card with thumbnail, title, and play button
+ * Expands to show embedded video when clicked
+ */
+@Composable
+fun YouTubePreviewCard(
+    url: String,
+    modifier: Modifier = Modifier
+) {
+    var metadata by remember { mutableStateOf<YouTubeMetadata?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+    var isExpanded by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    
+    LaunchedEffect(url) {
+        isLoading = true
+        scope.launch {
+            metadata = LinkPreviewUtils.fetchYouTubeMetadata(url)
+            isLoading = false
+        }
+    }
+    
+    val videoId = remember(url) { LinkPreviewUtils.extractYouTubeVideoId(url) }
+    val embedUrl = remember(videoId) {
+        videoId?.let { 
+            "https://www.youtube.com/embed/$it?enablejsapi=1&autoplay=0&modestbranding=1&rel=0&playsinline=1"
+        }
+    }
+    
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        if (isExpanded && embedUrl != null) {
+            // Show embedded video
+            Column {
+                YouTubeEmbedWebView(
+                    embedUrl = embedUrl,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(16f / 9f)
+                )
+                
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(
+                        onClick = { isExpanded = false }
+                    ) {
+                        Text("Show Preview")
+                    }
+                    
+                    TextButton(
+                        onClick = {
+                            try {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                // Handle error
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.OpenInNew,
+                            contentDescription = "Open in YouTube",
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Open in YouTube")
+                    }
+                }
+            }
+        } else {
+            // Show preview card
+            if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(16f / 9f)
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(16f / 9f)
+                        .clickable { isExpanded = true }
+                ) {
+                    // Thumbnail
+                    metadata?.thumbnailUrl?.let { thumbnailUrl ->
+                        AsyncImage(
+                            model = thumbnailUrl,
+                            contentDescription = metadata?.title,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } ?: Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                    )
+                    
+                    // Play button overlay
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.3f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = "Play",
+                            modifier = Modifier.size(64.dp),
+                            tint = Color.White
+                        )
+                    }
+                    
+                    // Title and channel info overlay at bottom
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.BottomStart)
+                            .background(Color.Black.copy(alpha = 0.7f))
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        metadata?.title?.let { title ->
+                            Text(
+                                text = title,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        
+                        metadata?.authorName?.let { author ->
+                            Text(
+                                text = author,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.9f)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * WebView component for embedding YouTube video with IFrame API
+ */
+@SuppressLint("SetJavaScriptEnabled")
+@Composable
+fun YouTubeEmbedWebView(
+    embedUrl: String,
+    modifier: Modifier = Modifier
+) {
+    AndroidView(
+        factory = { ctx ->
+            WebView(ctx).apply {
+                settings.javaScriptEnabled = true
+                settings.domStorageEnabled = true
+                settings.allowFileAccess = true
+                settings.allowContentAccess = true
+                settings.allowUniversalAccessFromFileURLs = true
+                settings.allowFileAccessFromFileURLs = true
+                settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                settings.mediaPlaybackRequiresUserGesture = false
+                settings.loadWithOverviewMode = true
+                settings.useWideViewPort = true
+                
+                setBackgroundColor(0x00000000)
+                
+                webViewClient = object : WebViewClient() {
+                    override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
+                        if (url != null && !url.contains("youtube.com/embed")) {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                            ctx.startActivity(intent)
+                            return true
+                        }
+                        return false
+                    }
+                    
+                    override fun onPageFinished(view: WebView?, url: String?) {
+                        super.onPageFinished(view, url)
+                        // Inject CSS for proper iframe sizing
+                        view?.evaluateJavascript("""
+                            (function() {
+                                var style = document.createElement('style');
+                                style.innerHTML = 'body { margin: 0; padding: 0; overflow: hidden; } iframe { width: 100% !important; height: 100% !important; border: none; }';
+                                document.head.appendChild(style);
+                            })();
+                        """.trimIndent(), null)
+                    }
+                }
+                
+                loadUrl(embedUrl)
+            }
+        },
+        modifier = modifier
+    )
+}
+
+/**
+ * WebView component for embedding TikTok videos
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -105,16 +328,35 @@ fun VideoEmbedView(
                             settings.allowFileAccessFromFileURLs = true
                             settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                             settings.mediaPlaybackRequiresUserGesture = false
+                            settings.loadWithOverviewMode = true
+                            settings.useWideViewPort = true
+                            
+                            // Set background to transparent for better appearance
+                            setBackgroundColor(0x00000000)
                             
                             webViewClient = object : WebViewClient() {
                                 override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
                                     // Allow navigation within embed, but open external links in browser
-                                    if (url != null && !url.contains("embed")) {
+                                    if (url != null && !url.contains("embed") && !url.contains("youtube.com") && !url.contains("tiktok.com")) {
                                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                                         ctx.startActivity(intent)
                                         return true
                                     }
                                     return false
+                                }
+                                
+                                override fun onPageFinished(view: WebView?, url: String?) {
+                                    super.onPageFinished(view, url)
+                                    // Inject CSS to hide YouTube UI elements if needed
+                                    if (linkType == LinkType.YOUTUBE) {
+                                        view?.evaluateJavascript("""
+                                            (function() {
+                                                var style = document.createElement('style');
+                                                style.innerHTML = 'body { margin: 0; padding: 0; } iframe { width: 100%; height: 100%; }';
+                                                document.head.appendChild(style);
+                                            })();
+                                        """.trimIndent(), null)
+                                    }
                                 }
                             }
                             
@@ -123,10 +365,19 @@ fun VideoEmbedView(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(if (linkType == LinkType.TIKTOK) 600.dp else 400.dp)
+                        .then(
+                            if (linkType == LinkType.YOUTUBE) {
+                                Modifier.aspectRatio(16f / 9f)
+                            } else if (linkType == LinkType.TIKTOK) {
+                                Modifier.height(600.dp)
+                            } else {
+                                Modifier.height(400.dp)
+                            }
+                        )
                 )
                 
                 // Clickable overlay to open in browser
+                val contextForButton = LocalContext.current
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -135,10 +386,9 @@ fun VideoEmbedView(
                 ) {
                     TextButton(
                         onClick = {
-                            val context = LocalContext.current
                             try {
                                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                                context.startActivity(intent)
+                                contextForButton.startActivity(intent)
                             } catch (e: Exception) {
                                 // Handle error
                             }
@@ -157,14 +407,14 @@ fun VideoEmbedView(
         }
     } else {
         // Fallback: show clickable card
+        val contextForFallback = LocalContext.current
         LinkPreviewCard(
             url = url,
             modifier = modifier,
             onLinkClick = {
-                val context = LocalContext.current
                 try {
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                    context.startActivity(intent)
+                    contextForFallback.startActivity(intent)
                 } catch (e: Exception) {
                     // Handle error
                 }

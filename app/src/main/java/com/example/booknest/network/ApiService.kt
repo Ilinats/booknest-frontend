@@ -394,7 +394,7 @@ data class Review(
     val applicationId: String,
     val rating: Int,
     @Serializable(with = ReviewTypeSerializer::class)
-    val reviewType: ReviewType,
+    val reviewType: ReviewType? = null,
     val reviewContent: String? = null,
     val reviewUrls: List<String>? = null,
     val isPublic: Boolean,
@@ -417,10 +417,8 @@ data class UpdateApplicationDto(
     val applicationMessage: String? = null
 )
 
-@Serializable
 data class UpdateReadingStatusDto(
-    @Serializable(with = ReadingStatusSerializer::class)
-    val readingStatus: ReadingStatus
+    val readingStatus: String
 )
 
 @Serializable
@@ -464,12 +462,10 @@ data class ApplicationCheckBook(
     val authorId: String
 )
 
-@Serializable
 data class CreateReviewDto(
     val applicationId: String,
     val rating: Int,
-    @Serializable(with = ReviewTypeSerializer::class)
-    val reviewType: ReviewType,
+    val reviewType: String,
     val reviewContent: String? = null,
     val reviewUrls: List<String>? = null,
     val isPublic: Boolean = true
@@ -1012,9 +1008,8 @@ interface ApiService {
     @GET("/profiles/me/activity/stats")
     suspend fun getMyActivityStats(): Response<ApiResponse<ActivityStats>>
     
-    // Author Following Endpoints
-    @POST("/authors/follow/{username}")
-    suspend fun followAuthor(@Path("username") username: String): Response<ApiResponse<AuthorFollow>>
+    @POST("/authors/follow/{authorId}")
+    suspend fun followAuthor(@Path("authorId") authorId: String): Response<ApiResponse<AuthorFollow>>
     
     @DELETE("/authors/unfollow/{authorId}")
     suspend fun unfollowAuthor(@Path("authorId") authorId: String): Response<Unit>

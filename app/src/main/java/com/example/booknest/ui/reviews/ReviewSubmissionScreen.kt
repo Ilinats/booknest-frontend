@@ -33,7 +33,6 @@ fun ReviewSubmissionScreen(
     )
 ) {
     var rating by remember { mutableStateOf(5) }
-    var reviewType by remember { mutableStateOf(ReviewType.TEXT) }
     var reviewContent by remember { mutableStateOf("") }
     var reviewUrls by remember { mutableStateOf(listOf("")) }
     var isPublic by remember { mutableStateOf(true) }
@@ -85,72 +84,55 @@ fun ReviewSubmissionScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Review type selection
+            // Review content (text)
             Text(
-                text = "Review Type",
+                text = "Review Content",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
             
-            ReviewTypeSelector(
-                currentType = reviewType,
-                onTypeChange = { reviewType = it }
+            Text(
+                text = "Write your detailed review of the book. Share your thoughts on the plot, characters, writing style, and overall experience. (Optional if you provide links)",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            
+            OutlinedTextField(
+                value = reviewContent,
+                onValueChange = { reviewContent = it },
+                label = { Text("Your review") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
+                maxLines = 10,
+                placeholder = { Text("Share your thoughts about this book...") }
+            )
+            
+            Text(
+                text = "Word count: ${reviewContent.split("\\s+".toRegex()).filter { it.isNotBlank() }.size}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Review content based on type
-            when (reviewType) {
-                ReviewType.TEXT -> {
-                    Text(
-                        text = "Review Content",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    Text(
-                        text = "Write your detailed review of the book. Share your thoughts on the plot, characters, writing style, and overall experience.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    
-                    OutlinedTextField(
-                        value = reviewContent,
-                        onValueChange = { reviewContent = it },
-                        label = { Text("Your review") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp),
-                        maxLines = 10,
-                        placeholder = { Text("Share your thoughts about this book...") }
-                    )
-                    
-                    Text(
-                        text = "Word count: ${reviewContent.split("\\s+".toRegex()).filter { it.isNotBlank() }.size}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                
-                ReviewType.LINK -> {
-                    Text(
-                        text = "Review Links",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    Text(
-                        text = "Share links to your review on other platforms (blog, Goodreads, social media, etc.).",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    
-                    ReviewUrlInputs(
-                        urls = reviewUrls,
-                        onUrlsChange = { reviewUrls = it }
-                    )
-                }
-            }
+            // Review links
+            Text(
+                text = "Review Links",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            
+            Text(
+                text = "Share links to your review on other platforms (blog, Goodreads, social media, etc.). (Optional if you provide text)",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            
+            ReviewUrlInputs(
+                urls = reviewUrls,
+                onUrlsChange = { reviewUrls = it }
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -190,20 +172,28 @@ fun ReviewSubmissionScreen(
             Button(
                 onClick = {
                     isSubmitting = true
-                    val content = if (reviewType == ReviewType.TEXT) reviewContent else null
-                    val urls = if (reviewType == ReviewType.LINK) reviewUrls.filter { it.isNotBlank() } else null
+                    val content = reviewContent.takeIf { it.isNotBlank() }
+                    val urls = reviewUrls.filter { it.isNotBlank() }
+                    
+                    // Determine review type: if both text and links, use "text", otherwise use whichever is provided
+                    val reviewType = when {
+                        content != null && urls.isNotEmpty() -> ReviewType.TEXT
+                        content != null -> ReviewType.TEXT
+                        urls.isNotEmpty() -> ReviewType.LINK
+                        else -> ReviewType.TEXT // Default
+                    }
                     
                     reviewViewModel.createReview(
                         applicationId = applicationId,
                         rating = rating,
                         reviewType = reviewType,
                         reviewContent = content,
-                        reviewUrls = urls,
+                        reviewUrls = if (urls.isNotEmpty()) urls else null,
                         isPublic = isPublic
                     )
                 },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !isSubmitting && isValidReview(reviewType, reviewContent, reviewUrls)
+                enabled = !isSubmitting && isValidReview(reviewContent, reviewUrls)
             ) {
                 if (isSubmitting) {
                     CircularProgressIndicator(
@@ -360,7 +350,7 @@ fun ReviewUrlInputs(
             }
         }
         
-        if (urls.size < 3) {
+        if (urls.size < 5) {
             OutlinedButton(
                 onClick = {
                     onUrlsChange(urls + "")
@@ -380,12 +370,11 @@ fun ReviewUrlInputs(
 }
 
 private fun isValidReview(
-    reviewType: ReviewType,
     reviewContent: String,
     reviewUrls: List<String>
 ): Boolean {
-    return when (reviewType) {
-        ReviewType.TEXT -> reviewContent.isNotBlank() && reviewContent.length >= 50
-        ReviewType.LINK -> reviewUrls.any { it.isNotBlank() && it.startsWith("http") }
-    }
+    val hasText = reviewContent.isNotBlank() && reviewContent.length >= 50
+    val hasLinks = reviewUrls.any { it.isNotBlank() && (it.startsWith("http://") || it.startsWith("https://")) }
+    // Must have either text (min 50 chars) or at least one valid link
+    return hasText || hasLinks
 }

@@ -141,7 +141,7 @@ class ReviewViewModel(private val authManager: AuthManager) : ViewModel() {
                     CreateReviewDto(
                         applicationId = applicationId,
                         rating = rating,
-                        reviewType = reviewType,
+                        reviewType = reviewType.value,
                         reviewContent = reviewContent,
                         reviewUrls = reviewUrls,
                         isPublic = isPublic

@@ -20,6 +20,7 @@ import com.example.booknest.ui.analytics.BookAnalyticsScreen
 import com.example.booknest.ui.friends.FriendsScreen
 import com.example.booknest.ui.profile.PrivacySettingsScreen
 import com.example.booknest.ui.profile.SocialMediaManagementScreen
+import com.example.booknest.ui.reviews.ReviewSubmissionScreen
 
 @Composable
 fun HomeNavGraph(
@@ -110,6 +111,15 @@ fun HomeNavGraph(
         // Social media management
         composable("social_media_management") {
             SocialMediaManagementScreen(navController, authManager)
-        }    
+        }
+        
+        // Review submission
+        composable(
+            route = "review_submission/{applicationId}",
+            arguments = listOf(navArgument("applicationId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val applicationId = backStackEntry.arguments?.getString("applicationId") ?: ""
+            ReviewSubmissionScreen(navController, authManager, applicationId)
+        }
     }
 }

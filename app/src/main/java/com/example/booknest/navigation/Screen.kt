@@ -48,4 +48,9 @@ sealed class Screen(val route: String) {
     }
     object PrivacySettings : Screen("privacy_settings")
     object SocialMediaManagement : Screen("social_media_management")
+    
+    // Review screens
+    object ReviewSubmission : Screen("review_submission/{applicationId}") {
+        fun createRoute(applicationId: String) = "review_submission/$applicationId"
+    }
 }
