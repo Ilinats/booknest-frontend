@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -13,9 +14,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.booknest.data.AuthManager
@@ -326,9 +329,57 @@ fun ReviewCard(
             }
 
             Spacer(modifier = Modifier.height(12.dp))
+            
+            // Reviewer info
+            val reviewer = review.application?.reader
+            val reviewerName = reviewer?.username 
+                ?: "${reviewer?.firstName ?: ""} ${reviewer?.lastName ?: ""}".trim()
+                .takeIf { it.isNotBlank() }
+                ?: "Reviewer"
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Reviewer profile picture
+                val reviewerInitial = reviewer?.username?.firstOrNull()?.uppercase() ?: "R"
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary),
+                    contentAlignment = Alignment.Center
+                ) {
+                    reviewer?.profilePictureUrl?.let { profileUrl ->
+                        AsyncImage(
+                            model = profileUrl,
+                            contentDescription = reviewerName,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } ?: Text(
+                        text = reviewerInitial,
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                
+                Column {
+                    Text(
+                        text = reviewerName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Review content
-            when (review.reviewType) {
+            val reviewType = review.reviewType ?: com.example.booknest.network.ReviewType.TEXT
+            when (reviewType) {
                 com.example.booknest.network.ReviewType.TEXT -> {
                     review.reviewContent?.let { content ->
                         Text(
@@ -349,22 +400,28 @@ fun ReviewCard(
                 }
                 
                 com.example.booknest.network.ReviewType.LINK -> {
-                    Text(
-                        text = "Review Links:",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
                     review.reviewUrls?.forEach { url ->
                         if (url.isNotBlank()) {
-                            Text(
-                                text = url,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(vertical = 2.dp)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            com.example.booknest.ui.components.ReviewLinkPreview(
+                                url = url,
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
+                    }
+                }
+            }
+            
+            // Show both text and links if both are present
+            if (review.reviewContent != null && review.reviewUrls != null && review.reviewUrls.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                review.reviewUrls.forEach { url ->
+                    if (url.isNotBlank()) {
+                        com.example.booknest.ui.components.ReviewLinkPreview(
+                            url = url,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
             }
@@ -378,7 +435,7 @@ fun ReviewCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Review Type: ${review.reviewType.value.replaceFirstChar { it.uppercase() }}",
+                    text = "Review Type: ${(review.reviewType ?: com.example.booknest.network.ReviewType.TEXT).value.replaceFirstChar { it.uppercase() }}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

@@ -96,12 +96,27 @@ class FileViewModel(
                     if (apiResponse.success && apiResponse.data != null) {
                         val downloadData = apiResponse.data!!
                         
+                        // Extract file type from URL or fileName if not provided
+                        val fileType = downloadData.fileType ?: run {
+                            val url = downloadData.downloadUrl
+                            val fileName = downloadData.fileName
+                            when {
+                                url.contains(".epub") || fileName.contains(".epub") -> "epub"
+                                url.contains(".pdf") || fileName.contains(".pdf") -> "pdf"
+                                url.contains(".mobi") || fileName.contains(".mobi") -> "mobi"
+                                else -> {
+                                    // Try to extract from URL path
+                                    url.substringAfterLast(".").substringBefore("?").takeIf { it.length <= 5 } ?: "epub"
+                                }
+                            }
+                        }
+                        
                         // Download file
                         val result = downloadManager.downloadBook(
                             bookId = bookId,
                             downloadUrl = downloadData.downloadUrl,
                             fileName = downloadData.fileName,
-                            fileType = downloadData.fileType
+                            fileType = fileType
                         )
                         
                         result.fold(

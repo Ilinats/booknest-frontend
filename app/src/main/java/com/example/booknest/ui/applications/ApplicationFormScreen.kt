@@ -138,7 +138,16 @@ fun ApplicationFormScreen(
                         )
                     }
                     Text(
-                        text = "Application Deadline: ${book.applicationDeadline?.let { formatDate(it) } ?: "Not specified"}",
+                        text = "Application Deadline: ${book.applicationDeadline?.let { dateString ->
+                            try {
+                                val inputFormat = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.getDefault())
+                                val outputFormat = java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault())
+                                val date = inputFormat.parse(dateString)
+                                outputFormat.format(date ?: java.util.Date())
+                            } catch (e: Exception) {
+                                dateString
+                            }
+                        } ?: "Not specified"}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -210,15 +219,4 @@ fun ApplicationFormScreen(
             )
         }
     }
-}
-
-private fun formatDate(dateString: String): String {
-    return try {
-        val inputFormat = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.getDefault())
-        val outputFormat = java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault())
-        val date = inputFormat.parse(dateString)
-        outputFormat.format(date ?: java.util.Date())
-    } catch (e: Exception) {
-        dateString
-    }
-}
+}}

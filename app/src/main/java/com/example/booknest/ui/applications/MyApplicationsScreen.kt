@@ -18,12 +18,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.booknest.data.AuthManager
 import com.example.booknest.network.*
+import com.example.booknest.navigation.Screen
 import com.example.booknest.viewmodel.ApplicationViewModel
 import com.example.booknest.viewmodel.ApplicationViewModelFactory
+import com.example.booknest.viewmodel.FileViewModel
 import kotlinx.coroutines.flow.collectLatest
 import java.text.SimpleDateFormat
 import java.util.*
@@ -37,8 +40,11 @@ fun MyApplicationsScreen(
         factory = ApplicationViewModelFactory(authManager)
     )
 ) {
+    val context = LocalContext.current
+    val fileViewModel: FileViewModel = remember { FileViewModel(context) }
     val myApplications by applicationViewModel.myApplications.collectAsState()
     val isLoading by applicationViewModel.isLoading.collectAsState()
+    val fileUiState by fileViewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     
     var selectedTab by remember { mutableStateOf(0) }
@@ -48,6 +54,20 @@ fun MyApplicationsScreen(
         applicationViewModel.loadMyApplications()
         applicationViewModel.snackbarEvent.collectLatest { message ->
             snackbarHostState.showSnackbar(message)
+        }
+    }
+    
+    LaunchedEffect(fileUiState.successMessage) {
+        fileUiState.successMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            fileViewModel.clearSuccessMessage()
+        }
+    }
+    
+    LaunchedEffect(fileUiState.error) {
+        fileUiState.error?.let {
+            snackbarHostState.showSnackbar(it)
+            fileViewModel.clearError()
         }
     }
 
@@ -69,7 +89,7 @@ fun MyApplicationsScreen(
             }
             1 -> {
                 val approved = myApplications.filter { 
-                    val isApproved = it.status == "approved"
+                    val isApproved = it.status == "approved" && it.reviewSubmittedAt == null
                     println("DEBUG: Application ${it.id} - status: ${it.status}, isApproved: $isApproved")
                     isApproved
                 }
@@ -77,7 +97,9 @@ fun MyApplicationsScreen(
                 approved
             }
             2 -> {
-                val completed = myApplications.filter { it.status == "approved" && it.readingStatus == "reviewed" }
+                val completed = myApplications.filter { 
+                    it.status == "approved" && (it.readingStatus == "reviewed" || it.reviewSubmittedAt != null)
+                }
                 println("DEBUG: Completed applications: ${completed.size}")
                 completed
             }
@@ -140,17 +162,23 @@ fun MyApplicationsScreen(
                 when (selectedTab) {
                     0 -> PendingApplicationsContent(
                         applications = filteredApplications,
-                        applicationViewModel = applicationViewModel
+                        applicationViewModel = applicationViewModel,
+                        navController = navController
                     )
                     1 -> ApprovedApplicationsContent(
                         applications = filteredApplications,
-                        applicationViewModel = applicationViewModel
+                        applicationViewModel = applicationViewModel,
+                        fileViewModel = fileViewModel,
+                        navController = navController
                     )
                     2 -> CompletedApplicationsContent(
-                        applications = filteredApplications
+                        applications = filteredApplications,
+                        navController = navController,
+                        fileViewModel = fileViewModel
                     )
                     3 -> RejectedApplicationsContent(
-                        applications = filteredApplications
+                        applications = filteredApplications,
+                        navController = navController
                     )
                 }
             }
@@ -164,7 +192,8 @@ fun ApplicationCard(
     onUpdateReadingStatus: (ReadingStatus) -> Unit,
     onMarkReceived: () -> Unit,
     onWithdraw: () -> Unit,
-    onNavigateToReview: () -> Unit
+    onNavigateToReview: () -> Unit,
+    onDownload: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -213,7 +242,8 @@ fun ApplicationCard(
                 onUpdateReadingStatus = onUpdateReadingStatus,
                 onMarkReceived = onMarkReceived,
                 onWithdraw = onWithdraw,
-                onNavigateToReview = onNavigateToReview
+                onNavigateToReview = onNavigateToReview,
+                onDownload = onDownload
             )
         }
     }
@@ -371,7 +401,8 @@ fun ApplicationActions(
     onUpdateReadingStatus: (ReadingStatus) -> Unit,
     onMarkReceived: () -> Unit,
     onWithdraw: () -> Unit,
-    onNavigateToReview: () -> Unit
+    onNavigateToReview: () -> Unit,
+    onDownload: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         // Reading status selector
@@ -401,7 +432,7 @@ fun ApplicationActions(
             // Download button for approved applications
             if (application.status == "approved") {
                 Button(
-                    onClick = { /* TODO: Implement download */ },
+                    onClick = onDownload,
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.tertiary
@@ -589,7 +620,8 @@ fun EmptyApplicationsState(
 @Composable
 fun PendingApplicationsContent(
     applications: List<Application>,
-    applicationViewModel: ApplicationViewModel
+    applicationViewModel: ApplicationViewModel,
+    navController: NavController
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -600,6 +632,9 @@ fun PendingApplicationsContent(
             SimpleApplicationCard(
                 application = application,
                 statusIndicator = Color.Green,
+                onClick = {
+                    navController.navigate(Screen.BookDetails.createRoute(application.bookId))
+                },
                 actionButton = {
                     OutlinedButton(
                         onClick = { applicationViewModel.withdrawApplication(application.id) }
@@ -615,7 +650,9 @@ fun PendingApplicationsContent(
 @Composable
 fun ApprovedApplicationsContent(
     applications: List<Application>,
-    applicationViewModel: ApplicationViewModel
+    applicationViewModel: ApplicationViewModel,
+    fileViewModel: FileViewModel,
+    navController: NavController
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -627,54 +664,107 @@ fun ApprovedApplicationsContent(
                 application = application,
                 statusIndicator = Color.Green,
                 actionButton = {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // Download button for all approved applications
-                        Button(
-                            onClick = { /* TODO: Implement download */ },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.tertiary
-                            )
+                        // First row: Download and Mark Received
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Icon(
-                                Icons.Filled.Add, // Using Add icon as placeholder
-                                contentDescription = "Download",
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Download")
+                            // Download button for all approved applications
+                            Button(
+                                onClick = { fileViewModel.downloadBook(application.bookId) },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.tertiary
+                                )
+                            ) {
+                                Icon(
+                                    Icons.Filled.Add,
+                                    contentDescription = "Download",
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Download")
+                            }
+                            
+                            // Mark Copy Received button (only for physical books)
+                            if (application.copySentAt != null && application.copyReceivedAt == null && application.reviewSubmittedAt == null) {
+                                Button(
+                                    onClick = { 
+                                        applicationViewModel.markCopyReceived(application.id)
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary
+                                    )
+                                ) {
+                                    Icon(
+                                        Icons.Filled.Email,
+                                        contentDescription = "Mark Received",
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Mark Received")
+                                }
+                            }
                         }
                         
-                        // Status-specific buttons
-                        when (application.readingStatus) {
-                            "not_started" -> {
-                                OutlinedButton(
-                                    onClick = { 
-                                        applicationViewModel.updateReadingStatus(application.id, ReadingStatus.CURRENTLY_READING)
+                        // Second row: Reading status buttons
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            when (application.readingStatus) {
+                                "not_started" -> {
+                                    OutlinedButton(
+                                        onClick = { 
+                                            applicationViewModel.updateReadingStatus(application.id, ReadingStatus.CURRENTLY_READING)
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("Start")
                                     }
-                                ) {
-                                    Text("Start")
+                                }
+                                "currently_reading" -> {
+                                    OutlinedButton(
+                                        onClick = { 
+                                            applicationViewModel.updateReadingStatus(application.id, ReadingStatus.FOR_REVIEW)
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("To Review")
+                                    }
+                                }
+                                "for_review" -> {
+                                    // Show Review button if copy is received (or for digital books)
+                                    if (application.copyReceivedAt != null || application.copySentAt == null) {
+                                        OutlinedButton(
+                                            onClick = { 
+                                                navController.navigate(Screen.ReviewSubmission.createRoute(application.id))
+                                            },
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Text("Review")
+                                        }
+                                    }
+                                }
+                                else -> {
+                                    // No additional button for completed reviews
                                 }
                             }
-                            "currently_reading" -> {
+                            
+                            // Also show Review button if copy is received and review not submitted (regardless of reading status)
+                            if (application.copyReceivedAt != null && application.reviewSubmittedAt == null && application.readingStatus != "for_review") {
                                 OutlinedButton(
                                     onClick = { 
-                                        applicationViewModel.updateReadingStatus(application.id, ReadingStatus.FOR_REVIEW)
-                                    }
-                                ) {
-                                    Text("To Review")
-                                }
-                            }
-                            "for_review" -> {
-                                OutlinedButton(
-                                    onClick = { /* TODO: Navigate to review screen */ }
+                                        navController.navigate(Screen.ReviewSubmission.createRoute(application.id))
+                                    },
+                                    modifier = Modifier.weight(1f)
                                 ) {
                                     Text("Review")
                                 }
-                            }
-                            else -> {
-                                // No additional button for completed reviews
                             }
                         }
                     }
@@ -686,7 +776,9 @@ fun ApprovedApplicationsContent(
 
 @Composable
 fun CompletedApplicationsContent(
-    applications: List<Application>
+    applications: List<Application>,
+    navController: NavController,
+    fileViewModel: FileViewModel
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -697,16 +789,19 @@ fun CompletedApplicationsContent(
             SimpleApplicationCard(
                 application = application,
                 statusIndicator = Color.Green,
+                onClick = {
+                    navController.navigate(Screen.BookDetails.createRoute(application.bookId))
+                },
                 actionButton = {
                     // Download button for completed applications
                     Button(
-                        onClick = { /* TODO: Implement download */ },
+                        onClick = { fileViewModel.downloadBook(application.bookId) },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.tertiary
                         )
                     ) {
                         Icon(
-                            Icons.Filled.Add, // Using Add icon as placeholder
+                            Icons.Filled.Add,
                             contentDescription = "Download",
                             modifier = Modifier.size(16.dp)
                         )
@@ -721,7 +816,8 @@ fun CompletedApplicationsContent(
 
 @Composable
 fun RejectedApplicationsContent(
-    applications: List<Application>
+    applications: List<Application>,
+    navController: NavController
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -732,6 +828,9 @@ fun RejectedApplicationsContent(
             SimpleApplicationCard(
                 application = application,
                 statusIndicator = Color.Red,
+                onClick = {
+                    navController.navigate(Screen.BookDetails.createRoute(application.bookId))
+                },
                 actionButton = {
                     // Rejected - no action button
                 }
@@ -744,14 +843,21 @@ fun RejectedApplicationsContent(
 fun SimpleApplicationCard(
     application: Application,
     statusIndicator: Color,
-    actionButton: @Composable () -> Unit
+    actionButton: @Composable () -> Unit,
+    onClick: (() -> Unit)? = null
 ) {
-    Row(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
         // Book cover placeholder
         Box(
             modifier = Modifier
@@ -804,6 +910,7 @@ fun SimpleApplicationCard(
             
             // Action button
             actionButton()
+        }
         }
     }
 }
