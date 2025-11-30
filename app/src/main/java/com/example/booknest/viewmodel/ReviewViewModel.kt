@@ -38,18 +38,32 @@ class ReviewViewModel(private val authManager: AuthManager) : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
+                println("DEBUG: Loading book reviews for bookId: $bookId")
                 val response = RetrofitInstance.api.getBookReviews(bookId)
+                println("DEBUG: Book reviews response code: ${response.code()}")
                 if (response.isSuccessful && response.body() != null) {
                     val apiResponse = response.body()!!
+                    println("DEBUG: Book reviews API success: ${apiResponse.success}")
                     if (apiResponse.success) {
-                        _bookReviews.value = apiResponse.data ?: emptyList()
+                        val reviews = apiResponse.data ?: emptyList()
+                        println("DEBUG: Loaded ${reviews.size} reviews")
+                        reviews.forEachIndexed { index, review ->
+                            println("DEBUG: Review $index: id=${review.id}, rating=${review.rating}, application=${review.application?.id}")
+                        }
+                        _bookReviews.value = reviews
                     } else {
+                        println("DEBUG: Book reviews API error: ${apiResponse.message}")
                         _snackbarEvent.emit(apiResponse.message ?: "Failed to load book reviews")
                     }
                 } else {
+                    val errorBody = response.errorBody()?.string()
+                    println("DEBUG: Book reviews HTTP error: ${response.code()} - ${response.message()}")
+                    println("DEBUG: Error body: $errorBody")
                     _snackbarEvent.emit("Failed to load book reviews: ${response.message()}")
                 }
             } catch (e: Exception) {
+                println("DEBUG: Exception loading book reviews: ${e.message}")
+                e.printStackTrace()
                 _snackbarEvent.emit("Error loading book reviews: ${e.message}")
             } finally {
                 _isLoading.value = false

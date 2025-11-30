@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.booknest.data.AuthManager
 import com.example.booknest.network.LoginRequest
 import com.example.booknest.network.RetrofitInstance
+import com.example.booknest.network.TokenCache
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -30,19 +31,14 @@ class LoginViewModel(private val authManager: AuthManager) : ViewModel() {
 
                 if (response.isSuccessful && response.body() != null) {
                     val loginResponse = response.body()!!
-                    println("DEBUG: Login response received - success: ${loginResponse.success}, hasAccessToken: ${!loginResponse.data.accessToken.isNullOrEmpty()}")
-                    println("DEBUG: User data: ${loginResponse.data.user}")
-                    println("DEBUG: Access token: ${loginResponse.data.accessToken?.take(20)}...")
-                    
                     if (loginResponse.success && !loginResponse.data.accessToken.isNullOrEmpty()) {
-                        println("DEBUG: Calling authManager.login()")
+                        TokenCache.accessToken = loginResponse.data.accessToken
                         authManager.login(loginResponse)
                         val userName = loginResponse.data.user.username
                         _loginState.value = LoginUiState.Success(loginResponse.message ?: "Welcome $userName! Logged in successfully!")
                         onLoginComplete(true)
                     } else {
                         val errorMessage = loginResponse.message ?: "Login failed"
-                        println("DEBUG: Login failed - success: ${loginResponse.success}, message: $errorMessage")
                         _loginState.value = LoginUiState.Error(errorMessage)
                         onLoginComplete(false)
                     }

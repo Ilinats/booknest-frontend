@@ -8,6 +8,7 @@ import com.example.booknest.network.ApiService
 import com.example.booknest.network.AuthorFollow
 import com.example.booknest.network.AuthorFollowWithStats
 import com.example.booknest.network.Book
+import com.example.booknest.network.RecommendedBook
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -103,17 +104,62 @@ class AuthorFollowViewModel(
                 _error.value = null
                 
                 val response = apiService.getBooksFromFollowedAuthors()
-                if (response.isSuccessful) {
-                    _booksFromFollowedAuthors.value = response.body()?.data ?: emptyList()
+                if (response.isSuccessful && response.body() != null) {
+                    val apiResponse = response.body()!!
+                    if (apiResponse.success) {
+                        // Convert RecommendedBook to Book for UI compatibility
+                        val books = (apiResponse.data ?: emptyList()).map { recommendedBook ->
+                            recommendedBook.toBook()
+                        }
+                        _booksFromFollowedAuthors.value = books
+                    } else {
+                        _error.value = "Failed to load books from followed authors: ${apiResponse.message}"
+                    }
                 } else {
                     _error.value = "Failed to load books from followed authors"
                 }
             } catch (e: Exception) {
                 _error.value = e.message ?: "Unknown error occurred"
+                println("Books from followed authors exception: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
         }
+    }
+    
+    // Extension function to convert RecommendedBook to Book
+    private fun RecommendedBook.toBook(): Book {
+        return Book(
+            id = this.id,
+            authorId = "", // Required but not available in RecommendedBook
+            title = this.title,
+            shortDescription = null,
+            fullDescription = null,
+            coverImageUrl = this.coverImageUrl,
+            pageCount = null,
+            ageRating = null,
+            distributionType = null,
+            fileUrl = null,
+            fileSize = null,
+            fileType = null,
+            totalCopies = null,
+            availableCopies = null,
+            applicationDeadline = null,
+            reviewDeadlineDays = null,
+            selectionCriteria = null,
+            selectionMethod = null,
+            status = null, // Required but not available in RecommendedBook
+            createdAt = null,
+            updatedAt = null,
+            publishedAt = this.publishedAt, // Nullable in Book
+            seriesId = null, // Required but not available in RecommendedBook
+            seriesOrder = this.seriesOrder,
+            seriesName = this.seriesName,
+            authorName = this.authorName,
+            author = null,
+            rating = this.rating,
+            genres = null
+        )
     }
     
     fun followAuthor(authorId: String) {

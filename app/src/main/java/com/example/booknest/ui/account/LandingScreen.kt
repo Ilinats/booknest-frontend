@@ -3,16 +3,30 @@ package com.example.booknest.ui.account
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.booknest.data.AuthManager
 import com.example.booknest.navigation.Screen // Ensure Screen.AccountType and Screen.Login are defined
 
 @Composable
-fun LandingScreen(navController: NavController) {
+fun LandingScreen(navController: NavController, authManager: AuthManager) {
+    val isLoggedIn by authManager.isLoggedIn.collectAsState()
+    
+    // Navigate to main screen if user is already logged in
+    LaunchedEffect(isLoggedIn) {
+        if (isLoggedIn) {
+            navController.navigate(Screen.Main.route) {
+                popUpTo(Screen.Landing.route) { inclusive = true }
+            }
+        }
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()

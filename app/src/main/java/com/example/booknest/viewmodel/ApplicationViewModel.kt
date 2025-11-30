@@ -49,7 +49,7 @@ class ApplicationViewModel(private val authManager: AuthManager) : ViewModel() {
                         _myApplications.value = applications
                         println("DEBUG: Applications loaded: ${applications.size} applications")
                         applications.forEach { app ->
-                            println("DEBUG: Application ${app.id} - status: ${app.status}, book: ${app.bookTitle}, author: ${app.authorName}")
+                            println("DEBUG: Application ${app.id} - status: ${app.status}, book: ${app.bookTitle ?: "N/A"}, author: ${app.authorName ?: "N/A"}")
                         }
                     } else {
                         println("DEBUG: Applications API error: ${apiResponse.message}")

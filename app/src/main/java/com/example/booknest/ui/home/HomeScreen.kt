@@ -18,19 +18,16 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -97,45 +94,7 @@ fun HomeScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { 
-                    Text(
-                        "BookNest",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
-                    ) 
-                },
-                actions = {
-                    IconButton(onClick = { 
-                        if (searchQuery.isNotBlank()) {
-                            navController.navigate(BottomBarScreen.Browse.withQuery(searchQuery))
-                        } else {
-                            navController.navigate(BottomBarScreen.Browse.route)
-                        }
-                    }) {
-                        Icon(Icons.Filled.Search, contentDescription = "Search")
-                    }
-                    IconButton(onClick = { 
-                        currentUser?.id?.let { userId ->
-                            try {
-                                navController.navigate(Screen.Profile.createRoute(userId))
-                            } catch (e: Exception) {
-                                println("Navigation error: ${e.message}")
-                                // Fallback navigation
-                                navController.navigate("profile/$userId")
-                            }
-                        }
-                    }) {
-                        Icon(
-                            Icons.Filled.AccountCircle, 
-                            contentDescription = "Profile",
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
-                }
-            )
-        }
+        // Removed topBar - now handled by MainScreen's MainTopBar
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier

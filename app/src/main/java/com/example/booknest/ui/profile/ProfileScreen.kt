@@ -10,6 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import com.example.booknest.ui.components.BackButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,6 +27,9 @@ import com.example.booknest.data.AuthManager
 import com.example.booknest.network.UserProfile
 import com.example.booknest.viewmodel.ProfileViewModel
 import com.example.booknest.viewmodel.ProfileViewModelFactory
+import com.example.booknest.ui.books.BookItem
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -70,9 +74,7 @@ fun ProfileScreen(
             TopAppBar(
                 title = { Text("Profile") },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
+                    BackButton(onClick = { navController.popBackStack() })
                 },
                 actions = {
                     if (isOwnProfile) {
@@ -140,6 +142,8 @@ fun ProfileScreen(
                     profile = currentState.profile,
                     isOwnProfile = isOwnProfile,
                     currentUser = currentUser,
+                    profileViewModel = profileViewModel,
+                    navController = navController,
                     modifier = Modifier.padding(paddingValues)
                 )
             }
@@ -153,8 +157,29 @@ fun ProfileContent(
     profile: UserProfile,
     isOwnProfile: Boolean,
     currentUser: com.example.booknest.network.UserData?,
+    profileViewModel: ProfileViewModel,
+    navController: NavController,
     modifier: Modifier = Modifier
 ) {
+    val authorBooks by profileViewModel.authorBooks.collectAsState()
+    val authorBooksLoading by profileViewModel.authorBooksLoading.collectAsState()
+    var isBooksExpanded by remember { mutableStateOf(false) }
+    
+    // Load author books if viewing an author profile (not own profile and user is author)
+    LaunchedEffect(profile.id, profile.userId, profile.userType) {
+        if (!isOwnProfile && profile.userType == "author") {
+            // Use userId if available, otherwise use profile id
+            val authorId = profile.userId ?: profile.id
+            // Get author name from profile
+            val authorName = listOfNotNull(profile.firstName, profile.lastName)
+                .joinToString(" ")
+                .ifBlank { profile.username ?: "" }
+            if (authorName.isNotBlank()) {
+                profileViewModel.loadAuthorBooks(authorId, authorName)
+            }
+        }
+    }
+    
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -171,6 +196,17 @@ fun ProfileContent(
         // Profile Stats
         profile.stats?.let { stats ->
             ProfileStatsSection(stats = stats, isOwnProfile = isOwnProfile)
+        }
+        
+        // Author Books Section (only for authors, not own profile)
+        if (!isOwnProfile && profile.userType == "author") {
+            AuthorBooksSection(
+                books = authorBooks,
+                isLoading = authorBooksLoading,
+                isExpanded = isBooksExpanded,
+                onExpandToggle = { isBooksExpanded = !isBooksExpanded },
+                navController = navController
+            )
         }
         
         // Profile Details
@@ -497,6 +533,77 @@ fun ProfileDetailItem(
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium
         )
+    }
+}
+
+@Composable
+fun AuthorBooksSection(
+    books: List<com.example.booknest.network.Book>,
+    isLoading: Boolean,
+    isExpanded: Boolean,
+    onExpandToggle: () -> Unit,
+    navController: NavController
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Books",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                if (books.size > 3) {
+                    TextButton(onClick = onExpandToggle) {
+                        Text(if (isExpanded) "Show Less" else "Show All (${books.size})")
+                        Icon(
+                            imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+            
+            if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else if (books.isEmpty()) {
+                Text(
+                    text = "No books available",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(16.dp)
+                )
+            } else {
+                val booksToShow = if (isExpanded || books.size <= 3) books else books.take(3)
+                
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp)
+                ) {
+                    items(booksToShow) { book ->
+                        BookItem(book = book, navController = navController)
+                    }
+                }
+            }
+        }
     }
 }
 

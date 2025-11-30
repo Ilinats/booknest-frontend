@@ -214,7 +214,7 @@ fun ApplicationCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = application.bookTitle,
+                    text = application.bookTitle ?: "Unknown Book",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f),
@@ -884,13 +884,13 @@ fun SimpleApplicationCard(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
-                text = application.bookTitle,
+                text = application.bookTitle ?: "Unknown Book",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
             
             Text(
-                text = "By ${application.authorName}",
+                text = "By ${application.authorName ?: "Unknown Author"}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
