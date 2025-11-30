@@ -33,6 +33,7 @@ import com.example.booknest.viewmodel.BookViewModelFactory
 import com.example.booknest.viewmodel.ReviewViewModel
 import com.example.booknest.viewmodel.ReviewViewModelFactory
 import com.example.booknest.ui.components.ReviewLinkPreview
+import com.example.booknest.ui.components.BackButton
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -70,14 +71,20 @@ fun BookDetailsScreen(
                 val apiResponse = response.body()!!
                 if (apiResponse.success) {
                     book = apiResponse.data
-                    book?.let { 
-                        reviewViewModel.loadBookReviews(it.id)
-                    }
+                    // Load reviews regardless of book state
+                    reviewViewModel.loadBookReviews(bookId)
+                } else {
+                    println("DEBUG: Book details API error: ${apiResponse.message}")
                 }
+            } else {
+                println("DEBUG: Book details API error: ${response.code()} - ${response.message()}")
             }
             isLoading = false
         } catch (e: Exception) {
             println("DEBUG: Book details API failed: ${e.message}")
+            e.printStackTrace()
+            // Still try to load reviews even if book details failed
+            reviewViewModel.loadBookReviews(bookId)
             isLoading = false
         }
         
@@ -132,7 +139,7 @@ fun BookDetailsScreen(
                 // Create a minimal Book object from the application check response
                 book = Book(
                     id = bookFromApp.id,
-                    authorId = bookFromApp.authorId,
+                    authorId = bookFromApp.authorId, // This will be set from ApplicationCheckBook
                     title = bookFromApp.title,
                     shortDescription = null,
                     fullDescription = null,
@@ -175,9 +182,7 @@ fun BookDetailsScreen(
             TopAppBar(
                 title = { Text("Book Details", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
-                    }
+                    BackButton(onClick = { navController.popBackStack() })
                 }
             )
         }
@@ -268,7 +273,7 @@ fun BookDetailsContent(
                 bookId = book.id,
                 bookTitle = book.title,
                 bookCoverImageUrl = book.coverImageUrl,
-                authorName = book.author?.username ?: "Unknown Author",
+                authorName = book.author?.name ?: book.authorName ?: "Unknown Author",
                 status = check.application.status,
                 appliedAt = check.application.appliedAt,
                 applicationMessage = null,
@@ -569,7 +574,11 @@ fun ApplicationInfoSection(
                 )
                 
                 Text(
-                    text = "Review Deadline: ${book.reviewDeadlineDays} days after approval",
+                    text = if (book.reviewDeadlineDays != null) {
+                        "Review Deadline: ${book.reviewDeadlineDays} days after approval"
+                    } else {
+                        "Review Deadline: Not specified"
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
@@ -647,7 +656,7 @@ fun AboutAuthorSection(
     val scope = rememberCoroutineScope()
     
     // Try to get author info from book.author first, fallback to book.authorId
-    val authorId = book.author?.id ?: book.authorId
+    val authorId = book.resolvedAuthorId
     val authorUsername = book.author?.username
     
     // Check if following on load

@@ -38,6 +38,9 @@ class TokenManager {
                             accessToken = refreshResponse.accessToken,
                             refreshToken = refreshResponse.refreshToken
                         )
+                        // Immediately update TokenCache
+                        com.example.booknest.network.TokenCache.accessToken = refreshResponse.accessToken
+                        println("DEBUG: TokenCache updated after refresh: ${refreshResponse.accessToken.take(20)}...")
                         return@withLock true
                     } else {
                         println("Token refresh failed: ${apiResponse.message}")

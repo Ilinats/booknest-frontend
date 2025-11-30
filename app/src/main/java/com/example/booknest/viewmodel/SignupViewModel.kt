@@ -2,7 +2,6 @@ package com.example.booknest.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.booknest.network.CreateGenreRequest
 import com.example.booknest.network.GenreDto
 import com.example.booknest.network.RetrofitInstance
 import com.example.booknest.network.TokenStorage
@@ -53,13 +52,6 @@ sealed class SignupUiState {
     data class Error(val error: String) : SignupUiState()
 }
 
-sealed class CreateGenreUiState {
-    object Idle : CreateGenreUiState()
-    object Loading : CreateGenreUiState()
-    data class Success(val message: String) : CreateGenreUiState()
-    data class Error(val error: String) : CreateGenreUiState()
-}
-
 class SignupViewModel(
     private val authManager: AuthManager
 ) : ViewModel() {
@@ -67,9 +59,6 @@ class SignupViewModel(
 
     private val _signupState = MutableStateFlow<SignupUiState>(SignupUiState.Idle)
     val signupState: StateFlow<SignupUiState> = _signupState
-
-    private val _createGenreUiState = MutableStateFlow<CreateGenreUiState>(CreateGenreUiState.Idle)
-    val createGenreUiState: StateFlow<CreateGenreUiState> = _createGenreUiState
 
     private val _availableGenres = MutableStateFlow<List<GenreDto>>(emptyList())
     val availableGenres: StateFlow<List<GenreDto>> = _availableGenres
@@ -100,47 +89,6 @@ class SignupViewModel(
                 println("Error fetching genres: ${e.localizedMessage}")
             }
         }
-    }
-
-    fun createGenre(
-        name: String,
-        description: String?,
-        colorCode: String?,
-        icon: String?,
-        isActive: Boolean?
-    ) {
-        viewModelScope.launch {
-            _createGenreUiState.value = CreateGenreUiState.Loading
-            try {
-                val createGenreRequest = CreateGenreRequest(
-                    name = name,
-                    description = description,
-                    colorCode = colorCode,
-                    icon = icon,
-                    isActive = isActive
-                )
-                val response = RetrofitInstance.api.addGenre(createGenreRequest)
-                if (response.isSuccessful && response.body() != null) {
-                    val apiResponse = response.body()!!
-                    if (apiResponse.success) {
-                        _createGenreUiState.value = CreateGenreUiState.Success(apiResponse.message ?: "Genre created successfully!")
-                        fetchAvailableGenres()
-                    } else {
-                        val errorMsg = apiResponse.message ?: "Failed to create genre"
-                        _createGenreUiState.value = CreateGenreUiState.Error(errorMsg)
-                    }
-                } else {
-                    val errorMsg = response.body()?.message ?: "Failed to create genre: ${response.code()}"
-                    _createGenreUiState.value = CreateGenreUiState.Error(errorMsg)
-                }
-            } catch (e: Exception) {
-                _createGenreUiState.value = CreateGenreUiState.Error("Network error: ${e.localizedMessage}")
-            }
-        }
-    }
-
-    fun resetCreateGenreState() {
-        _createGenreUiState.value = CreateGenreUiState.Idle
     }
 
     fun updateAccountType(type: String) {

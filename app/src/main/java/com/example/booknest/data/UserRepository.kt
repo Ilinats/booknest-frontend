@@ -52,6 +52,13 @@ class UserRepository(private val context: Context) {
         }.first()
     }
     
+    // For immediate access to access token value
+    suspend fun getAccessToken(): String? {
+        return context.dataStore.data.map { preferences ->
+            preferences[ACCESS_TOKEN_KEY]
+        }.first()
+    }
+    
     val isLoggedIn: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[IS_LOGGED_IN_KEY] ?: false
     }

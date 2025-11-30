@@ -10,11 +10,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import com.example.booknest.ui.components.BackButton
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Notifications
@@ -32,6 +36,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -47,6 +52,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.booknest.viewmodel.FavoriteGenresViewModel
+import com.example.booknest.viewmodel.FavoriteGenresViewModelFactory
 import com.example.booknest.data.AuthManager
 import com.example.booknest.network.UserProfile
 import com.example.booknest.viewmodel.ProfileViewModel
@@ -72,8 +79,25 @@ fun PrivacySettingsScreen(
     var notificationsEnabled by remember { mutableStateOf(true) }
     var emailNotifications by remember { mutableStateOf(true) }
     
+    // Notification preferences
+    var friendRequests by remember { mutableStateOf(true) }
+    var friendRequestAccepted by remember { mutableStateOf(true) }
+    var applicationApproved by remember { mutableStateOf(true) }
+    var applicationRejected by remember { mutableStateOf(true) }
+    var reviewDeadlineReminders by remember { mutableStateOf(true) }
+    var authorBookPublished by remember { mutableStateOf(true) }
+    
+    // Favorite Genres ViewModel
+    val favoriteGenresViewModel: FavoriteGenresViewModel = viewModel(
+        factory = FavoriteGenresViewModelFactory(authManager)
+    )
+    val favoriteGenres by favoriteGenresViewModel.genres.collectAsState()
+    val selectedGenres by favoriteGenresViewModel.selectedGenreIds.collectAsState()
+    val genresLoading by favoriteGenresViewModel.isLoading.collectAsState()
+    
     LaunchedEffect(Unit) {
         profileViewModel.loadMyProfile()
+        favoriteGenresViewModel.loadGenres()
     }
     
     LaunchedEffect(myProfile) {
@@ -84,17 +108,28 @@ fun PrivacySettingsScreen(
             reviewsPrivacy = profile.reviewsPrivacy ?: reviewsPrivacy
             notificationsEnabled = profile.notificationsEnabled
             emailNotifications = profile.emailNotifications
+            
+            // Load notification preferences
+            profile.notificationPreferences?.let { prefs ->
+                friendRequests = prefs.friendRequests ?: true
+                friendRequestAccepted = prefs.friendRequestAccepted ?: true
+                applicationApproved = prefs.applicationApproved ?: true
+                applicationRejected = prefs.applicationRejected ?: true
+                reviewDeadlineReminders = prefs.reviewDeadlineReminders ?: true
+                authorBookPublished = prefs.authorBookPublished ?: true
+            }
         }
     }
     
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Privacy Settings") },
+                title = { Text("Settings") },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
+                    BackButton(
+                        onClick = { navController.popBackStack() },
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
                 }
             )
         }
@@ -275,6 +310,154 @@ fun PrivacySettingsScreen(
                     }
                 }
                 
+                // Notification Preferences Section
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Notification Preferences",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                
+                // Friend Requests Notification
+                item {
+                    NotificationPreferenceCard(
+                        title = "Friend Requests",
+                        description = "Notify when someone sends a friend request",
+                        checked = friendRequests,
+                        onCheckedChange = { friendRequests = it },
+                        enabled = notificationsEnabled
+                    )
+                }
+                
+                // Friend Request Accepted Notification
+                item {
+                    NotificationPreferenceCard(
+                        title = "Friend Request Accepted",
+                        description = "Notify when a friend request is accepted",
+                        checked = friendRequestAccepted,
+                        onCheckedChange = { friendRequestAccepted = it },
+                        enabled = notificationsEnabled
+                    )
+                }
+                
+                // Application Approved Notification
+                item {
+                    NotificationPreferenceCard(
+                        title = "Application Approved",
+                        description = "Notify when book application is approved",
+                        checked = applicationApproved,
+                        onCheckedChange = { applicationApproved = it },
+                        enabled = notificationsEnabled
+                    )
+                }
+                
+                // Application Rejected Notification
+                item {
+                    NotificationPreferenceCard(
+                        title = "Application Rejected",
+                        description = "Notify when book application is rejected",
+                        checked = applicationRejected,
+                        onCheckedChange = { applicationRejected = it },
+                        enabled = notificationsEnabled
+                    )
+                }
+                
+                // Review Deadline Reminders
+                item {
+                    NotificationPreferenceCard(
+                        title = "Review Deadline Reminders",
+                        description = "Reminders for review deadlines",
+                        checked = reviewDeadlineReminders,
+                        onCheckedChange = { reviewDeadlineReminders = it },
+                        enabled = notificationsEnabled
+                    )
+                }
+                
+                // Author Book Published Notification
+                item {
+                    NotificationPreferenceCard(
+                        title = "Author Book Published",
+                        description = "Notify when followed author publishes a book",
+                        checked = authorBookPublished,
+                        onCheckedChange = { authorBookPublished = it },
+                        enabled = notificationsEnabled
+                    )
+                }
+                
+                // Favorite Genres Section
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Favorite Genres",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            if (genresLoading && favoriteGenres.isEmpty()) {
+                                Box(
+                        modifier = Modifier.fillMaxWidth(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator()
+                }
+                            } else if (selectedGenres.isEmpty()) {
+                                Text(
+                                    text = "No favorite genres selected yet.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            } else {
+                                // Show selected genres
+                                val selectedGenresList = favoriteGenres.filter { it.id in selectedGenres }
+                                Column(
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    selectedGenresList.forEach { genre ->
+                                        Row(
+                        modifier = Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = genre.name,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                modifier = Modifier.weight(1f)
+                    )
+                }
+                                    }
+                                }
+                            }
+                            
+                            OutlinedButton(
+                                onClick = {
+                                    navController.navigate(com.example.booknest.navigation.Screen.FavoriteGenres.route)
+                                },
+                        modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "Edit",
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Edit Favorite Genres")
+                            }
+                        }
+                    }
+                }
+                
                 // Save Button
                 item {
                     Button(
@@ -287,7 +470,15 @@ fun PrivacySettingsScreen(
                             )
                             profileViewModel.updateNotificationSettings(
                                 notificationsEnabled = notificationsEnabled,
-                                emailNotifications = emailNotifications
+                                emailNotifications = emailNotifications,
+                                notificationPreferences = com.example.booknest.network.NotificationPreferences(
+                                    friendRequests = friendRequests,
+                                    friendRequestAccepted = friendRequestAccepted,
+                                    applicationApproved = applicationApproved,
+                                    applicationRejected = applicationRejected,
+                                    reviewDeadlineReminders = reviewDeadlineReminders,
+                                    authorBookPublished = authorBookPublished
+                                )
                             )
                         },
                         modifier = Modifier.fillMaxWidth()
@@ -315,6 +506,45 @@ fun PrivacySettingsScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun NotificationPreferenceCard(
+    title: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    enabled: Boolean
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Switch(
+                checked = checked && enabled,
+                onCheckedChange = { if (enabled) onCheckedChange(it) },
+                enabled = enabled
+            )
         }
     }
 }

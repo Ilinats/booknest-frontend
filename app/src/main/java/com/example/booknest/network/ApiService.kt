@@ -69,6 +69,7 @@ data class CreateGenreRequest(
     val isActive: Boolean? = null
 )
 
+@Serializable
 data class GenreDto(
     val id: Int,
     val name: String,
@@ -226,7 +227,8 @@ object ReviewTypeSerializer : KSerializer<ReviewType> {
 @Serializable
 data class Book(
     val id: String,
-    val authorId: String,
+    @SerialName("authorId")
+    val authorId: String? = null,
     val title: String,
     val shortDescription: String?,
     val fullDescription: String?,
@@ -256,12 +258,29 @@ data class Book(
     val author: BookAuthor? = null,
     val rating: Double? = null,
     val genres: List<Genre>? = null
+) {
+    // Computed property to get authorId from author object if not directly provided
+    val resolvedAuthorId: String?
+        get() = authorId ?: author?.id
+}
+
+// Simplified book DTO for recommended books endpoint
+@Serializable
+data class RecommendedBook(
+    val id: String,
+    val title: String,
+    val authorName: String? = null,
+    val coverImageUrl: String? = null,
+    val rating: Double? = null,
+    val seriesName: String? = null,
+    val seriesOrder: Int? = null,
+    val publishedAt: String? = null
 )
 
 @Serializable
 data class BookAuthor(
     val id: String,
-    val username: String,
+    val username: String? = null,
     val name: String,
     val bio: String?,
     val profilePictureUrl: String?
@@ -364,9 +383,9 @@ data class Application(
     val applicationMessage: String? = null,
     val authorNotes: String? = null,
     val bookId: String,
-    val bookTitle: String,
-    val bookCoverImageUrl: String?,
-    val authorName: String,
+    val bookTitle: String? = null, // Made nullable for nested application objects in reviews
+    val bookCoverImageUrl: String? = null, // Made nullable for nested application objects in reviews
+    val authorName: String? = null, // Made nullable for nested application objects in reviews
     val readingStatus: String,
     val readingStartedAt: String? = null,
     val readingCompletedAt: String? = null,
@@ -385,7 +404,8 @@ data class ApplicationReader(
     val email: String,
     val firstName: String,
     val lastName: String,
-    val profilePictureUrl: String?
+    @SerialName("avatarUrl")
+    val profilePictureUrl: String? = null // API uses avatarUrl, mapped to profilePictureUrl
 )
 
 @Serializable
@@ -702,8 +722,14 @@ interface ApiService {
     @GET("/genres")
     suspend fun getGenres(): Response<ApiResponse<List<GenreDto>>>
 
+    @GET("/me/genre-preferences")
+    suspend fun getGenrePreferences(): Response<ApiResponse<List<GenrePreference>>>
+    
     @POST("/me/genre-preferences")
     suspend fun saveUserGenres(@Body preference: UpsertPreferenceRequest): Response<ApiResponse<Unit>>
+    
+    @DELETE("/me/genre-preferences")
+    suspend fun deleteGenrePreference(@Body request: DeleteGenrePreferenceRequest): Response<ApiResponse<Unit>>
 
     @POST("/genres")
     suspend fun addGenre(@Body genre: CreateGenreRequest): Response<ApiResponse<GenreDto>>
@@ -720,7 +746,7 @@ interface ApiService {
         @Query("skip") skip: Int?,
         @Query("take") take: Int?,
         @Query("status") status: String?
-    ): Response<ApiResponse<List<Book>>>
+    ): Response<ApiResponse<List<RecommendedBook>>>
 
     @GET("/books/featured")
     suspend fun getFeaturedBooks(): Response<ApiResponse<List<Book>>>
@@ -730,12 +756,12 @@ interface ApiService {
         @Query("q") query: String,
         @Query("skip") skip: Int?,
         @Query("take") take: Int?
-    ): Response<ApiResponse<List<Book>>>
+    ): Response<ApiResponse<List<RecommendedBook>>>
 
     @GET("/books/recommended")
     suspend fun getRecommendedBooks(
         @Query("take") take: Int?
-    ): Response<ApiResponse<List<Book>>>
+    ): Response<ApiResponse<List<RecommendedBook>>>
 
     @GET("/books/{bookId}")
     suspend fun getBookDetails(@Path("bookId") bookId: String): Response<ApiResponse<Book>>
@@ -974,6 +1000,9 @@ interface ApiService {
     @PUT("/profiles/me")
     suspend fun updateMyProfile(@Body profile: UpdateProfileRequest): Response<ApiResponse<UserProfile>>
     
+    @PATCH("/users/profile/me")
+    suspend fun updateUserProfile(@Body profile: UpdateUserProfileRequest): Response<ApiResponse<UserData>>
+    
     @GET("/profiles/social-media/options")
     suspend fun getSocialMediaOptions(): Response<ApiResponse<SocialMediaOptions>>
     
@@ -1029,7 +1058,7 @@ interface ApiService {
     @GET("/authors/following/books")
     suspend fun getBooksFromFollowedAuthors(
         @Query("limit") limit: Int? = 20
-    ): Response<ApiResponse<List<Book>>>
+    ): Response<ApiResponse<List<RecommendedBook>>>
     
     // Enhanced User Search
     @GET("/users/search")
@@ -1037,6 +1066,42 @@ interface ApiService {
         @Query("q") query: String,
         @Query("limit") limit: Int? = 20
     ): Response<ApiResponse<UserSearchResult>>
+    
+    // Notifications Endpoints
+    @GET("/notifications")
+    suspend fun getNotifications(
+        @Query("limit") limit: Int? = 50,
+        @Query("offset") offset: Int? = 0,
+        @Query("unreadOnly") unreadOnly: Boolean? = false
+    ): Response<ApiResponse<NotificationsResponse>>
+    
+    @GET("/notifications/unread-count")
+    suspend fun getUnreadCount(): Response<ApiResponse<UnreadCountResponse>>
+    
+    @PUT("/notifications/{notificationId}/read")
+    suspend fun markNotificationAsRead(@Path("notificationId") notificationId: String): Response<ApiResponse<Notification>>
+    
+    @PUT("/notifications/read-all")
+    suspend fun markAllNotificationsAsRead(): Response<ApiResponse<Unit>>
+    
+    @DELETE("/notifications/{notificationId}")
+    suspend fun deleteNotification(@Path("notificationId") notificationId: String): Response<ApiResponse<Unit>>
+    
+    // Device Token Management
+    @POST("/device-tokens/register")
+    suspend fun registerDeviceToken(@Body request: RegisterDeviceTokenRequest): Response<ApiResponse<DeviceToken>>
+    
+    @GET("/device-tokens")
+    suspend fun getDeviceTokens(): Response<ApiResponse<List<DeviceToken>>>
+    
+    @PUT("/device-tokens/{token}")
+    suspend fun updateDeviceToken(
+        @Path("token") token: String,
+        @Body request: UpdateDeviceTokenRequest
+    ): Response<ApiResponse<DeviceToken>>
+    
+    @DELETE("/device-tokens/{token}")
+    suspend fun deleteDeviceToken(@Path("token") token: String): Response<ApiResponse<Map<String, Any>>>
 }
 
 @Serializable
@@ -1251,7 +1316,8 @@ data class UserProfile(
     val readingListPrivacy: String? = null,
     val reviewsPrivacy: String? = null,
     val notificationsEnabled: Boolean = true,
-    val emailNotifications: Boolean = true
+    val emailNotifications: Boolean = true,
+    val notificationPreferences: NotificationPreferences? = null
 )
 
 @Serializable
@@ -1367,7 +1433,102 @@ data class UpdatePrivacyRequest(
 )
 
 @Serializable
+data class NotificationPreferences(
+    val friendRequests: Boolean? = null,
+    val friendRequestAccepted: Boolean? = null,
+    val applicationApproved: Boolean? = null,
+    val applicationRejected: Boolean? = null,
+    val reviewDeadlineReminders: Boolean? = null,
+    val authorBookPublished: Boolean? = null
+)
+
+@Serializable
 data class UpdateNotificationRequest(
     val notificationsEnabled: Boolean? = null,
-    val emailNotifications: Boolean? = null
+    val emailNotifications: Boolean? = null,
+    val notificationPreferences: NotificationPreferences? = null
+)
+
+@Serializable
+data class UpdateUserProfileRequest(
+    val firstName: String? = null,
+    val lastName: String? = null,
+    val birthDate: String? = null,
+    val bio: String? = null,
+    val avatarUrl: String? = null
+)
+
+@Serializable
+data class GenrePreference(
+    val id: String,
+    val userId: String? = null, // Not present in API response for /me/genre-preferences endpoint
+    @SerialName("genreId")
+    val genreId: Int? = null, // Not directly in response, but available via genre.id
+    val preferenceLevel: Int,
+    val genre: GenreDto,
+    val createdAt: String
+) {
+    // Computed property to get genreId from genre object if not directly provided
+    val resolvedGenreId: Int
+        get() = genreId ?: genre.id
+}
+
+@Serializable
+data class DeleteGenrePreferenceRequest(
+    val genreId: Int
+)
+
+// Notification data models
+@Serializable
+data class Notification(
+    val id: String,
+    val userId: String,
+    val type: String, // NotificationType
+    val title: String,
+    val body: String,
+    val isRead: Boolean,
+    val readAt: String? = null,
+    val data: Map<String, String>? = null,
+    val bookId: String? = null,
+    val applicationId: String? = null,
+    val relatedUserId: String? = null,
+    val createdAt: String,
+    val updatedAt: String
+)
+
+@Serializable
+data class NotificationsResponse(
+    val notifications: List<Notification>,
+    val total: Int
+)
+
+@Serializable
+data class UnreadCountResponse(
+    val count: Int
+)
+
+@Serializable
+data class RegisterDeviceTokenRequest(
+    val token: String,
+    val deviceType: String? = "android",
+    val deviceId: String? = null,
+    val appVersion: String? = null
+)
+
+@Serializable
+data class UpdateDeviceTokenRequest(
+    val isActive: Boolean? = null
+)
+
+@Serializable
+data class DeviceToken(
+    val id: String,
+    val userId: String,
+    val token: String,
+    val deviceType: String? = null,
+    val deviceId: String? = null,
+    val appVersion: String? = null,
+    val isActive: Boolean = true,
+    val createdAt: String,
+    val updatedAt: String
 )

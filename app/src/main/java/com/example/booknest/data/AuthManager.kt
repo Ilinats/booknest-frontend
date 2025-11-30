@@ -64,7 +64,23 @@ class AuthManager(private val userRepository: UserRepository, private val _apiSe
         // Update TokenCache when access token changes
         authScope.launch {
             userRepository.accessToken.collect { token ->
-                TokenCache.accessToken = token
+                // Only update TokenCache if token is not null, or if we're explicitly clearing it
+                // This prevents overwriting a valid token with null during Flow initialization
+                if (token != null) {
+                    TokenCache.accessToken = token
+                    println("DEBUG: TokenCache updated from Flow: ${token.take(20)}...")
+                } else {
+                    // Only clear TokenCache if user is explicitly logged out
+                    val isLoggedIn = _isLoggedIn.value
+                    if (!isLoggedIn) {
+                        TokenCache.accessToken = null
+                        println("DEBUG: TokenCache cleared - user logged out")
+                    } else {
+                        // User is logged in but token is null - this shouldn't happen
+                        // Keep existing TokenCache value to avoid overwriting with null
+                        println("DEBUG: WARNING - Token is null but user is logged in, keeping existing TokenCache")
+                    }
+                }
             }
         }
     }
@@ -102,6 +118,10 @@ class AuthManager(private val userRepository: UserRepository, private val _apiSe
     suspend fun isTokenExpired(): Boolean {
         val currentToken = userRepository.accessToken.first()
         return tokenManager.isTokenExpired(currentToken)
+    }
+    
+    suspend fun getAccessToken(): String? {
+        return userRepository.getAccessToken()
     }
     
     // Email Verification Methods (New 6-digit code system)
@@ -276,6 +296,18 @@ class AuthManager(private val userRepository: UserRepository, private val _apiSe
             return INSTANCE ?: synchronized(this) {
                 val userRepository = UserRepository(context)
                 val instance = AuthManager(userRepository, apiService)
+                
+                // Initialize TokenCache synchronously before returning instance
+                kotlinx.coroutines.runBlocking {
+                    try {
+                        val initialToken = userRepository.accessToken.first()
+                        TokenCache.accessToken = initialToken
+                        println("DEBUG: TokenCache initialized synchronously: ${initialToken?.take(20)}...")
+                    } catch (e: Exception) {
+                        println("DEBUG: Error loading initial token: ${e.message}")
+                    }
+                }
+                
                 INSTANCE = instance
                 instance
             }

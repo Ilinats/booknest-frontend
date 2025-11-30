@@ -13,7 +13,11 @@ import com.example.booknest.network.UpdateSocialMediaRequest
 import com.example.booknest.network.UpdatePrivacyRequest
 import com.example.booknest.network.UpdateNotificationRequest
 import com.example.booknest.network.UpdateProfileRequest
+import com.example.booknest.network.UpdateUserProfileRequest
+import com.example.booknest.network.NotificationPreferences
 import com.example.booknest.network.UserStatsResponse
+import com.example.booknest.network.Book
+import com.example.booknest.network.RecommendedBook
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -68,6 +72,12 @@ class ProfileViewModel(
     
     private val _snackbarEvent = MutableSharedFlow<String>()
     val snackbarEvent: SharedFlow<String> = _snackbarEvent.asSharedFlow()
+    
+    private val _authorBooks = MutableStateFlow<List<Book>>(emptyList())
+    val authorBooks: StateFlow<List<Book>> = _authorBooks.asStateFlow()
+    
+    private val _authorBooksLoading = MutableStateFlow(false)
+    val authorBooksLoading: StateFlow<Boolean> = _authorBooksLoading.asStateFlow()
     
     fun loadMyProfile() {
         viewModelScope.launch {
@@ -354,7 +364,8 @@ class ProfileViewModel(
     
     fun updateNotificationSettings(
         notificationsEnabled: Boolean? = null,
-        emailNotifications: Boolean? = null
+        emailNotifications: Boolean? = null,
+        notificationPreferences: NotificationPreferences? = null
     ) {
         viewModelScope.launch {
             try {
@@ -363,7 +374,8 @@ class ProfileViewModel(
                 
                 val request = UpdateNotificationRequest(
                     notificationsEnabled = notificationsEnabled,
-                    emailNotifications = emailNotifications
+                    emailNotifications = emailNotifications,
+                    notificationPreferences = notificationPreferences
                 )
                 val response = apiService.updateNotificationSettings(request)
                 if (response.isSuccessful && response.body()?.success == true) {
@@ -382,8 +394,126 @@ class ProfileViewModel(
         }
     }
     
+    fun updateUserProfile(
+        firstName: String? = null,
+        lastName: String? = null,
+        birthDate: String? = null,
+        bio: String? = null,
+        avatarUrl: String? = null
+    ) {
+        viewModelScope.launch {
+            _profileEditState.value = ProfileEditUiState.Loading
+            try {
+                val request = UpdateUserProfileRequest(
+                    firstName = firstName,
+                    lastName = lastName,
+                    birthDate = birthDate,
+                    bio = bio,
+                    avatarUrl = avatarUrl
+                )
+                val response = apiService.updateUserProfile(request)
+                if (response.isSuccessful && response.body()?.success == true) {
+                    // Reload profile to get updated data
+                    loadMyProfile()
+                    _profileEditState.value = ProfileEditUiState.Success
+                    _snackbarEvent.emit("Account settings updated successfully")
+                } else {
+                    handleProfileEditError(response.body()?.message ?: "Failed to update account settings")
+                }
+            } catch (e: Exception) {
+                handleProfileEditError(e.message ?: "Unknown error occurred")
+            }
+        }
+    }
+    
     fun clearError() {
         _error.value = null
+    }
+    
+    fun loadAuthorBooks(authorId: String, authorName: String?) {
+        viewModelScope.launch {
+            try {
+                _authorBooksLoading.value = true
+                _error.value = null
+                
+                // Use browseBooks without status filter to get all books regardless of status
+                // Then filter by authorName since RecommendedBook doesn't have authorId
+                val response = apiService.browseBooks(
+                    query = null,
+                    genreId = null,
+                    ageRating = null,
+                    distributionType = null,
+                    publishedFrom = null,
+                    publishedTo = null,
+                    skip = null,
+                    take = 100, // Get more books to filter
+                    status = null // No status filter to get all books
+                )
+                
+                if (response.isSuccessful && response.body() != null) {
+                    val apiResponse = response.body()!!
+                    if (apiResponse.success) {
+                        // Filter books by author name and convert to Book
+                        val filteredBooks = (apiResponse.data ?: emptyList())
+                            .filter { recommendedBook ->
+                                // Filter by authorName if available, otherwise we'd need authorId
+                                authorName?.let { name ->
+                                    recommendedBook.authorName?.equals(name, ignoreCase = true) == true
+                                } ?: false
+                            }
+                            .map { recommendedBook ->
+                                recommendedBook.toBook()
+                            }
+                        
+                        _authorBooks.value = filteredBooks
+                    } else {
+                        _error.value = "Failed to load author books: ${apiResponse.message}"
+                    }
+                } else {
+                    _error.value = "Failed to load author books"
+                }
+            } catch (e: Exception) {
+                _error.value = e.message ?: "Unknown error occurred"
+                println("Author books exception: ${e.message}")
+            } finally {
+                _authorBooksLoading.value = false
+            }
+        }
+    }
+    
+    // Extension function to convert RecommendedBook to Book
+    private fun RecommendedBook.toBook(): Book {
+        return Book(
+            id = this.id,
+            authorId = "", // Required but not available in RecommendedBook
+            title = this.title,
+            shortDescription = null,
+            fullDescription = null,
+            coverImageUrl = this.coverImageUrl,
+            pageCount = null,
+            ageRating = null,
+            distributionType = null,
+            fileUrl = null,
+            fileSize = null,
+            fileType = null,
+            totalCopies = null,
+            availableCopies = null,
+            applicationDeadline = null,
+            reviewDeadlineDays = null,
+            selectionCriteria = null,
+            selectionMethod = null,
+            status = null,
+            createdAt = null,
+            updatedAt = null,
+            publishedAt = this.publishedAt,
+            seriesId = null,
+            seriesOrder = this.seriesOrder,
+            seriesName = this.seriesName,
+            authorName = this.authorName,
+            author = null,
+            rating = this.rating,
+            genres = null
+        )
     }
     
     private fun onProfileLoaded(profile: UserProfile) {

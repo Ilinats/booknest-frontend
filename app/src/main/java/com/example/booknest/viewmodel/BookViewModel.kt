@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.booknest.data.AuthManager
 import com.example.booknest.network.Book
+import com.example.booknest.network.RecommendedBook
 import com.example.booknest.network.RetrofitInstance
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -63,8 +64,12 @@ class BookViewModel(private val authManager: AuthManager) : ViewModel() {
                 if (response.isSuccessful && response.body() != null) {
                     val apiResponse = response.body()!!
                     if (apiResponse.success) {
-                        _recommendedBooks.value = apiResponse.data ?: emptyList()
-                        println("Recommended books loaded: ${apiResponse.data?.size ?: 0} books")
+                        // Convert RecommendedBook to Book for UI compatibility
+                        val books = (apiResponse.data ?: emptyList()).map { recommendedBook ->
+                            recommendedBook.toBook()
+                        }
+                        _recommendedBooks.value = books
+                        println("Recommended books loaded: ${books.size} books")
                     } else {
                         println("Recommended books API error: ${apiResponse.message}")
                     }
@@ -79,6 +84,41 @@ class BookViewModel(private val authManager: AuthManager) : ViewModel() {
                 _isLoading.value = false
             }
         }
+    }
+    
+    // Extension function to convert RecommendedBook to Book
+    private fun RecommendedBook.toBook(): Book {
+        return Book(
+            id = this.id,
+            authorId = "", // Required but not available in RecommendedBook
+            title = this.title,
+            shortDescription = null,
+            fullDescription = null,
+            coverImageUrl = this.coverImageUrl,
+            pageCount = null,
+            ageRating = null,
+            distributionType = null,
+            fileUrl = null,
+            fileSize = null,
+            fileType = null,
+            totalCopies = null,
+            availableCopies = null,
+            applicationDeadline = null,
+            reviewDeadlineDays = null,
+            selectionCriteria = null,
+            selectionMethod = null,
+            status = null, // Required but not available in RecommendedBook
+            createdAt = null,
+            updatedAt = null,
+            publishedAt = this.publishedAt, // Nullable in Book
+            seriesId = null, // Required but not available in RecommendedBook
+            seriesOrder = this.seriesOrder,
+            seriesName = this.seriesName,
+            authorName = this.authorName,
+            author = null,
+            rating = this.rating,
+            genres = null
+        )
     }
     
     
@@ -106,13 +146,23 @@ class BookViewModel(private val authManager: AuthManager) : ViewModel() {
                 if (response.isSuccessful && response.body() != null) {
                     val apiResponse = response.body()!!
                     if (apiResponse.success) {
-                        _newReleases.value = apiResponse.data ?: emptyList()
+                        // Convert RecommendedBook to Book for UI compatibility
+                        val books = (apiResponse.data ?: emptyList()).map { recommendedBook ->
+                            recommendedBook.toBook()
+                        }
+                        _newReleases.value = books
+                        println("New releases loaded: ${books.size} books")
+                    } else {
+                        println("New releases API error: ${apiResponse.message}")
                     }
                 } else {
                     println("New releases API error: ${response.code()} - ${response.message()}")
+                    val errorBody = response.errorBody()?.string()
+                    println("New releases error body: $errorBody")
                 }
             } catch (e: Exception) {
-                // Handle error
+                println("New releases exception: ${e.message}")
+                e.printStackTrace()
             } finally {
                 _isLoading.value = false
             }
@@ -145,11 +195,15 @@ class BookViewModel(private val authManager: AuthManager) : ViewModel() {
                 if (response.isSuccessful && response.body() != null) {
                     val apiResponse = response.body()!!
                     if (apiResponse.success) {
-                        _books.value = apiResponse.data ?: emptyList()
+                        // Convert RecommendedBook to Book for UI compatibility
+                        val books = (apiResponse.data ?: emptyList()).map { recommendedBook ->
+                            recommendedBook.toBook()
+                        }
+                        _books.value = books
                     }
                 }
             } catch (e: Exception) {
-                // Handle error
+                println("Browse books exception: ${e.message}")
             }
         }
     }
@@ -172,8 +226,12 @@ class BookViewModel(private val authManager: AuthManager) : ViewModel() {
                 if (response.isSuccessful && response.body() != null) {
                     val apiResponse = response.body()!!
                     if (apiResponse.success) {
-                        _featuredBooks.value = apiResponse.data ?: emptyList()
-                        println("Featured books loaded: ${apiResponse.data?.size ?: 0} books")
+                        // Convert RecommendedBook to Book for UI compatibility
+                        val books = (apiResponse.data ?: emptyList()).map { recommendedBook ->
+                            recommendedBook.toBook()
+                        }
+                        _featuredBooks.value = books
+                        println("Featured books loaded: ${books.size} books")
                     } else {
                         println("Featured books API error: ${apiResponse.message}")
                     }
@@ -193,11 +251,21 @@ class BookViewModel(private val authManager: AuthManager) : ViewModel() {
                 if (response.isSuccessful && response.body() != null) {
                     val apiResponse = response.body()!!
                     if (apiResponse.success) {
-                        _books.value = apiResponse.data ?: emptyList()
+                        // Convert RecommendedBook to Book for UI compatibility
+                        val books = (apiResponse.data ?: emptyList()).map { recommendedBook ->
+                            recommendedBook.toBook()
+                        }
+                        _books.value = books
+                        println("Search books loaded: ${books.size} books for query: $query")
+                    } else {
+                        println("Search books API error: ${apiResponse.message}")
                     }
+                } else {
+                    println("Search books API error: ${response.code()} - ${response.message()}")
                 }
             } catch (e: Exception) {
-                // Handle error
+                println("Search books exception: ${e.message}")
+                e.printStackTrace()
             }
         }
     }

@@ -43,6 +43,7 @@ sealed class Screen(val route: String) {
     
     // Friend screens
     object Friends : Screen("friends")
+    object FavoriteGenres : Screen("favorite_genres")
     object UserProfile : Screen("user_profile/{username}") {
         fun createRoute(username: String) = "user_profile/$username"
     }
@@ -53,4 +54,5 @@ sealed class Screen(val route: String) {
     object ReviewSubmission : Screen("review_submission/{applicationId}") {
         fun createRoute(applicationId: String) = "review_submission/$applicationId"
     }
+    object Notifications : Screen("notifications")
 }

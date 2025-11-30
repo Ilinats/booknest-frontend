@@ -1,79 +1,54 @@
 package com.example.booknest.network
 
-import com.example.booknest.data.AuthManager
 import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
 import okhttp3.Response
-import java.io.IOException
 
-class AuthInterceptor(private val authManager: AuthManager) : Interceptor {
-    
-    // Track if we're already in a refresh attempt to prevent infinite loops
-    private var isRefreshing = false
-    
+class AuthInterceptor : Interceptor {
+
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
-        val token = TokenCache.accessToken
+        var token = TokenCache.accessToken
 
+        // Add Authorization header if token exists
         val requestBuilder = originalRequest.newBuilder()
         if (token != null) {
             requestBuilder.addHeader("Authorization", "Bearer $token")
         }
 
-        val request = requestBuilder.build()
+        var request = requestBuilder.build()
         var response = chain.proceed(request)
 
-        // Only attempt refresh if we get 401, have a token, and aren't already refreshing
-        // Also exclude auth endpoints from token refresh logic
-        val isAuthEndpoint = originalRequest.url.toString().contains("/auth/")
-        if (response.code == 401 && token != null && !isRefreshing && !isAuthEndpoint) {
-            println("Received 401, attempting token refresh...")
-            response.close()
-            
-            // Check if this is a refresh token request to avoid infinite loops
-            if (originalRequest.url.toString().contains("/auth/refresh-token")) {
-                println("Refresh token request failed with 401, clearing user data")
-                runBlocking {
-                    authManager.logout()
-                }
-                // Return the original 401 response instead of throwing an exception
-                return response
-            }
-            
-            isRefreshing = true
-            try {
+        // Handle 401 Unauthorized responses
+        // Skip token refresh for auth endpoints to avoid infinite loops
+        val requestPath = originalRequest.url.encodedPath
+        val isAuthEndpoint = requestPath == "/auth/login" || 
+                            requestPath == "/auth/register" ||
+                            requestPath == "/auth/refresh-token" ||
+                            requestPath.startsWith("/auth/verify") ||
+                            requestPath.startsWith("/auth/resend")
+        
+        if (response.code == 401 && !isAuthEndpoint) {
+            val tokenRefreshCallback = RetrofitInstance.tokenRefreshCallback
+            if (tokenRefreshCallback != null) {
+                response.close() // Close the original response
+                
+                // Attempt to refresh the token
                 val refreshSuccess = runBlocking {
-                    authManager.refreshTokenIfNeeded()
+                    tokenRefreshCallback()
                 }
                 
                 if (refreshSuccess) {
-                    println("Token refresh successful, retrying request...")
+                    // Get the new token
                     val newToken = TokenCache.accessToken
                     if (newToken != null) {
-                        val newRequest = originalRequest.newBuilder()
-                            .removeHeader("Authorization")
-                            .addHeader("Authorization", "Bearer $newToken")
+                        // Retry the original request with the new token
+                        request = originalRequest.newBuilder()
+                            .header("Authorization", "Bearer $newToken")
                             .build()
-                        response = chain.proceed(newRequest)
-                        println("Request retry successful: ${response.code}")
+                        response = chain.proceed(request)
                     }
-                } else {
-                    println("Token refresh failed, user needs to login again")
-                    runBlocking {
-                        authManager.logout()
-                    }
-                    // Return the original 401 response instead of throwing an exception
-                    return response
                 }
-            } catch (e: Exception) {
-                println("Token refresh exception: ${e.message}")
-                runBlocking {
-                    authManager.logout()
-                }
-                // Return the original 401 response instead of throwing an exception
-                return response
-            } finally {
-                isRefreshing = false
             }
         }
 

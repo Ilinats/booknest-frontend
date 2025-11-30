@@ -15,12 +15,14 @@ import com.example.booknest.ui.home.HomeScreen
 import com.example.booknest.ui.profile.ProfileEditScreen
 import com.example.booknest.ui.profile.ProfileScreen
 import com.example.booknest.ui.profile.StatsScreen
+import com.example.booknest.ui.profile.FavoriteGenresScreen
 import com.example.booknest.ui.analytics.AuthorAnalyticsScreen
 import com.example.booknest.ui.analytics.BookAnalyticsScreen
 import com.example.booknest.ui.friends.FriendsScreen
 import com.example.booknest.ui.profile.PrivacySettingsScreen
 import com.example.booknest.ui.profile.SocialMediaManagementScreen
 import com.example.booknest.ui.reviews.ReviewSubmissionScreen
+import com.example.booknest.ui.notifications.NotificationsScreen
 
 @Composable
 fun HomeNavGraph(
@@ -46,10 +48,6 @@ fun HomeNavGraph(
                 searchQuery = searchQuery
             )
         }
-        composable(route = BottomBarScreen.Friends.route) {
-            FriendsScreen(navController, authManager)
-        }
-        
         composable(
             route = "book_details/{bookId}",
             arguments = listOf(navArgument("bookId") { type = NavType.StringType })
@@ -99,8 +97,12 @@ fun HomeNavGraph(
         }
         
         // Friend screens
-        composable("friends") {
+        composable(Screen.Friends.route) {
             FriendsScreen(navController, authManager)
+        }
+
+        composable(Screen.FavoriteGenres.route) {
+            FavoriteGenresScreen(navController, authManager)
         }
         
         // Privacy settings
@@ -120,6 +122,11 @@ fun HomeNavGraph(
         ) { backStackEntry ->
             val applicationId = backStackEntry.arguments?.getString("applicationId") ?: ""
             ReviewSubmissionScreen(navController, authManager, applicationId)
+        }
+        
+        // Notifications
+        composable(Screen.Notifications.route) {
+            NotificationsScreen(navController, authManager)
         }
     }
 }

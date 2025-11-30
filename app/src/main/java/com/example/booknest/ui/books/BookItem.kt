@@ -43,7 +43,7 @@ fun BookItem(
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = "by ${book.authorName ?: book.author?.username ?: "Unknown Author"}",
+                text = "by ${book.author?.name ?: book.authorName ?: "Unknown Author"}",
                 style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
