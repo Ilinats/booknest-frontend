@@ -3,15 +3,16 @@ package com.example.booknest.viewmodel
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.booknest.network.ApiService
-import com.example.booknest.network.RetrofitInstance
+import com.example.booknest.data.datasource.extractErrorMessage
+import com.example.booknest.data.error.BNError
+import com.example.booknest.domain.usecase.files.GetBookDownloadUrlUseCase
+import com.example.booknest.domain.usecase.files.UploadBookFileUseCase
 import com.example.booknest.utils.FileDownloadManager
 import com.example.booknest.utils.FileUploadManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import okhttp3.MultipartBody
 import java.io.File
 
 data class FileUiState(
@@ -20,26 +21,26 @@ data class FileUiState(
     val downloadProgress: Float = 0f,
     val error: String? = null,
     val successMessage: String? = null,
+    val downloadingMessage: String? = null,
     val downloadedBooks: List<File> = emptyList()
 )
 
 class FileViewModel(
-    private val context: Context
+    private val context: Context,
+    private val uploadBookFileUseCase: UploadBookFileUseCase,
+    private val getBookDownloadUrlUseCase: GetBookDownloadUrlUseCase
 ) : ViewModel() {
-    
+
     private val _uiState = MutableStateFlow(FileUiState())
     val uiState: StateFlow<FileUiState> = _uiState.asStateFlow()
-    
-    private val apiService: ApiService = RetrofitInstance.api
     private val uploadManager = FileUploadManager(context)
     private val downloadManager = FileDownloadManager(context)
-    
+
     fun uploadBookFile(bookId: String, file: File) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            
+
             try {
-                // Validate file
                 val validationResult = uploadManager.validateFile(file)
                 if (validationResult is FileUploadManager.ValidationResult.Error) {
                     _uiState.value = _uiState.value.copy(
@@ -48,32 +49,23 @@ class FileViewModel(
                     )
                     return@launch
                 }
-                
-                // Create multipart body
+
                 val multipartBody = uploadManager.createMultipartBody(file)
-                
-                // Upload file
-                val response = apiService.uploadBookFile(bookId, multipartBody)
-                
-                if (response.isSuccessful && response.body() != null) {
-                    val apiResponse = response.body()!!
-                    if (apiResponse.success) {
+
+                val result = uploadBookFileUseCase(bookId, multipartBody)
+                result
+                    .onSuccess {
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
                             successMessage = "File uploaded successfully"
                         )
-                    } else {
+                    }
+                    .onFailure { e ->
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
-                            error = apiResponse.message ?: "Upload failed"
+                            error = e.message ?: "Upload failed"
                         )
                     }
-                } else {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = "Upload failed: ${response.code()}"
-                    )
-                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -82,21 +74,22 @@ class FileViewModel(
             }
         }
     }
-    
+
     fun downloadBook(bookId: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                error = null,
+                successMessage = null,
+                downloadingMessage = "Downloading book...",
+                downloadProgress = 0f
+            )
+
             try {
-                // Get download URL
-                val response = apiService.getBookDownloadUrl(bookId)
-                
-                if (response.isSuccessful && response.body() != null) {
-                    val apiResponse = response.body()!!
-                    if (apiResponse.success && apiResponse.data != null) {
-                        val downloadData = apiResponse.data!!
-                        
-                        // Extract file type from URL or fileName if not provided
+                val downloadResult = getBookDownloadUrlUseCase(bookId)
+
+                downloadResult
+                    .onSuccess { downloadData ->
                         val fileType = downloadData.fileType ?: run {
                             val url = downloadData.downloadUrl
                             val fileName = downloadData.fileName
@@ -105,56 +98,108 @@ class FileViewModel(
                                 url.contains(".pdf") || fileName.contains(".pdf") -> "pdf"
                                 url.contains(".mobi") || fileName.contains(".mobi") -> "mobi"
                                 else -> {
-                                    // Try to extract from URL path
-                                    url.substringAfterLast(".").substringBefore("?").takeIf { it.length <= 5 } ?: "epub"
+                                    url.substringAfterLast(".").substringBefore("?")
+                                        .takeIf { it.length <= 5 } ?: "epub"
                                 }
                             }
                         }
-                        
-                        // Download file
+
                         val result = downloadManager.downloadBook(
                             bookId = bookId,
                             downloadUrl = downloadData.downloadUrl,
                             fileName = downloadData.fileName,
                             fileType = fileType
                         )
-                        
+
                         result.fold(
-                            onSuccess = { file ->
+                            onSuccess = { _ ->
                                 _uiState.value = _uiState.value.copy(
                                     isLoading = false,
+                                    downloadingMessage = null,
                                     successMessage = "Book downloaded successfully",
                                     downloadedBooks = downloadManager.getDownloadedBooks()
                                 )
                             },
                             onFailure = { exception ->
+                                val friendlyMessage = when (exception) {
+                                    is BNError.Generic -> {
+                                        exception.messageString?.takeIf { it.isNotBlank() }
+                                            ?: "Download failed. Please try again later."
+                                    }
+
+                                    else -> {
+                                        val extracted = extractErrorMessage(exception.message)
+                                        if (extracted.isNotBlank() && !extracted.contains("{") && !extracted.contains(
+                                                "statusCode"
+                                            )
+                                        ) {
+                                            extracted
+                                        } else {
+                                            "Download failed. Please try again later."
+                                        }
+                                    }
+                                }
                                 _uiState.value = _uiState.value.copy(
                                     isLoading = false,
-                                    error = "Download failed: ${exception.message}"
+                                    downloadingMessage = null,
+                                    error = friendlyMessage
                                 )
                             }
                         )
-                    } else {
+                    }
+                    .onFailure { e ->
+                        val friendlyMessage = when (e) {
+                            is BNError.Generic -> {
+                                e.messageString?.takeIf { it.isNotBlank() }
+                                    ?: "No file available for this book"
+                            }
+
+                            else -> {
+                                val extracted = extractErrorMessage(e.message)
+                                if (extracted.isNotBlank() && !extracted.contains("{") && !extracted.contains(
+                                        "statusCode"
+                                    )
+                                ) {
+                                    extracted
+                                } else {
+                                    "No file available for this book"
+                                }
+                            }
+                        }
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
-                            error = apiResponse.message ?: "Download failed"
+                            downloadingMessage = null,
+                            error = friendlyMessage
                         )
                     }
-                } else {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = "Download failed: ${response.code()}"
-                    )
-                }
             } catch (e: Exception) {
+                val friendlyMessage = when (e) {
+                    is BNError.Generic -> {
+                        e.messageString?.takeIf { it.isNotBlank() }
+                            ?: "Download failed. Please try again later."
+                    }
+
+                    else -> {
+                        val extracted = extractErrorMessage(e.message)
+                        if (extracted.isNotBlank() && !extracted.contains("{") && !extracted.contains(
+                                "statusCode"
+                            )
+                        ) {
+                            extracted
+                        } else {
+                            "Download failed. Please try again later."
+                        }
+                    }
+                }
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = "Download failed: ${e.message}"
+                    downloadingMessage = null,
+                    error = friendlyMessage
                 )
             }
         }
     }
-    
+
     fun deleteDownloadedBook(file: File) {
         viewModelScope.launch {
             val success = downloadManager.deleteDownloadedBook(file)
@@ -170,7 +215,7 @@ class FileViewModel(
             }
         }
     }
-    
+
     fun loadDownloadedBooks() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
@@ -178,19 +223,23 @@ class FileViewModel(
             )
         }
     }
-    
+
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
     }
-    
+
     fun clearSuccessMessage() {
         _uiState.value = _uiState.value.copy(successMessage = null)
     }
-    
+
+    fun clearDownloadingMessage() {
+        _uiState.value = _uiState.value.copy(downloadingMessage = null)
+    }
+
     fun isBookDownloaded(bookId: String): Boolean {
         return downloadManager.isBookDownloaded(bookId)
     }
-    
+
     fun getDownloadedBook(bookId: String): File? {
         return downloadManager.getDownloadedBook(bookId)
     }
