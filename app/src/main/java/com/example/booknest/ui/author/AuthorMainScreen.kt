@@ -1,16 +1,23 @@
 package com.example.booknest.ui.author
 
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.ui.draw.shadow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -21,32 +28,67 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.booknest.data.AuthManager
+import com.example.booknest.data.session.SessionManager
 import com.example.booknest.navigation.AuthorBottomBarScreen
 import com.example.booknest.navigation.Screen
 import com.example.booknest.ui.applications.BookApplicationDetailScreen
 import com.example.booknest.ui.author.AuthorHomeScreen
 import com.example.booknest.ui.author.AuthorProfileScreen
 import com.example.booknest.ui.author.BookCreationWizard
+import com.example.booknest.ui.author.BookEditScreen
 import com.example.booknest.ui.author.MyBooksScreen
 import com.example.booknest.ui.author.SeriesManagementScreen
 import com.example.booknest.ui.profile.ProfileEditScreen
 import com.example.booknest.ui.profile.ProfileScreen
 import com.example.booknest.ui.profile.StatsScreen
+import com.example.booknest.ui.profile.PrivacySettingsScreen
+import com.example.booknest.ui.profile.SocialMediaManagementScreen
 import com.example.booknest.ui.analytics.AuthorAnalyticsScreen
 import com.example.booknest.ui.analytics.BookAnalyticsScreen
+import com.example.booknest.ui.books.BookDetailsScreen
+import com.example.booknest.ui.books.SeriesBooksScreen
+import com.example.booknest.ui.auth.PasswordResetScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AuthorMainScreen(authManager: AuthManager) {
+fun AuthorMainScreen(sessionManager: SessionManager) {
     val navController = rememberNavController()
+    val currentUser by sessionManager.currentUser.collectAsState()
+    val isLoggedIn by sessionManager.isLoggedIn.collectAsState()
+
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+    val shouldShowBottomBar =
+        currentRoute != "profile_edit" && currentRoute != "social_media_management"
+
+    androidx.compose.runtime.LaunchedEffect(isLoggedIn) {
+        if (isLoggedIn == true && currentUser == null) {
+            try {
+                val profilesService = org.koin.core.context.GlobalContext.get()
+                    .get<com.example.booknest.data.service.ProfilesService>()
+                val response = profilesService.getMe()
+                if (response.isSuccessful) {
+                    response.body()?.let { user ->
+                        sessionManager.updateUser(user)
+                    }
+                }
+            } catch (e: Exception) {
+                println("DEBUG: Failed to fetch user in AuthorMainScreen: ${e.message}")
+            }
+        }
+    }
+
     Scaffold(
-        bottomBar = { AuthorBottomBar(navController = navController) }
+        bottomBar = {
+            if (shouldShowBottomBar) {
+                AuthorBottomBar(navController = navController)
+            }
+        }
     ) { paddingValues ->
         AuthorNavGraph(
-            navController = navController, 
-            authManager = authManager,
-            modifier = Modifier.padding(paddingValues)
+            navController = navController,
+            sessionManager = sessionManager,
+            modifier = Modifier.fillMaxSize()
         )
     }
 }
@@ -61,9 +103,19 @@ fun AuthorBottomBar(navController: NavHostController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    NavigationBar {
-        screens.forEach { screen ->
-            AddItem(screen = screen, currentDestination = currentDestination, navController = navController)
+    Surface(
+        shadowElevation = 8.dp,
+        tonalElevation = 4.dp,
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        NavigationBar {
+            screens.forEach { screen ->
+                AddItem(
+                    screen = screen,
+                    currentDestination = currentDestination,
+                    navController = navController
+                )
+            }
         }
     }
 }
@@ -91,82 +143,131 @@ fun RowScope.AddItem(
 
 @Composable
 fun AuthorNavGraph(
-    navController: NavHostController, 
-    authManager: AuthManager,
+    navController: NavHostController,
+    sessionManager: SessionManager,
     modifier: Modifier = Modifier
 ) {
     NavHost(
-        navController = navController, 
-        startDestination = AuthorBottomBarScreen.Home.route, 
+        navController = navController,
+        startDestination = AuthorBottomBarScreen.Home.route,
         modifier = modifier
     ) {
         composable(route = AuthorBottomBarScreen.Home.route) {
-            AuthorHomeScreen(navController, authManager)
+            AuthorHomeScreen(navController, sessionManager)
         }
         composable(route = AuthorBottomBarScreen.MyBooks.route) {
-            MyBooksScreen(navController, authManager)
+            MyBooksScreen(navController, sessionManager)
         }
         composable(route = AuthorBottomBarScreen.Profile.route) {
-            AuthorProfileScreen(navController, authManager)
+            AuthorProfileScreen(navController, sessionManager)
         }
-        
-        // Author-specific screens
+
         composable(route = Screen.BookCreation.route) {
-            BookCreationWizard(navController, authManager)
+            BookCreationWizard(navController, sessionManager)
         }
-        
+
         composable(route = Screen.SeriesManagement.route) {
-            SeriesManagementScreen(navController, authManager)
+            SeriesManagementScreen(navController, sessionManager)
         }
-        
+
         composable(
             route = Screen.BookApplicationDetail.route,
             arguments = listOf(navArgument("bookId") { type = NavType.StringType })
         ) { backStackEntry ->
             val bookId = backStackEntry.arguments?.getString("bookId") ?: ""
-            BookApplicationDetailScreen(navController, authManager, bookId)
+            BookApplicationDetailScreen(navController, sessionManager, bookId)
         }
-        
-        // Profile and Stats screens
+
+        composable(route = "profile") {
+            ProfileScreen(navController, sessionManager, null)
+        }
         composable(
-            route = "profile/{userId?}",
-            arguments = listOf(navArgument("userId") { 
+            route = "profile/{userId}",
+            arguments = listOf(navArgument("userId") {
                 type = NavType.StringType
-                nullable = true
-                defaultValue = null
             })
         ) { backStackEntry ->
             val userId = backStackEntry.arguments?.getString("userId")
-            ProfileScreen(navController, authManager, userId)
+            ProfileScreen(navController, sessionManager, userId)
         }
-        
+
         composable("profile_edit") {
-            ProfileEditScreen(navController, authManager)
+            ProfileEditScreen(navController, sessionManager)
         }
-        
+
+        composable(route = "stats") {
+            StatsScreen(navController, sessionManager, null)
+        }
         composable(
-            route = "stats/{authorId?}",
-            arguments = listOf(navArgument("authorId") { 
+            route = "stats/{authorId}",
+            arguments = listOf(navArgument("authorId") {
                 type = NavType.StringType
-                nullable = true
-                defaultValue = null
             })
         ) { backStackEntry ->
             val authorId = backStackEntry.arguments?.getString("authorId")
-            StatsScreen(navController, authManager, authorId)
+            StatsScreen(navController, sessionManager, authorId)
         }
-        
-        // Analytics screens
+
+        composable(
+            route = Screen.BookEdit.route,
+            arguments = listOf(navArgument("bookId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val bookId = backStackEntry.arguments?.getString("bookId") ?: ""
+            BookEditScreen(navController, bookId, sessionManager)
+        }
+
         composable(
             route = "book_analytics/{bookId}",
             arguments = listOf(navArgument("bookId") { type = NavType.StringType })
         ) { backStackEntry ->
             val bookId = backStackEntry.arguments?.getString("bookId") ?: ""
-            BookAnalyticsScreen(navController, authManager, bookId)
+            BookAnalyticsScreen(navController, sessionManager, bookId)
         }
-        
-        composable("author_analytics") {
-            AuthorAnalyticsScreen(navController, authManager)
+
+        composable(Screen.AuthorAnalytics.route) {
+            AuthorAnalyticsScreen(navController, sessionManager)
+        }
+
+        composable(
+            route = Screen.BookDetails.route,
+            arguments = listOf(navArgument("bookId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val bookId = backStackEntry.arguments?.getString("bookId") ?: ""
+            BookDetailsScreen(navController, sessionManager, bookId)
+        }
+
+        composable(
+            route = "series_books/{seriesId}?seriesName={seriesName}",
+            arguments = listOf(
+                navArgument("seriesId") { type = NavType.StringType },
+                navArgument("seriesName") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { backStackEntry ->
+            val seriesId = backStackEntry.arguments?.getString("seriesId") ?: ""
+            val seriesName = backStackEntry.arguments?.getString("seriesName")
+            SeriesBooksScreen(navController, seriesId, seriesName)
+        }
+
+        composable(Screen.PrivacySettings.route) {
+            PrivacySettingsScreen(navController, sessionManager)
+        }
+
+        composable(Screen.SocialMediaManagement.route) {
+            SocialMediaManagementScreen(navController, sessionManager)
+        }
+
+        composable(
+            route = Screen.PasswordReset.route,
+            arguments = listOf(navArgument("email") {
+                type = NavType.StringType
+            })
+        ) { backStackEntry ->
+            val email = backStackEntry.arguments?.getString("email") ?: ""
+            PasswordResetScreen(navController, sessionManager, email)
         }
     }
 }

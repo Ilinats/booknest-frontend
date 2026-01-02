@@ -1,77 +1,114 @@
 package com.example.booknest.viewmodel
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.booknest.data.AuthManager
-import com.example.booknest.network.Book
-import com.example.booknest.network.BookAnalytics
-import com.example.booknest.network.BookStats
-import com.example.booknest.network.CreateBookDto
-import com.example.booknest.network.CreateSeriesDto
-import com.example.booknest.network.RetrofitInstance
-import com.example.booknest.network.Series
-import com.example.booknest.network.UpdateBookDto
-import com.example.booknest.network.UpdateSeriesDto
+import com.example.booknest.domain.model.request.CreateBookRequest
+import com.example.booknest.domain.model.request.CreateSeriesRequest
+import com.example.booknest.domain.model.request.UpdateBookRequest
+import com.example.booknest.domain.model.request.UpdateSeriesRequest
+import com.example.booknest.domain.model.response.BookResponse
+import com.example.booknest.domain.model.response.BookStatsResponse
+import com.example.booknest.domain.model.response.SeriesResponse
+import com.example.booknest.domain.model.response.ApplicationResponse
+import com.example.booknest.domain.model.response.ReviewResponse
+import com.example.booknest.domain.model.response.UserStatsResponse
+import com.example.booknest.domain.repository.ApplicationsRepository
+import com.example.booknest.domain.repository.BooksRepository
+import com.example.booknest.domain.repository.ProfileRepository
+import com.example.booknest.domain.repository.ReviewsRepository
+import com.example.booknest.domain.repository.SeriesRepository
+import com.example.booknest.domain.usecase.author.GetBookStatsUseCase
+import com.example.booknest.domain.usecase.author.GetMyBooksUseCase
+import com.example.booknest.domain.usecase.author.GetMySeriesUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
 
-class AuthorViewModel(private val authManager: AuthManager) : ViewModel() {
+class AuthorViewModel(
+    private val booksRepository: BooksRepository,
+    private val seriesRepository: SeriesRepository,
+    private val getMyBooksUseCase: GetMyBooksUseCase,
+    private val getMySeriesUseCase: GetMySeriesUseCase,
+    private val getBookStatsUseCase: GetBookStatsUseCase,
+    private val profileRepository: ProfileRepository,
+    private val reviewsRepository: ReviewsRepository,
+    private val applicationsRepository: ApplicationsRepository
+) : ViewModel() {
 
-    // Books state
-    private val _myBooks = MutableStateFlow<List<Book>>(emptyList())
-    val myBooks: StateFlow<List<Book>> = _myBooks.asStateFlow()
+    private val _myBooks = MutableStateFlow<List<BookResponse>>(emptyList())
+    val myBooks: StateFlow<List<BookResponse>> = _myBooks.asStateFlow()
 
     private val _isLoadingBooks = MutableStateFlow(false)
     val isLoadingBooks: StateFlow<Boolean> = _isLoadingBooks.asStateFlow()
 
-    // Series state
-    private val _mySeries = MutableStateFlow<List<Series>>(emptyList())
-    val mySeries: StateFlow<List<Series>> = _mySeries.asStateFlow()
+    private val _mySeries = MutableStateFlow<List<SeriesResponse>>(emptyList())
+    val mySeries: StateFlow<List<SeriesResponse>> = _mySeries.asStateFlow()
 
     private val _isLoadingSeries = MutableStateFlow(false)
     val isLoadingSeries: StateFlow<Boolean> = _isLoadingSeries.asStateFlow()
 
-    // Book stats state
-    private val _bookStats = MutableStateFlow<Map<String, BookStats>>(emptyMap())
-    val bookStats: StateFlow<Map<String, BookStats>> = _bookStats.asStateFlow()
+    private val _bookStats = MutableStateFlow<Map<String, BookStatsResponse>>(emptyMap())
+    val bookStats: StateFlow<Map<String, BookStatsResponse>> = _bookStats.asStateFlow()
 
-    // Quick stats
     private val _quickStats = MutableStateFlow(QuickStats())
     val quickStats: StateFlow<QuickStats> = _quickStats.asStateFlow()
+
+    private val _authorStats = MutableStateFlow<UserStatsResponse?>(null)
+    val authorStats: StateFlow<UserStatsResponse?> = _authorStats.asStateFlow()
+
+    private val _recentReviews = MutableStateFlow<List<ReviewResponse>>(emptyList())
+    val recentReviews: StateFlow<List<ReviewResponse>> = _recentReviews.asStateFlow()
+
+    private val _overdueReviews = MutableStateFlow<List<ApplicationResponse>>(emptyList())
+    val overdueReviews: StateFlow<List<ApplicationResponse>> = _overdueReviews.asStateFlow()
+
+    private val _isLoadingStats = MutableStateFlow(false)
+    val isLoadingStats: StateFlow<Boolean> = _isLoadingStats.asStateFlow()
+
+    private val _isLoadingReviews = MutableStateFlow(false)
+    val isLoadingReviews: StateFlow<Boolean> = _isLoadingReviews.asStateFlow()
 
     data class QuickStats(
         val totalBooks: Int = 0,
         val activeBooks: Int = 0,
         val totalApplications: Int = 0,
-        val avgResponseTime: String = "0 days"
+        val pendingApplications: Int = 0,
+        val applicationsThisMonth: Int = 0,
+        val avgResponseTime: String = "0 days",
+        val totalReviews: Int = 0,
+        val averageRating: Double = 0.0,
+        val approvalRate: Int = 0
     )
 
     init {
         loadMyBooks()
         loadMySeries()
+        loadAuthorStats()
+        loadRecentReviews()
+        loadOverdueReviews()
     }
 
     fun loadMyBooks() {
         viewModelScope.launch {
             try {
                 _isLoadingBooks.value = true
-                val response = RetrofitInstance.api.getMyBooks()
-                if (response.isSuccessful && response.body() != null) {
-                    val apiResponse = response.body()!!
-                    if (apiResponse.success) {
-                        _myBooks.value = apiResponse.data ?: emptyList()
+                val result = getMyBooksUseCase()
+                result
+                    .onSuccess { books ->
+                        _myBooks.value = books
                         updateQuickStats()
-                    } else {
-                        println("Failed to load books: ${apiResponse.message}")
                     }
-                } else {
-                    println("Failed to load books: ${response.code()} - ${response.message()}")
-                }
+                    .onFailure { e ->
+                        com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                    }
             } catch (e: Exception) {
-                println("Error loading books: ${e.message}")
+                com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
             } finally {
                 _isLoadingBooks.value = false
             }
@@ -82,51 +119,418 @@ class AuthorViewModel(private val authManager: AuthManager) : ViewModel() {
         viewModelScope.launch {
             try {
                 _isLoadingSeries.value = true
-                val response = RetrofitInstance.api.getMySeries()
-                if (response.isSuccessful && response.body() != null) {
-                    val apiResponse = response.body()!!
-                    if (apiResponse.success) {
-                        _mySeries.value = apiResponse.data ?: emptyList()
-                    } else {
-                        println("Failed to load series: ${apiResponse.message}")
+                val result = getMySeriesUseCase()
+                result
+                    .onSuccess { series ->
+                        _mySeries.value = series
                     }
-                } else {
-                    println("Failed to load series: ${response.code()} - ${response.message()}")
-                }
+                    .onFailure { e ->
+                        com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                    }
             } catch (e: Exception) {
-                println("Error loading series: ${e.message}")
+                com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
             } finally {
                 _isLoadingSeries.value = false
             }
         }
     }
 
-    fun createBook(book: CreateBookDto) {
+    private val _bookCreationState = MutableStateFlow<BookCreationState>(BookCreationState.Idle)
+    val bookCreationState: StateFlow<BookCreationState> = _bookCreationState.asStateFlow()
+
+    sealed class BookCreationState {
+        object Idle : BookCreationState()
+        object Creating : BookCreationState()
+        data class Success(val book: BookResponse) : BookCreationState()
+        data class Error(val message: String) : BookCreationState()
+    }
+
+    fun createBook(
+        book: CreateBookRequest,
+        fileUri: android.net.Uri? = null,
+        coverImageUri: android.net.Uri? = null,
+        context: android.content.Context? = null
+    ) {
         viewModelScope.launch {
             try {
-                val response = RetrofitInstance.api.createBook(book)
-                if (response.isSuccessful) {
-                    loadMyBooks() // Refresh the list
-                } else {
-                    println("Failed to create book: ${response.code()} - ${response.message()}")
+                _bookCreationState.value = BookCreationState.Creating
+
+                if (context == null && (fileUri != null || coverImageUri != null)) {
+                    _bookCreationState.value =
+                        BookCreationState.Error("Context required for file upload")
+                    return@launch
                 }
+
+                val filePart = fileUri?.let { uri ->
+                    val contextNonNull = context ?: run {
+                        _bookCreationState.value =
+                            BookCreationState.Error("Context required for file upload")
+                        return@launch
+                    }
+
+                    val mimeType = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        contextNonNull.contentResolver.getType(uri)
+                    }
+
+                    val file = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        uriToFileForBook(contextNonNull, uri, mimeType)
+                    } ?: run {
+                        _bookCreationState.value =
+                            BookCreationState.Error("File type not allowed. Allowed types: pdf, epub")
+                        return@launch
+                    }
+
+                    val uploadManager = com.example.booknest.utils.FileUploadManager(contextNonNull)
+                    val validationResult = uploadManager.validateBookFile(file)
+                    if (validationResult is com.example.booknest.utils.FileUploadManager.ValidationResult.Error) {
+                        _bookCreationState.value = BookCreationState.Error(validationResult.message)
+                        return@launch
+                    }
+
+                    uploadManager.createMultipartBody(file)
+                }
+
+                val bookWithoutCover = book.copy(coverImageUrl = null)
+                val result = booksRepository.createBook(bookWithoutCover, filePart)
+                result
+                    .onSuccess { createdBook ->
+                        coverImageUri?.let { uri ->
+                            uploadBookCoverImage(
+                                createdBook.id,
+                                uri,
+                                context!!,
+                                onSuccess = { coverUrl ->
+                                    _bookCreationState.value =
+                                        BookCreationState.Success(createdBook.copy(coverImageUrl = coverUrl))
+                                    reloadHomeScreenData()
+                                },
+                                onError = { errorMsg ->
+                                    com.example.booknest.ui.error.GlobalErrorHandler.showError("Book created but cover upload failed: $errorMsg")
+                                    _bookCreationState.value =
+                                        BookCreationState.Success(createdBook)
+                                    reloadHomeScreenData()
+                                }
+                            )
+                        } ?: run {
+                            _bookCreationState.value = BookCreationState.Success(createdBook)
+                            reloadHomeScreenData()
+                        }
+                    }
+                    .onFailure { e ->
+                        val errorMsg = e.message ?: "Failed to create book"
+                        com.example.booknest.ui.error.GlobalErrorHandler.showError(errorMsg)
+                        _bookCreationState.value = BookCreationState.Error(errorMsg)
+                    }
             } catch (e: Exception) {
-                println("Error creating book: ${e.message}")
+                val errorMsg = e.message ?: "Error creating book"
+                com.example.booknest.ui.error.GlobalErrorHandler.showError(errorMsg)
+                _bookCreationState.value = BookCreationState.Error(errorMsg)
             }
         }
     }
 
-    fun updateBook(bookId: String, book: UpdateBookDto) {
+    fun uploadBookFile(
+        bookId: String,
+        fileUri: android.net.Uri,
+        context: android.content.Context,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch(kotlinx.coroutines.NonCancellable) {
+            try {
+                val mimeType = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    context.contentResolver.getType(fileUri)
+                }
+
+                val file = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    uriToFileForBook(context, fileUri, mimeType)
+                } ?: run {
+                    onError("File type not allowed. Allowed types: pdf, epub")
+                    return@launch
+                }
+
+                val uploadManager = com.example.booknest.utils.FileUploadManager(context)
+                val validationResult = uploadManager.validateBookFile(file)
+                if (validationResult is com.example.booknest.utils.FileUploadManager.ValidationResult.Error) {
+                    onError(validationResult.message)
+                    return@launch
+                }
+
+                val multipartBody = uploadManager.createMultipartBody(file)
+                val result = booksRepository.uploadBookFile(bookId, multipartBody)
+
+                result
+                    .onSuccess {
+                        onSuccess()
+                        withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            try {
+                                if (file.exists()) file.delete()
+                            } catch (e: Exception) {
+                            }
+                        }
+                    }
+                    .onFailure { e ->
+                        if (e !is kotlinx.coroutines.CancellationException) {
+                            onError(e.message ?: "Failed to upload file")
+                        }
+                    }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (e !is kotlinx.coroutines.CancellationException) {
+                    onError(e.message ?: "Error uploading file")
+                }
+            }
+        }
+    }
+
+    fun uploadBookCoverImage(
+        bookId: String,
+        imageUri: android.net.Uri,
+        context: android.content.Context,
+        onSuccess: (String) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch(kotlinx.coroutines.NonCancellable) {
+            try {
+                val mimeType = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    context.contentResolver.getType(imageUri) ?: "image/png"
+                }
+
+                val file = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    uriToFile(context, imageUri, mimeType)
+                } ?: run {
+                    onError("Failed to process image file")
+                    return@launch
+                }
+
+                val finalMimeType = when {
+                    mimeType.isNotEmpty() && mimeType.startsWith("image/") -> mimeType
+                    else -> {
+                        val extension = file.name.substringAfterLast('.', "").lowercase()
+                        when (extension) {
+                            "jpg", "jpeg" -> "image/jpeg"
+                            "png" -> "image/png"
+                            "gif" -> "image/gif"
+                            "webp" -> "image/webp"
+                            else -> "image/png"
+                        }
+                    }
+                }
+
+                val uploadManager = com.example.booknest.utils.FileUploadManager(context)
+                val requestFile = file.asRequestBody(finalMimeType.toMediaType())
+                val multipartBody =
+                    MultipartBody.Part.createFormData("cover", file.name, requestFile)
+
+                val result = booksRepository.uploadBookCoverImage(bookId, multipartBody)
+
+                result
+                    .onSuccess { bookResponse ->
+                        onSuccess(bookResponse.coverImageUrl ?: "")
+                        withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            try {
+                                if (file.exists()) file.delete()
+                            } catch (e: Exception) {
+                            }
+                        }
+                    }
+                    .onFailure { e ->
+                        if (e !is kotlinx.coroutines.CancellationException) {
+                            onError(e.message ?: "Failed to upload cover image")
+                        }
+                    }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (e !is kotlinx.coroutines.CancellationException) {
+                    onError(e.message ?: "Error uploading cover image")
+                }
+            }
+        }
+    }
+
+    fun removeBookCoverImage(bookId: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch(kotlinx.coroutines.NonCancellable) {
+            try {
+                val result = booksRepository.removeBookCoverImage(bookId)
+                result
+                    .onSuccess {
+                        onSuccess()
+                    }
+                    .onFailure { e ->
+                        val errorMsg = e.message ?: "Failed to remove cover image"
+                        onError(errorMsg)
+                    }
+            } catch (e: Exception) {
+                val errorMsg = e.message ?: "Error removing cover image"
+                onError(errorMsg)
+            }
+        }
+    }
+
+    private suspend fun uriToFile(
+        context: android.content.Context,
+        uri: android.net.Uri,
+        mimeType: String? = null
+    ): java.io.File? =
+        withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val inputStream =
+                    context.contentResolver.openInputStream(uri) ?: return@withContext null
+
+                val extension = when {
+                    mimeType != null -> {
+                        when {
+                            mimeType.contains("jpeg") || mimeType.contains("jpg") -> "jpg"
+                            mimeType.contains("png") -> "png"
+                            mimeType.contains("gif") -> "gif"
+                            mimeType.contains("webp") -> "webp"
+                            else -> "png"
+                        }
+                    }
+
+                    else -> {
+                        val uriPath = uri.toString()
+                        val uriExt =
+                            uriPath.substringAfterLast('.', "").substringBefore('?', "").lowercase()
+                        if (uriExt in listOf("jpg", "jpeg", "png", "gif", "webp")) {
+                            uriExt
+                        } else {
+                            "png"
+                        }
+                    }
+                }
+
+                val tempFile = java.io.File(
+                    context.cacheDir,
+                    "temp_book_cover_${System.currentTimeMillis()}.$extension"
+                )
+                tempFile.outputStream().use { output ->
+                    inputStream.copyTo(output)
+                }
+                tempFile
+            } catch (e: Exception) {
+                com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                null
+            }
+        }
+
+    private suspend fun uriToFileForBook(
+        context: android.content.Context,
+        uri: android.net.Uri,
+        mimeType: String? = null
+    ): java.io.File? =
+        withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val inputStream =
+                    context.contentResolver.openInputStream(uri) ?: return@withContext null
+
+                val fileName = try {
+                    var displayName: String? = null
+                    context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                        val nameIndex =
+                            cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                        if (nameIndex >= 0 && cursor.moveToFirst()) {
+                            displayName = cursor.getString(nameIndex)
+                        }
+                    }
+                    displayName
+                } catch (e: Exception) {
+                    null
+                }
+
+                val extension = when {
+                    fileName != null -> {
+                        val ext = fileName.substringAfterLast('.', "").substringBefore('?', "")
+                            .substringBefore('(', "").trim().lowercase()
+                        if (ext.isNotEmpty() && ext in com.example.booknest.utils.FileUploadManager.BOOK_FILE_EXTENSIONS) {
+                            ext
+                        } else {
+                            null
+                        }
+                    }
+
+                    else -> null
+                } ?: when {
+                    mimeType != null -> {
+                        when {
+                            mimeType.contains("pdf", ignoreCase = true) -> "pdf"
+                            mimeType.contains(
+                                "epub",
+                                ignoreCase = true
+                            ) || mimeType.contains("application/epub", ignoreCase = true) -> "epub"
+
+                            else -> null
+                        }
+                    }
+
+                    else -> null
+                } ?: run {
+                    val uriPath = uri.toString()
+                    val uriExt = uriPath.substringAfterLast('.', "").substringBefore('?', "")
+                        .substringBefore('(', "").trim().lowercase()
+                    if (uriExt in com.example.booknest.utils.FileUploadManager.BOOK_FILE_EXTENSIONS) {
+                        uriExt
+                    } else {
+                        null
+                    }
+                }
+
+                if (extension == null || extension !in com.example.booknest.utils.FileUploadManager.BOOK_FILE_EXTENSIONS) {
+                    return@withContext null
+                }
+
+                val sanitizedFileName = fileName?.let { origName ->
+                    val ext = origName.substringAfterLast('.', "").substringBefore('?', "")
+                        .substringBefore('(', "").trim().lowercase()
+                    if (ext in com.example.booknest.utils.FileUploadManager.BOOK_FILE_EXTENSIONS) {
+                        val nameWithoutExt = origName.substringBeforeLast('.', origName)
+                            .replace(" ", "_")
+                            .replace("[^a-zA-Z0-9._-]".toRegex(), "_")
+                        "$nameWithoutExt.$ext"
+                    } else {
+                        "book_file_${System.currentTimeMillis()}.$extension"
+                    }
+                } ?: "book_file_${System.currentTimeMillis()}.$extension"
+
+                val tempFile = java.io.File(context.cacheDir, "temp_$sanitizedFileName")
+                tempFile.outputStream().use { output ->
+                    inputStream.copyTo(output)
+                }
+                tempFile
+            } catch (e: Exception) {
+                com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                null
+            }
+        }
+
+    fun clearBookCreationState() {
+        _bookCreationState.value = BookCreationState.Idle
+    }
+
+    fun reloadHomeScreenData() {
+        viewModelScope.launch {
+            loadMyBooks()
+            loadAuthorStats()
+            loadRecentReviews()
+            loadOverdueReviews()
+        }
+    }
+
+    fun updateBook(bookId: String, book: UpdateBookRequest) {
         viewModelScope.launch {
             try {
-                val response = RetrofitInstance.api.updateBook(bookId, book)
-                if (response.isSuccessful) {
-                    loadMyBooks() // Refresh the list
-                } else {
-                    println("Failed to update book: ${response.code()} - ${response.message()}")
-                }
+                val result = booksRepository.updateBook(bookId, book)
+                result
+                    .onSuccess {
+                        reloadHomeScreenData()
+                    }
+                    .onFailure { e ->
+                        com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                    }
             } catch (e: Exception) {
-                println("Error updating book: ${e.message}")
+                com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
             }
         }
     }
@@ -134,14 +538,16 @@ class AuthorViewModel(private val authManager: AuthManager) : ViewModel() {
     fun deleteBook(bookId: String) {
         viewModelScope.launch {
             try {
-                val response = RetrofitInstance.api.deleteBook(bookId)
-                if (response.isSuccessful) {
-                    loadMyBooks() // Refresh the list
-                } else {
-                    println("Failed to delete book: ${response.code()} - ${response.message()}")
-                }
+                val result = booksRepository.deleteBook(bookId)
+                result
+                    .onSuccess {
+                        reloadHomeScreenData()
+                    }
+                    .onFailure { e ->
+                        com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                    }
             } catch (e: Exception) {
-                println("Error deleting book: ${e.message}")
+                com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
             }
         }
     }
@@ -149,14 +555,16 @@ class AuthorViewModel(private val authManager: AuthManager) : ViewModel() {
     fun publishBook(bookId: String) {
         viewModelScope.launch {
             try {
-                val response = RetrofitInstance.api.publishBook(bookId)
-                if (response.isSuccessful) {
-                    loadMyBooks() // Refresh the list
-                } else {
-                    println("Failed to publish book: ${response.code()} - ${response.message()}")
-                }
+                val result = booksRepository.publishBook(bookId)
+                result
+                    .onSuccess {
+                        reloadHomeScreenData()
+                    }
+                    .onFailure { e ->
+                        com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                    }
             } catch (e: Exception) {
-                println("Error publishing book: ${e.message}")
+                com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
             }
         }
     }
@@ -164,52 +572,50 @@ class AuthorViewModel(private val authManager: AuthManager) : ViewModel() {
     fun getBookStats(bookId: String) {
         viewModelScope.launch {
             try {
-                val response = RetrofitInstance.api.getBookStats(bookId)
-                if (response.isSuccessful && response.body() != null) {
-                    val apiResponse = response.body()!!
-                    if (apiResponse.success) {
-                        val stats = apiResponse.data
-                        if (stats != null) {
-                            _bookStats.value = _bookStats.value + (bookId to stats)
-                        }
-                    } else {
-                        println("Failed to get book stats: ${apiResponse.message}")
+                val result = getBookStatsUseCase(bookId)
+                result
+                    .onSuccess { stats ->
+                        _bookStats.value = _bookStats.value + (bookId to stats)
                     }
-                } else {
-                    println("Failed to get book stats: ${response.code()} - ${response.message()}")
-                }
+                    .onFailure { e ->
+                        com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                    }
             } catch (e: Exception) {
-                println("Error getting book stats: ${e.message}")
+                com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
             }
         }
     }
 
-    fun createSeries(series: CreateSeriesDto) {
+    fun createSeries(series: CreateSeriesRequest) {
         viewModelScope.launch {
             try {
-                val response = RetrofitInstance.api.createSeries(series)
-                if (response.isSuccessful) {
-                    loadMySeries() // Refresh the list
-                } else {
-                    println("Failed to create series: ${response.code()} - ${response.message()}")
-                }
+                val result = seriesRepository.createSeries(series)
+                result
+                    .onSuccess {
+                        loadMySeries()
+                    }
+                    .onFailure { e ->
+                        com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                    }
             } catch (e: Exception) {
-                println("Error creating series: ${e.message}")
+                com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
             }
         }
     }
 
-    fun updateSeries(seriesId: String, series: UpdateSeriesDto) {
+    fun updateSeries(seriesId: String, series: UpdateSeriesRequest) {
         viewModelScope.launch {
             try {
-                val response = RetrofitInstance.api.updateSeries(seriesId, series)
-                if (response.isSuccessful) {
-                    loadMySeries() // Refresh the list
-                } else {
-                    println("Failed to update series: ${response.code()} - ${response.message()}")
-                }
+                val result = seriesRepository.updateSeries(seriesId, series)
+                result
+                    .onSuccess {
+                        loadMySeries()
+                    }
+                    .onFailure { e ->
+                        com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                    }
             } catch (e: Exception) {
-                println("Error updating series: ${e.message}")
+                com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
             }
         }
     }
@@ -217,14 +623,74 @@ class AuthorViewModel(private val authManager: AuthManager) : ViewModel() {
     fun deleteSeries(seriesId: String) {
         viewModelScope.launch {
             try {
-                val response = RetrofitInstance.api.deleteSeries(seriesId)
-                if (response.isSuccessful) {
-                    loadMySeries() // Refresh the list
-                } else {
-                    println("Failed to delete series: ${response.code()} - ${response.message()}")
-                }
+                val result = seriesRepository.deleteSeries(seriesId)
+                result
+                    .onSuccess {
+                        loadMySeries()
+                    }
+                    .onFailure { e ->
+                        com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                    }
             } catch (e: Exception) {
-                println("Error deleting series: ${e.message}")
+                com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+            }
+        }
+    }
+
+    fun loadAuthorStats() {
+        viewModelScope.launch {
+            try {
+                _isLoadingStats.value = true
+                val result = profileRepository.getMyStats()
+                result
+                    .onSuccess { stats ->
+                        _authorStats.value = stats
+                        updateQuickStatsFromStats(stats)
+                    }
+                    .onFailure { e ->
+                        com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                    }
+            } catch (e: Exception) {
+                com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+            } finally {
+                _isLoadingStats.value = false
+            }
+        }
+    }
+
+    fun loadRecentReviews() {
+        viewModelScope.launch {
+            try {
+                _isLoadingReviews.value = true
+                val result = reviewsRepository.getAuthorLatestReviews(limit = 3)
+                result
+                    .onSuccess { reviews ->
+                        _recentReviews.value = reviews
+                    }
+                    .onFailure { e ->
+                        com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                    }
+            } catch (e: Exception) {
+                com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+            } finally {
+                _isLoadingReviews.value = false
+            }
+        }
+    }
+
+    fun loadOverdueReviews() {
+        viewModelScope.launch {
+            try {
+                val result = applicationsRepository.getOverdueReviews()
+                result
+                    .onSuccess { applications ->
+                        _overdueReviews.value = applications
+                    }
+                    .onFailure { e ->
+                        com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                    }
+            } catch (e: Exception) {
+                com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
             }
         }
     }
@@ -232,24 +698,36 @@ class AuthorViewModel(private val authManager: AuthManager) : ViewModel() {
     private fun updateQuickStats() {
         val books = _myBooks.value
         val totalBooks = books.size
-        val activeBooks = books.count { it.status?.name == "ACTIVE" }
-        val totalApplications = _bookStats.value.values.sumOf { it.totalApplications }
-        
-        _quickStats.value = QuickStats(
+        val activeBooks = books.count { it.status == "active" }
+        val totalApplications = _bookStats.value.values.sumOf { it.effectiveTotalApplications }
+
+        _quickStats.value = _quickStats.value.copy(
             totalBooks = totalBooks,
             activeBooks = activeBooks,
-            totalApplications = totalApplications,
-            avgResponseTime = "2 days" // This would be calculated from actual data
+            totalApplications = totalApplications
+        )
+    }
+
+    private fun updateQuickStatsFromStats(stats: UserStatsResponse) {
+        val statsData = stats.stats
+        val avgResponseTime = statsData.averageResponseTime?.let {
+            if (it < 1) "${(it * 24).toInt()} hours"
+            else "${it.toInt()} days"
+        } ?: "0 days"
+
+        _quickStats.value = QuickStats(
+            totalBooks = statsData.totalBooks ?: 0,
+            activeBooks = statsData.publishedBooks ?: 0,
+            totalApplications = statsData.totalApplications,
+            pendingApplications = statsData.pendingApplications,
+            applicationsThisMonth = statsData.applicationsThisMonth ?: 0,
+            avgResponseTime = avgResponseTime,
+            totalReviews = statsData.totalReviews ?: 0,
+            averageRating = statsData.averageRating ?: 0.0,
+            approvalRate = statsData.approvalRate ?: (if (statsData.totalApplications > 0) {
+                ((statsData.approvedApplications.toDouble() / statsData.totalApplications) * 100).toInt()
+            } else 0)
         )
     }
 }
 
-class AuthorViewModelFactory(private val authManager: AuthManager) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(AuthorViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return AuthorViewModel(authManager) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
-    }
-}

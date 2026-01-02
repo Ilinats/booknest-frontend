@@ -15,12 +15,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.booknest.data.AuthManager
-import com.example.booknest.network.*
+import com.example.booknest.data.session.SessionManager
+import com.example.booknest.domain.model.response.ApplicationResponse
+import com.example.booknest.domain.model.response.ReaderAddressResponse
 import com.example.booknest.viewmodel.ApplicationViewModel
-import com.example.booknest.viewmodel.ApplicationViewModelFactory
+import org.koin.androidx.compose.getViewModel
+import org.koin.compose.koinInject
 import kotlinx.coroutines.flow.collectLatest
 import java.text.SimpleDateFormat
 import java.util.*
@@ -29,11 +30,9 @@ import java.util.*
 @Composable
 fun AuthorApplicationManagementScreen(
     navController: NavController,
-    authManager: AuthManager,
+    sessionManager: SessionManager = koinInject(),
     bookId: String,
-    applicationViewModel: ApplicationViewModel = viewModel(
-        factory = ApplicationViewModelFactory(authManager)
-    )
+    applicationViewModel: ApplicationViewModel = getViewModel()
 ) {
     val bookApplications by applicationViewModel.bookApplications.collectAsState()
     val isLoading by applicationViewModel.isLoading.collectAsState()
@@ -94,10 +93,8 @@ fun AuthorApplicationManagementScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                // Application statistics
                 ApplicationStats(applications = bookApplications)
 
-                // Applications list
                 LazyColumn(
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(16.dp),
@@ -129,7 +126,6 @@ fun AuthorApplicationManagementScreen(
             }
         }
 
-        // Bulk action dialog
         if (showBulkActionDialog) {
             BulkActionDialog(
                 selectedCount = selectedApplications.size,
@@ -137,7 +133,7 @@ fun AuthorApplicationManagementScreen(
                 onBulkApprove = { notes ->
                     applicationViewModel.bulkActionApplications(
                         selectedApplications.toList(),
-                        "approve",
+                        "approved",
                         notes
                     )
                     selectedApplications = emptySet()
@@ -146,7 +142,7 @@ fun AuthorApplicationManagementScreen(
                 onBulkReject = { notes ->
                     applicationViewModel.bulkActionApplications(
                         selectedApplications.toList(),
-                        "reject",
+                        "rejected",
                         notes
                     )
                     selectedApplications = emptySet()
@@ -158,7 +154,7 @@ fun AuthorApplicationManagementScreen(
 }
 
 @Composable
-fun ApplicationStats(applications: List<Application>) {
+fun ApplicationStats(applications: List<ApplicationResponse>) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -229,7 +225,7 @@ fun StatItem(
 
 @Composable
 fun AuthorApplicationCard(
-    application: Application,
+    application: ApplicationResponse,
     isSelected: Boolean,
     onSelectionChange: (Boolean) -> Unit,
     onApprove: (String?) -> Unit,
@@ -246,9 +242,9 @@ fun AuthorApplicationCard(
             .clickable { onSelectionChange(!isSelected) },
         elevation = CardDefaults.cardElevation(if (isSelected) 4.dp else 2.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) 
-                MaterialTheme.colorScheme.primaryContainer 
-            else 
+            containerColor = if (isSelected)
+                MaterialTheme.colorScheme.primaryContainer
+            else
                 MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
@@ -257,7 +253,6 @@ fun AuthorApplicationCard(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // Header with reader info and selection
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -275,7 +270,7 @@ fun AuthorApplicationCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                
+
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -290,12 +285,23 @@ fun AuthorApplicationCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Application details
             ApplicationDetails(application = application)
+
+            val requiresPhysicalCopy =
+                application.book?.distributionType?.lowercase() in listOf("physical", "both")
+            val shouldShowAddresses = application.status == "approved" && requiresPhysicalCopy &&
+                    application.reader?.addresses?.isNotEmpty() == true
+
+            if (shouldShowAddresses) {
+                Spacer(modifier = Modifier.height(12.dp))
+                ReaderAddressesSection(
+                    addresses = application.reader?.addresses ?: emptyList(),
+                    readerName = application.reader?.username ?: "Reader"
+                )
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Action buttons
             AuthorApplicationActions(
                 application = application,
                 onApprove = { showApproveDialog = true },
@@ -305,7 +311,6 @@ fun AuthorApplicationCard(
         }
     }
 
-    // Approve dialog
     if (showApproveDialog) {
         ApplicationActionDialog(
             title = "Approve Application",
@@ -315,7 +320,6 @@ fun AuthorApplicationCard(
         )
     }
 
-    // Reject dialog
     if (showRejectDialog) {
         ApplicationActionDialog(
             title = "Reject Application",
@@ -328,7 +332,7 @@ fun AuthorApplicationCard(
 
 @Composable
 fun AuthorApplicationActions(
-    application: Application,
+    application: ApplicationResponse,
     onApprove: () -> Unit,
     onReject: () -> Unit,
     onMarkSent: () -> Unit
@@ -354,7 +358,7 @@ fun AuthorApplicationActions(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Approve")
                 }
-                
+
                 OutlinedButton(
                     onClick = onReject,
                     modifier = Modifier.weight(1f)
@@ -368,6 +372,7 @@ fun AuthorApplicationActions(
                     Text("Reject")
                 }
             }
+
             "approved" -> {
                 if (application.copySentAt == null) {
                     Button(
@@ -394,6 +399,7 @@ fun AuthorApplicationActions(
                     )
                 }
             }
+
             else -> {
                 Text(
                     text = "Application ${application.status?.replaceFirstChar { it.uppercase() } ?: "Unknown"}",
@@ -475,7 +481,7 @@ fun BulkActionDialog(
             },
             confirmButton = {
                 Button(
-                    onClick = { 
+                    onClick = {
                         when (action) {
                             BulkAction.APPROVE -> onBulkApprove(notes.ifBlank { null })
                             BulkAction.REJECT -> onBulkReject(notes.ifBlank { null })
@@ -529,6 +535,105 @@ fun BulkActionDialog(
 private enum class BulkAction(val displayName: String) {
     APPROVE("Approve"),
     REJECT("Reject")
+}
+
+@Composable
+fun ReaderAddressesSection(
+    addresses: List<ReaderAddressResponse>,
+    readerName: String
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded },
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        Icons.Filled.LocationOn,
+                        contentDescription = "Address",
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    Text(
+                        text = "Shipping Address${if (addresses.size > 1) "es (${addresses.size})" else ""}",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+                Icon(
+                    if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                    contentDescription = if (expanded) "Collapse" else "Expand",
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            }
+
+            if (expanded) {
+                addresses.forEachIndexed { index, address ->
+                    if (index > 0) {
+                        Divider(modifier = Modifier.padding(vertical = 8.dp))
+                    }
+
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        if (address.isPrimary) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    Icons.Filled.Star,
+                                    contentDescription = "Primary",
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = "Primary Address",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = address.streetAddress,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        Text(
+                            text = "${address.city}, ${address.postalCode}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        Text(
+                            text = address.country,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
 
 private fun formatDate(dateString: String): String {
