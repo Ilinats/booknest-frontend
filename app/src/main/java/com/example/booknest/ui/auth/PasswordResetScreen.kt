@@ -19,50 +19,48 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import org.koin.androidx.compose.getViewModel
 import com.example.booknest.ui.components.CodeInputField
 import com.example.booknest.ui.components.ResendCodeButton
-import com.example.booknest.data.AuthManager
+import com.example.booknest.data.session.SessionManager
 import com.example.booknest.viewmodel.PasswordResetViewModel
-import com.example.booknest.viewmodel.PasswordResetViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PasswordResetScreen(
     navController: NavController,
-    authManager: AuthManager,
+    sessionManager: SessionManager,
     email: String,
-    viewModel: PasswordResetViewModel = viewModel(
-        factory = PasswordResetViewModelFactory(authManager)
-    )
+    viewModel: PasswordResetViewModel = getViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    
+
     var showPasswordInput by remember { mutableStateOf(false) }
+    var enteredCode by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
-    
-    // Handle password reset success
+
     LaunchedEffect(uiState.isPasswordResetSuccessful) {
         if (uiState.isPasswordResetSuccessful) {
-            navController.navigate("login") {
-                popUpTo("forgot_password") { inclusive = true }
+            navController.navigate(com.example.booknest.navigation.Screen.Login.route) {
+                popUpTo(com.example.booknest.navigation.Screen.PasswordReset.createRoute(email)) {
+                    inclusive = true
+                }
             }
         }
     }
-    
-    // Handle snackbar messages
+
     LaunchedEffect(uiState.snackbarMessage) {
         uiState.snackbarMessage?.let { message ->
             snackbarHostState.showSnackbar(message)
             viewModel.clearSnackbarMessage()
         }
     }
-    
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -83,51 +81,46 @@ fun PasswordResetScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Header
             Text(
                 text = if (showPasswordInput) "Enter new password" else "Enter reset code",
                 style = MaterialTheme.typography.headlineMedium,
                 textAlign = TextAlign.Center,
                 fontWeight = FontWeight.Bold
             )
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             Text(
-                text = if (showPasswordInput) 
-                    "Create a new password for your account" 
-                else 
+                text = if (showPasswordInput)
+                    "Create a new password for your account"
+                else
                     "We sent a 6-digit code to\n$email",
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            
+
             Spacer(modifier = Modifier.height(32.dp))
-            
-            // Email icon
+
             Icon(
                 imageVector = Icons.Default.Email,
                 contentDescription = "Email",
                 modifier = Modifier.size(64.dp),
                 tint = MaterialTheme.colorScheme.primary
             )
-            
+
             Spacer(modifier = Modifier.height(32.dp))
-            
+
             if (!showPasswordInput) {
-                // 6-digit code input
-                var enteredCode by remember { mutableStateOf("") }
                 CodeInputField(
                     onCodeChange = { code ->
                         enteredCode = code
                     },
                     modifier = Modifier.fillMaxWidth()
                 )
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
-                // Verify code button
+
                 Button(
                     onClick = {
                         if (enteredCode.length == 6 && enteredCode.all { it.isDigit() }) {
@@ -147,48 +140,43 @@ fun PasswordResetScreen(
                         Text("Verify Code")
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(24.dp))
-                
-                // Resend code button
+
                 ResendCodeButton(
                     onResend = {
-                        viewModel.resendResetCode()
+                        viewModel.resendResetCode(email)
                     },
                     cooldownSeconds = 60,
                     modifier = Modifier.fillMaxWidth()
                 )
             } else {
-                // Password input fields
                 OutlinedTextField(
                     value = newPassword,
                     onValueChange = { newPassword = it },
                     label = { Text("New Password") },
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    // Password visibility toggle temporarily disabled
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     modifier = Modifier.fillMaxWidth()
                 )
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 OutlinedTextField(
                     value = confirmPassword,
                     onValueChange = { confirmPassword = it },
                     label = { Text("Confirm Password") },
                     visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    // Password visibility toggle temporarily disabled
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     modifier = Modifier.fillMaxWidth()
                 )
-                
+
                 Spacer(modifier = Modifier.height(24.dp))
-                
-                // Reset password button
+
                 Button(
                     onClick = {
                         if (newPassword == confirmPassword && newPassword.length >= 6) {
-                            viewModel.resetPassword(newPassword)
+                            viewModel.resetPassword(enteredCode, newPassword)
                         } else {
                             viewModel.showError("Passwords don't match or are too short")
                         }
@@ -203,10 +191,9 @@ fun PasswordResetScreen(
                     }
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
-            // Help text
+
             if (!showPasswordInput) {
                 Text(
                     text = "Didn't receive the code? Check your spam folder or try resending.",
@@ -215,10 +202,9 @@ fun PasswordResetScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(32.dp))
-            
-            // Loading indicator
+
             if (uiState.isLoading) {
                 CircularProgressIndicator()
             }

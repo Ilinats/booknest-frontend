@@ -42,14 +42,12 @@ fun GoogleSignInButton(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
-            // Google Logo (you can replace this with an actual Google logo drawable)
             Box(
                 modifier = Modifier
                     .size(20.dp)
                     .padding(end = 12.dp),
                 contentAlignment = Alignment.Center
             ) {
-                // Placeholder for Google logo - you should add the actual Google logo drawable
                 Text(
                     text = "G",
                     fontSize = 16.sp,
@@ -57,7 +55,7 @@ fun GoogleSignInButton(
                     color = Color(0xFF4285F4)
                 )
             }
-            
+
             Text(
                 text = text,
                 fontSize = 16.sp,
@@ -93,7 +91,6 @@ fun GoogleSignInButtonOutlined(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
-            // Google Logo placeholder
             Box(
                 modifier = Modifier
                     .size(20.dp)
@@ -107,7 +104,7 @@ fun GoogleSignInButtonOutlined(
                     color = Color(0xFF4285F4)
                 )
             }
-            
+
             Text(
                 text = text,
                 fontSize = 16.sp,
