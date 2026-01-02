@@ -1,39 +1,24 @@
 package com.example.booknest.ui.account
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import com.example.booknest.ui.components.BackButton
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Link
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -43,46 +28,49 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.booknest.data.AuthManager
-import com.example.booknest.network.CustomSocialLink
-import com.example.booknest.network.SocialMedia
-import com.example.booknest.network.SocialMediaOption
+import com.example.booknest.data.session.SessionManager
+import com.example.booknest.domain.model.response.CustomSocialLinkResponse
+import com.example.booknest.domain.model.response.SocialMediaResponse
+import com.example.booknest.navigation.Screen
+import com.example.booknest.ui.theme.DarkNavyBlue
+import com.example.booknest.ui.theme.SkyBluePeriwinkle
 import com.example.booknest.viewmodel.ProfileViewModel
-import com.example.booknest.viewmodel.ProfileViewModelFactory
+import org.koin.androidx.compose.getViewModel
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SocialMediaScreen(
     navController: NavController,
-    authManager: AuthManager,
-    profileViewModel: ProfileViewModel = viewModel(
-        factory = ProfileViewModelFactory(authManager)
-    )
+    sessionManager: SessionManager = koinInject(),
+    profileViewModel: ProfileViewModel = getViewModel()
 ) {
     val myProfile by profileViewModel.myProfile.collectAsState()
     val isLoading by profileViewModel.isLoading.collectAsState()
     val error by profileViewModel.error.collectAsState()
-    
-    // Social media state
+
     var instagram by remember { mutableStateOf("") }
     var tiktok by remember { mutableStateOf("") }
     var youtube by remember { mutableStateOf("") }
     var goodreads by remember { mutableStateOf("") }
-    var customLinks by remember { mutableStateOf<List<CustomSocialLink>>(emptyList()) }
-    
-    // UI state
+    var customLinks by remember { mutableStateOf<List<CustomSocialLinkResponse>>(emptyList()) }
+
     var showAddCustom by remember { mutableStateOf(false) }
     var newCustomPlatform by remember { mutableStateOf("") }
     var newCustomUrl by remember { mutableStateOf("") }
-    
+
     LaunchedEffect(Unit) {
         profileViewModel.loadMyProfile()
     }
-    
+
     LaunchedEffect(myProfile) {
         myProfile?.socialMedia?.let { socialMedia ->
             instagram = socialMedia.instagram ?: ""
@@ -92,176 +80,274 @@ fun SocialMediaScreen(
             customLinks = socialMedia.custom ?: emptyList()
         }
     }
-    
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Social Media Links") },
-                navigationIcon = {
-                    BackButton(onClick = { navController.popBackStack() })
-                }
-            )
-        }
-    ) { paddingValues ->
-        LazyColumn(
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF1E9EE))
+    ) {
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .offset(x = (-175).dp, y = (-175).dp)
+                .size(350.dp)
+                .clip(CircleShape)
+                .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .offset(x = (-135).dp, y = (-135).dp)
+                .size(270.dp)
+                .clip(CircleShape)
+                .background(SkyBluePeriwinkle)
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .offset(x = 175.dp, y = 175.dp)
+                .size(350.dp)
+                .clip(CircleShape)
+                .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .offset(x = 135.dp, y = 135.dp)
+                .size(270.dp)
+                .clip(CircleShape)
+                .background(SkyBluePeriwinkle)
+        )
+
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .verticalScroll(rememberScrollState())
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Header
-            item {
-                Column {
-                    Text(
-                        text = "Connect Your Social Media",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Share your social media profiles with other BookNest users",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = { navController.popBackStack() }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Back",
+                        tint = Color.Black
                     )
                 }
             }
-            
-            // Predefined Social Media Platforms
-            item {
-                Text(
-                    text = "Popular Platforms",
-                    style = MaterialTheme.typography.titleLarge,
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Text(
+                text = "Connect Your\nSocial Media",
+                style = MaterialTheme.typography.headlineLarge.copy(
+                    fontSize = 40.sp,
                     fontWeight = FontWeight.Bold
-                )
-            }
-            
-            // Instagram
-            item {
-                SocialMediaInputCard(
-                    platform = "Instagram",
-                    icon = "instagram",
+                ),
+                color = DarkNavyBlue,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "Share your social media profiles with other BookNest users (optional)",
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontSize = 16.sp
+                ),
+                color = Color(0xFF757575),
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(40.dp))
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                SocialMediaInputField(
+                    label = "Instagram",
                     value = instagram,
                     onValueChange = { instagram = it },
                     placeholder = "https://instagram.com/username"
                 )
-            }
-            
-            // TikTok
-            item {
-                SocialMediaInputCard(
-                    platform = "TikTok",
-                    icon = "tiktok",
+
+                SocialMediaInputField(
+                    label = "TikTok",
                     value = tiktok,
                     onValueChange = { tiktok = it },
                     placeholder = "https://tiktok.com/@username"
                 )
-            }
-            
-            // YouTube
-            item {
-                SocialMediaInputCard(
-                    platform = "YouTube",
-                    icon = "youtube",
+
+                SocialMediaInputField(
+                    label = "YouTube",
                     value = youtube,
                     onValueChange = { youtube = it },
                     placeholder = "https://youtube.com/@username"
                 )
-            }
-            
-            // Goodreads
-            item {
-                SocialMediaInputCard(
-                    platform = "Goodreads",
-                    icon = "goodreads",
+
+                SocialMediaInputField(
+                    label = "Goodreads",
                     value = goodreads,
                     onValueChange = { goodreads = it },
                     placeholder = "https://goodreads.com/user/show/username"
                 )
             }
-            
-            // Custom Links Section
-            item {
-                Row(
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            if (customLinks.isNotEmpty() || showAddCustom) {
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text(
-                        text = "Custom Links",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Button(
-                        onClick = { showAddCustom = true }
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = "Add")
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Add Custom")
-                    }
-                }
-            }
-            
-            // Custom Links List
-            items(customLinks) { customLink ->
-                CustomLinkCard(
-                    customLink = customLink,
-                    onDelete = { linkToDelete ->
-                        customLinks = customLinks.filter { it != linkToDelete }
-                    }
-                )
-            }
-            
-            // Add Custom Link Dialog
-            if (showAddCustom) {
-                item {
-                    Card(
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp)
-                        ) {
-                            Text(
-                                text = "Add Custom Link",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            
-                            OutlinedTextField(
-                                value = newCustomPlatform,
-                                onValueChange = { newCustomPlatform = it },
-                                label = { Text("Platform Name") },
-                                placeholder = { Text("e.g., Twitter, Personal Blog") },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            
-                            Spacer(modifier = Modifier.height(8.dp))
-                            
-                            OutlinedTextField(
-                                value = newCustomUrl,
-                                onValueChange = { newCustomUrl = it },
-                                label = { Text("URL") },
-                                placeholder = { Text("https://example.com") },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            
-                            Spacer(modifier = Modifier.height(12.dp))
-                            
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.End
+                        Text(
+                            text = "Custom Links",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 20.sp
+                            ),
+                            color = DarkNavyBlue
+                        )
+                        if (!showAddCustom) {
+                            Button(
+                                onClick = { showAddCustom = true },
+                                modifier = Modifier.height(40.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFFE8DFE4),
+                                    contentColor = DarkNavyBlue
+                                )
                             ) {
-                                Button(
-                                    onClick = { showAddCustom = false }
+                                Icon(
+                                    Icons.Default.Add,
+                                    contentDescription = "Add",
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Add", fontSize = 14.sp)
+                            }
+                        }
+                    }
+
+                    customLinks.forEach { customLink ->
+                        CustomLinkCard(
+                            customLink = customLink,
+                            onDelete = {
+                                customLinks = customLinks.filter { it != customLink }
+                            }
+                        )
+                    }
+
+                    if (showAddCustom) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color(0xFFE8DFE4)
+                            ),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text("Cancel")
+                                    Text(
+                                        text = "Add Custom Link",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Bold
+                                        ),
+                                        color = DarkNavyBlue
+                                    )
+                                    IconButton(
+                                        onClick = {
+                                            showAddCustom = false
+                                            newCustomPlatform = ""
+                                            newCustomUrl = ""
+                                        }
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Close,
+                                            contentDescription = "Close",
+                                            tint = Color(0xFF757575)
+                                        )
+                                    }
                                 }
-                                Spacer(modifier = Modifier.width(8.dp))
+
+                                OutlinedTextField(
+                                    value = newCustomPlatform,
+                                    onValueChange = { newCustomPlatform = it },
+                                    placeholder = {
+                                        Text(
+                                            "Platform Name",
+                                            color = Color(0xFF757575)
+                                        )
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(56.dp)
+                                        .shadow(
+                                            elevation = 2.dp,
+                                            shape = RoundedCornerShape(28.dp)
+                                        ),
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(28.dp),
+                                    colors = TextFieldDefaults.colors(
+                                        focusedTextColor = Color.Black,
+                                        unfocusedTextColor = Color.Black,
+                                        focusedContainerColor = Color(0xFFE8DFE4),
+                                        unfocusedContainerColor = Color(0xFFE8DFE4),
+                                        focusedIndicatorColor = Color.Transparent,
+                                        unfocusedIndicatorColor = Color.Transparent,
+                                        disabledIndicatorColor = Color.Transparent
+                                    )
+                                )
+
+                                OutlinedTextField(
+                                    value = newCustomUrl,
+                                    onValueChange = { newCustomUrl = it },
+                                    placeholder = { Text("URL", color = Color(0xFF757575)) },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(56.dp)
+                                        .shadow(
+                                            elevation = 2.dp,
+                                            shape = RoundedCornerShape(28.dp)
+                                        ),
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(28.dp),
+                                    colors = TextFieldDefaults.colors(
+                                        focusedTextColor = Color.Black,
+                                        unfocusedTextColor = Color.Black,
+                                        focusedContainerColor = Color(0xFFE8DFE4),
+                                        unfocusedContainerColor = Color(0xFFE8DFE4),
+                                        focusedIndicatorColor = Color.Transparent,
+                                        unfocusedIndicatorColor = Color.Transparent,
+                                        disabledIndicatorColor = Color.Transparent
+                                    )
+                                )
+
                                 Button(
                                     onClick = {
                                         if (newCustomPlatform.isNotBlank() && newCustomUrl.isNotBlank()) {
-                                            customLinks = customLinks + CustomSocialLink(
+                                            customLinks = customLinks + CustomSocialLinkResponse(
                                                 platform = newCustomPlatform,
                                                 url = newCustomUrl
                                             )
@@ -269,154 +355,220 @@ fun SocialMediaScreen(
                                             newCustomUrl = ""
                                             showAddCustom = false
                                         }
-                                    }
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(48.dp),
+                                    enabled = newCustomPlatform.isNotBlank() && newCustomUrl.isNotBlank(),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = DarkNavyBlue,
+                                        disabledContainerColor = Color(0xFFE0E0E0)
+                                    )
                                 ) {
-                                    Text("Add")
+                                    Text(
+                                        "Add Link",
+                                        style = MaterialTheme.typography.labelLarge.copy(
+                                            fontWeight = FontWeight.Bold
+                                        ),
+                                        color = if (newCustomPlatform.isNotBlank() && newCustomUrl.isNotBlank()) Color.White else Color(
+                                            0xFF757575
+                                        )
+                                    )
                                 }
                             }
                         }
                     }
                 }
-            }
-            
-            // Save Button
-            item {
+            } else {
                 Button(
-                    onClick = {
-                        profileViewModel.updateSocialMedia(
-                            com.example.booknest.network.SocialMedia(
-                                instagram = instagram.takeIf { it.isNotBlank() },
-                                tiktok = tiktok.takeIf { it.isNotBlank() },
-                                youtube = youtube.takeIf { it.isNotBlank() },
-                                goodreads = goodreads.takeIf { it.isNotBlank() },
-                                custom = customLinks.takeIf { it.isNotEmpty() }
-                            )
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth()
+                    onClick = { showAddCustom = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFE8DFE4),
+                        contentColor = DarkNavyBlue
+                    )
                 ) {
-                    Text("Save Social Media Links")
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Add",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Add Custom Link",
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontWeight = FontWeight.Medium
+                        )
+                    )
                 }
             }
-            
-            // Skip Button (for signup flow)
-            item {
-                Button(
-                    onClick = { navController.navigate("main") },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Skip for Now")
-                }
-            }
-            
-            // Error Display
-            if (error != null) {
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Button(
+                onClick = {
+                    profileViewModel.updateSocialMedia(
+                        SocialMediaResponse(
+                            instagram = instagram.takeIf { it.isNotBlank() },
+                            tiktok = tiktok.takeIf { it.isNotBlank() },
+                            youtube = youtube.takeIf { it.isNotBlank() },
+                            goodreads = goodreads.takeIf { it.isNotBlank() },
+                            custom = customLinks.takeIf { it.isNotEmpty() }
                         )
-                    ) {
-                        Text(
-                            text = error ?: "Unknown error",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.padding(16.dp)
-                        )
+                    )
+                    navController.navigate(Screen.Main.route) {
+                        popUpTo(Screen.SocialMedia.route) { inclusive = true }
                     }
-                }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .shadow(
+                        elevation = 4.dp,
+                        shape = RoundedCornerShape(12.dp)
+                    ),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = DarkNavyBlue
+                )
+            ) {
+                Text(
+                    "Continue",
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
+                    ),
+                    color = Color.White
+                )
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TextButton(
+                onClick = {
+                    navController.navigate(Screen.Main.route) {
+                        popUpTo(Screen.SocialMedia.route) { inclusive = true }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    "Skip for Now",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 16.sp
+                    ),
+                    color = DarkNavyBlue
+                )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
 
 @Composable
-fun SocialMediaInputCard(
-    platform: String,
-    icon: String,
+fun SocialMediaInputField(
+    label: String,
     value: String,
     onValueChange: (String) -> Unit,
     placeholder: String
 ) {
-    Card(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    Icons.Default.Link,
-                    contentDescription = platform,
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = platform,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            OutlinedTextField(
-                value = value,
-                onValueChange = onValueChange,
-                placeholder = { Text(placeholder) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.Medium
+            ),
+            color = DarkNavyBlue,
+            modifier = Modifier.padding(horizontal = 8.dp)
+        )
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            placeholder = { Text(placeholder, color = Color(0xFF757575)) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .shadow(
+                    elevation = 2.dp,
+                    shape = RoundedCornerShape(28.dp)
+                ),
+            singleLine = true,
+            shape = RoundedCornerShape(28.dp),
+            colors = TextFieldDefaults.colors(
+                focusedTextColor = Color.Black,
+                unfocusedTextColor = Color.Black,
+                focusedContainerColor = Color(0xFFE8DFE4),
+                unfocusedContainerColor = Color(0xFFE8DFE4),
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                disabledIndicatorColor = Color.Transparent
             )
-        }
+        )
     }
 }
 
 @Composable
 fun CustomLinkCard(
-    customLink: CustomSocialLink,
-    onDelete: (CustomSocialLink) -> Unit
+    customLink: CustomSocialLinkResponse,
+    onDelete: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFE8DFE4)
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Icon(
-                Icons.Default.Link,
-                contentDescription = customLink.platform,
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = customLink.platform,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Medium
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    Icons.Default.Link,
+                    contentDescription = customLink.platform,
+                    tint = DarkNavyBlue,
+                    modifier = Modifier.size(24.dp)
                 )
-                Text(
-                    text = customLink.url,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Column {
+                    Text(
+                        text = customLink.platform,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = DarkNavyBlue
+                    )
+                    Text(
+                        text = customLink.url,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF757575)
+                    )
+                }
             }
-            
             IconButton(
-                onClick = { onDelete(customLink) }
+                onClick = onDelete
             ) {
                 Icon(
                     Icons.Default.Delete,
                     contentDescription = "Delete",
-                    tint = MaterialTheme.colorScheme.error
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }
