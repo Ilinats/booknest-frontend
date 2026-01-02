@@ -1,25 +1,25 @@
 package com.example.booknest.viewmodel
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.booknest.data.AuthManager
-import com.example.booknest.network.GenreDto
-import com.example.booknest.network.GenrePreference
-import com.example.booknest.network.UpsertPreferenceRequest
+import com.example.booknest.domain.model.request.UpsertPreferenceRequest
+import com.example.booknest.domain.model.response.GenreResponse
+import com.example.booknest.domain.usecase.genres.GetGenrePreferencesUseCase
+import com.example.booknest.domain.usecase.genres.GetGenresUseCase
+import com.example.booknest.domain.usecase.genres.SaveUserGenrePreferenceUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class FavoriteGenresViewModel(
-    private val authManager: AuthManager
+    private val getGenresUseCase: GetGenresUseCase,
+    private val getGenrePreferencesUseCase: GetGenrePreferencesUseCase,
+    private val saveUserGenrePreferenceUseCase: SaveUserGenrePreferenceUseCase
 ) : ViewModel() {
 
-    private val apiService = authManager.apiService
-
-    private val _genres = MutableStateFlow<List<GenreDto>>(emptyList())
-    val genres: StateFlow<List<GenreDto>> = _genres.asStateFlow()
+    private val _genres = MutableStateFlow<List<GenreResponse>>(emptyList())
+    val genres: StateFlow<List<GenreResponse>> = _genres.asStateFlow()
 
     private val _selectedGenreIds = MutableStateFlow<Set<Int>>(emptySet())
     val selectedGenreIds: StateFlow<Set<Int>> = _selectedGenreIds.asStateFlow()
@@ -34,20 +34,25 @@ class FavoriteGenresViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                // Load all available genres
-                val genresResponse = apiService.getGenres()
-                if (genresResponse.isSuccessful) {
-                    _genres.value = genresResponse.body()?.data ?: emptyList()
-                } else {
-                    _message.value = genresResponse.body()?.message ?: "Failed to load genres"
-                }
-                
-                // Load user's current genre preferences
-                val preferencesResponse = apiService.getGenrePreferences()
-                if (preferencesResponse.isSuccessful) {
-                    val preferences = preferencesResponse.body()?.data ?: emptyList()
-                    _selectedGenreIds.value = preferences.map { it.resolvedGenreId }.toSet()
-                }
+                val genresResult = getGenresUseCase()
+                genresResult
+                    .onSuccess { genres ->
+                        _genres.value = genres
+                    }
+                    .onFailure { e ->
+                        _message.value = e.localizedMessage ?: "Failed to load genres"
+                    }
+
+                val preferencesResult = getGenrePreferencesUseCase()
+                preferencesResult
+                    .onSuccess { preferences ->
+                        _selectedGenreIds.value = preferences
+                            .mapNotNull { it.resolvedGenreId.takeIf { id -> id > 0 } }
+                            .toSet()
+                    }
+                    .onFailure { e ->
+                        println("DEBUG: Failed to load genre preferences: ${e.message}")
+                    }
             } catch (e: Exception) {
                 _message.value = e.localizedMessage ?: "Failed to load genres"
             } finally {
@@ -73,17 +78,18 @@ class FavoriteGenresViewModel(
             _isLoading.value = true
             try {
                 val results = _selectedGenreIds.value.map { genreId ->
-                    apiService.saveUserGenres(
+                    saveUserGenrePreferenceUseCase(
                         UpsertPreferenceRequest(
-                            genreId = genreId,
-                            preferenceLevel = 5
+                            genreId = genreId
                         )
                     )
                 }
-                if (results.all { it.isSuccessful }) {
-                    _message.value = "Favorite genres saved."
+
+                val allSucceeded = results.all { it.isSuccess }
+                _message.value = if (allSucceeded) {
+                    "Favorite genres saved."
                 } else {
-                    _message.value = "Some preferences could not be saved."
+                    "Some preferences could not be saved."
                 }
             } catch (e: Exception) {
                 _message.value = "Failed to save preferences: ${e.localizedMessage}"
@@ -97,16 +103,3 @@ class FavoriteGenresViewModel(
         _message.value = null
     }
 }
-
-class FavoriteGenresViewModelFactory(
-    private val authManager: AuthManager
-) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(FavoriteGenresViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return FavoriteGenresViewModel(authManager) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
-    }
-}
-
