@@ -37,9 +37,6 @@ import com.example.booknest.utils.LinkType
 import com.example.booknest.utils.YouTubeMetadata
 import kotlinx.coroutines.launch
 
-/**
- * Displays a review link with appropriate preview based on link type
- */
 @Composable
 fun ReviewLinkPreview(
     url: String,
@@ -47,7 +44,7 @@ fun ReviewLinkPreview(
 ) {
     val context = LocalContext.current
     val linkType = remember(url) { LinkPreviewUtils.detectLinkType(url) }
-    
+
     when (linkType) {
         LinkType.YOUTUBE -> {
             YouTubePreviewCard(
@@ -55,6 +52,7 @@ fun ReviewLinkPreview(
                 modifier = modifier
             )
         }
+
         LinkType.TIKTOK -> {
             VideoEmbedView(
                 url = url,
@@ -62,6 +60,7 @@ fun ReviewLinkPreview(
                 modifier = modifier
             )
         }
+
         LinkType.OTHER -> {
             LinkPreviewCard(
                 url = url,
@@ -71,7 +70,6 @@ fun ReviewLinkPreview(
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                         context.startActivity(intent)
                     } catch (e: Exception) {
-                        // Handle error
                     }
                 }
             )
@@ -79,10 +77,6 @@ fun ReviewLinkPreview(
     }
 }
 
-/**
- * YouTube preview card with thumbnail, title, and play button
- * Expands to show embedded video when clicked
- */
 @Composable
 fun YouTubePreviewCard(
     url: String,
@@ -93,7 +87,7 @@ fun YouTubePreviewCard(
     var isExpanded by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    
+
     LaunchedEffect(url) {
         isLoading = true
         scope.launch {
@@ -101,20 +95,19 @@ fun YouTubePreviewCard(
             isLoading = false
         }
     }
-    
+
     val videoId = remember(url) { LinkPreviewUtils.extractYouTubeVideoId(url) }
     val embedUrl = remember(videoId) {
-        videoId?.let { 
+        videoId?.let {
             "https://www.youtube.com/embed/$it?enablejsapi=1&autoplay=0&modestbranding=1&rel=0&playsinline=1"
         }
     }
-    
+
     Card(
         modifier = modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         if (isExpanded && embedUrl != null) {
-            // Show embedded video
             Column {
                 YouTubeEmbedWebView(
                     embedUrl = embedUrl,
@@ -122,7 +115,7 @@ fun YouTubePreviewCard(
                         .fillMaxWidth()
                         .aspectRatio(16f / 9f)
                 )
-                
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -135,14 +128,13 @@ fun YouTubePreviewCard(
                     ) {
                         Text("Show Preview")
                     }
-                    
+
                     TextButton(
                         onClick = {
                             try {
                                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                                 context.startActivity(intent)
                             } catch (e: Exception) {
-                                // Handle error
                             }
                         }
                     ) {
@@ -157,7 +149,6 @@ fun YouTubePreviewCard(
                 }
             }
         } else {
-            // Show preview card
             if (isLoading) {
                 Box(
                     modifier = Modifier
@@ -175,7 +166,6 @@ fun YouTubePreviewCard(
                         .aspectRatio(16f / 9f)
                         .clickable { isExpanded = true }
                 ) {
-                    // Thumbnail
                     metadata?.thumbnailUrl?.let { thumbnailUrl ->
                         AsyncImage(
                             model = thumbnailUrl,
@@ -188,8 +178,7 @@ fun YouTubePreviewCard(
                             .fillMaxSize()
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                     )
-                    
-                    // Play button overlay
+
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -203,8 +192,7 @@ fun YouTubePreviewCard(
                             tint = Color.White
                         )
                     }
-                    
-                    // Title and channel info overlay at bottom
+
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -223,7 +211,7 @@ fun YouTubePreviewCard(
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
-                        
+
                         metadata?.authorName?.let { author ->
                             Text(
                                 text = author,
@@ -238,9 +226,6 @@ fun YouTubePreviewCard(
     }
 }
 
-/**
- * WebView component for embedding YouTube video with IFrame API
- */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun YouTubeEmbedWebView(
@@ -260,9 +245,9 @@ fun YouTubeEmbedWebView(
                 settings.mediaPlaybackRequiresUserGesture = false
                 settings.loadWithOverviewMode = true
                 settings.useWideViewPort = true
-                
+
                 setBackgroundColor(0x00000000)
-                
+
                 webViewClient = object : WebViewClient() {
                     override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
                         if (url != null && !url.contains("youtube.com/embed")) {
@@ -272,20 +257,21 @@ fun YouTubeEmbedWebView(
                         }
                         return false
                     }
-                    
+
                     override fun onPageFinished(view: WebView?, url: String?) {
                         super.onPageFinished(view, url)
-                        // Inject CSS for proper iframe sizing
-                        view?.evaluateJavascript("""
+                        view?.evaluateJavascript(
+                            """
                             (function() {
                                 var style = document.createElement('style');
                                 style.innerHTML = 'body { margin: 0; padding: 0; overflow: hidden; } iframe { width: 100% !important; height: 100% !important; border: none; }';
                                 document.head.appendChild(style);
                             })();
-                        """.trimIndent(), null)
+                        """.trimIndent(), null
+                        )
                     }
                 }
-                
+
                 loadUrl(embedUrl)
             }
         },
@@ -293,9 +279,6 @@ fun YouTubeEmbedWebView(
     )
 }
 
-/**
- * WebView component for embedding TikTok videos
- */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun VideoEmbedView(
@@ -310,7 +293,7 @@ fun VideoEmbedView(
             else -> null
         }
     }
-    
+
     if (embedUrl != null) {
         Card(
             modifier = modifier.fillMaxWidth(),
@@ -326,40 +309,46 @@ fun VideoEmbedView(
                             settings.allowContentAccess = true
                             settings.allowUniversalAccessFromFileURLs = true
                             settings.allowFileAccessFromFileURLs = true
-                            settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                            settings.mixedContentMode =
+                                android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                             settings.mediaPlaybackRequiresUserGesture = false
                             settings.loadWithOverviewMode = true
                             settings.useWideViewPort = true
-                            
-                            // Set background to transparent for better appearance
+
                             setBackgroundColor(0x00000000)
-                            
+
                             webViewClient = object : WebViewClient() {
-                                override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
-                                    // Allow navigation within embed, but open external links in browser
-                                    if (url != null && !url.contains("embed") && !url.contains("youtube.com") && !url.contains("tiktok.com")) {
+                                override fun shouldOverrideUrlLoading(
+                                    view: WebView?,
+                                    url: String?
+                                ): Boolean {
+                                    if (url != null && !url.contains("embed") && !url.contains("youtube.com") && !url.contains(
+                                            "tiktok.com"
+                                        )
+                                    ) {
                                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                                         ctx.startActivity(intent)
                                         return true
                                     }
                                     return false
                                 }
-                                
+
                                 override fun onPageFinished(view: WebView?, url: String?) {
                                     super.onPageFinished(view, url)
-                                    // Inject CSS to hide YouTube UI elements if needed
                                     if (linkType == LinkType.YOUTUBE) {
-                                        view?.evaluateJavascript("""
+                                        view?.evaluateJavascript(
+                                            """
                                             (function() {
                                                 var style = document.createElement('style');
                                                 style.innerHTML = 'body { margin: 0; padding: 0; } iframe { width: 100%; height: 100%; }';
                                                 document.head.appendChild(style);
                                             })();
-                                        """.trimIndent(), null)
+                                        """.trimIndent(), null
+                                        )
                                     }
                                 }
                             }
-                            
+
                             loadUrl(embedUrl)
                         }
                     },
@@ -375,8 +364,7 @@ fun VideoEmbedView(
                             }
                         )
                 )
-                
-                // Clickable overlay to open in browser
+
                 val contextForButton = LocalContext.current
                 Row(
                     modifier = Modifier
@@ -390,7 +378,6 @@ fun VideoEmbedView(
                                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                                 contextForButton.startActivity(intent)
                             } catch (e: Exception) {
-                                // Handle error
                             }
                         }
                     ) {
@@ -406,7 +393,6 @@ fun VideoEmbedView(
             }
         }
     } else {
-        // Fallback: show clickable card
         val contextForFallback = LocalContext.current
         LinkPreviewCard(
             url = url,
@@ -416,16 +402,12 @@ fun VideoEmbedView(
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                     contextForFallback.startActivity(intent)
                 } catch (e: Exception) {
-                    // Handle error
                 }
             }
         )
     }
 }
 
-/**
- * Preview card for regular links using meta tags
- */
 @Composable
 fun LinkPreviewCard(
     url: String,
@@ -436,7 +418,7 @@ fun LinkPreviewCard(
     var metaTags by remember { mutableStateOf<LinkMetaTags?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
-    
+
     LaunchedEffect(url) {
         isLoading = true
         scope.launch {
@@ -444,7 +426,7 @@ fun LinkPreviewCard(
             isLoading = false
         }
     }
-    
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -468,7 +450,6 @@ fun LinkPreviewCard(
                     .padding(12.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Image
                 metaTags?.imageUrl?.let { imageUrl ->
                     AsyncImage(
                         model = imageUrl,
@@ -484,8 +465,7 @@ fun LinkPreviewCard(
                         .clip(RoundedCornerShape(8.dp))
                         .background(MaterialTheme.colorScheme.surfaceVariant)
                 )
-                
-                // Content
+
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -495,19 +475,18 @@ fun LinkPreviewCard(
                     Column(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        // Site name or URL domain
                         Text(
-                            text = metaTags?.siteName 
-                                ?: url.split("/").getOrNull(2)?.split(".")?.getOrNull(0)?.replaceFirstChar { 
-                                    if (it.isLowerCase()) it.titlecase() else it.toString() 
-                                }
+                            text = metaTags?.siteName
+                                ?: url.split("/").getOrNull(2)?.split(".")?.getOrNull(0)
+                                    ?.replaceFirstChar {
+                                        if (it.isLowerCase()) it.titlecase() else it.toString()
+                                    }
                                 ?: "Link",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Medium
                         )
-                        
-                        // Title
+
                         Text(
                             text = metaTags?.title ?: url,
                             style = MaterialTheme.typography.titleSmall,
@@ -515,8 +494,7 @@ fun LinkPreviewCard(
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
-                        
-                        // Description
+
                         metaTags?.description?.let { description ->
                             Text(
                                 text = description,
@@ -527,8 +505,7 @@ fun LinkPreviewCard(
                             )
                         }
                     }
-                    
-                    // Open link indicator
+
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)

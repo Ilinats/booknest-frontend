@@ -1,5 +1,6 @@
 package com.example.booknest.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,88 +30,83 @@ fun CodeInputField(
 ) {
     var code by remember { mutableStateOf("") }
     val focusRequesters = remember { List(codeLength) { FocusRequester() } }
-    
+
     Row(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         repeat(codeLength) { index ->
             val isFilled = index < code.length
             val currentDigit = if (isFilled) code[index].toString() else ""
-            
-            BasicTextField(
-                value = currentDigit,
-                onValueChange = { newValue ->
-                    // Handle paste (multiple digits at once)
-                    if (newValue.length > 1 && newValue.all { it.isDigit() }) {
-                        // Paste detected - fill all fields with the pasted digits
-                        val pastedDigits = newValue.take(codeLength)
-                        code = pastedDigits.padEnd(codeLength, ' ').trim()
-                        
-                        // Focus the next empty field or the last field
-                        val nextEmptyIndex = pastedDigits.length.coerceAtMost(codeLength - 1)
-                        if (nextEmptyIndex < codeLength) {
-                            focusRequesters[nextEmptyIndex].requestFocus()
-                        }
-                        
-                        // Notify parent of code change
-                        onCodeChange(code)
-                    }
-                    // Handle single digit input
-                    else if (newValue.length <= 1 && newValue.all { it.isDigit() }) {
-                        val newCode = code.toMutableList()
-                        
-                        // Ensure we have enough elements
-                        while (newCode.size <= index) {
-                            newCode.add(' ')
-                        }
-                        
-                        if (newValue.isEmpty()) {
-                            // Delete current digit
-                            newCode[index] = ' '
-                            code = newCode.joinToString("").trim()
-                            
-                            // Move focus to previous field if current field is now empty
-                            if (index > 0) {
-                                focusRequesters[index - 1].requestFocus()
-                            }
-                        } else {
-                            newCode[index] = newValue.last()
-                            code = newCode.joinToString("").trim()
-                            
-                            // Auto-focus next field
-                            if (index < codeLength - 1) {
-                                focusRequesters[index + 1].requestFocus()
-                            }
-                        }
-                        
-                        // Notify parent of code change
-                        onCodeChange(code)
-                    }
-                },
+
+            Box(
                 modifier = Modifier
-                    .width(48.dp)
-                    .height(56.dp)
+                    .weight(1f)
+                    .aspectRatio(1f)
                     .focusRequester(focusRequesters[index])
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFFF1E9EE))
                     .border(
-                        width = 2.dp,
-                        color = if (isFilled) MaterialTheme.colorScheme.primary 
-                               else MaterialTheme.colorScheme.outline,
-                        shape = RoundedCornerShape(8.dp)
+                        width = 1.dp,
+                        color = Color(0xFF0D1E4C),
+                        shape = RoundedCornerShape(12.dp)
                     ),
-                textStyle = TextStyle(
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurface
-                ),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number
-                ),
-                singleLine = true,
-                maxLines = 1
-            )
+                contentAlignment = Alignment.Center
+            ) {
+                BasicTextField(
+                    value = currentDigit,
+                    onValueChange = { newValue ->
+                        if (newValue.length > 1 && newValue.all { it.isDigit() }) {
+                            val pastedDigits = newValue.take(codeLength)
+                            code = pastedDigits.padEnd(codeLength, ' ').trim()
+
+                            val nextEmptyIndex = pastedDigits.length.coerceAtMost(codeLength - 1)
+                            if (nextEmptyIndex < codeLength) {
+                                focusRequesters[nextEmptyIndex].requestFocus()
+                            }
+
+                            onCodeChange(code)
+                        } else if (newValue.length <= 1 && newValue.all { it.isDigit() }) {
+                            val newCode = code.toMutableList()
+
+                            while (newCode.size <= index) {
+                                newCode.add(' ')
+                            }
+
+                            if (newValue.isEmpty()) {
+                                newCode[index] = ' '
+                                code = newCode.joinToString("").trim()
+
+                                if (index > 0) {
+                                    focusRequesters[index - 1].requestFocus()
+                                }
+                            } else {
+                                newCode[index] = newValue.last()
+                                code = newCode.joinToString("").trim()
+
+                                if (index < codeLength - 1) {
+                                    focusRequesters[index + 1].requestFocus()
+                                }
+                            }
+
+                            onCodeChange(code)
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                    textStyle = TextStyle(
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        color = Color(0xFF0D1E4C)
+                    ),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number
+                    ),
+                    singleLine = true,
+                    maxLines = 1
+                )
+            }
         }
     }
 }
@@ -123,7 +119,7 @@ fun ResendCodeButton(
 ) {
     var timeLeft by remember { mutableStateOf(0) }
     var isEnabled by remember { mutableStateOf(true) }
-    
+
     LaunchedEffect(timeLeft) {
         if (timeLeft > 0) {
             kotlinx.coroutines.delay(1000)
@@ -132,12 +128,12 @@ fun ResendCodeButton(
             isEnabled = true
         }
     }
-    
+
     LaunchedEffect(Unit) {
         timeLeft = cooldownSeconds
         isEnabled = false
     }
-    
+
     TextButton(
         onClick = {
             if (isEnabled) {
@@ -151,8 +147,8 @@ fun ResendCodeButton(
     ) {
         Text(
             text = if (isEnabled) "Resend code" else "Resend code in ${timeLeft}s",
-            color = if (isEnabled) MaterialTheme.colorScheme.primary 
-                   else MaterialTheme.colorScheme.onSurfaceVariant
+            color = if (isEnabled) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

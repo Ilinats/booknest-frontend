@@ -25,11 +25,7 @@ fun BackButton(
     ) {
         Box(
             modifier = Modifier
-                .size(36.dp)
-                .background(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = CircleShape
-                ),
+                .size(36.dp),
             contentAlignment = Alignment.Center
         ) {
             Icon(

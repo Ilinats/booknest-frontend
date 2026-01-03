@@ -1,70 +1,59 @@
 package com.example.booknest.viewmodel
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.booknest.data.AuthManager
-import com.example.booknest.network.*
-import kotlinx.coroutines.flow.MutableSharedFlow
+import com.example.booknest.domain.model.request.CreateReviewRequest
+import com.example.booknest.domain.model.request.UpdateReviewRequest
+import com.example.booknest.domain.model.response.ApplicationResponse
+import com.example.booknest.domain.model.response.ReviewResponse
+import com.example.booknest.domain.repository.ReviewsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import com.example.booknest.ui.toast.GlobalToastHandler
 
-class ReviewViewModel(private val authManager: AuthManager) : ViewModel() {
+enum class ReviewType(val value: String) {
+    TEXT("text"),
+    LINK("link")
+}
 
-    // Review state
-    private val _bookReviews = MutableStateFlow<List<Review>>(emptyList())
-    val bookReviews: StateFlow<List<Review>> = _bookReviews
+class ReviewViewModel(
+    private val reviewsRepository: ReviewsRepository,
+    private val booksRepository: com.example.booknest.domain.repository.BooksRepository
+) : ViewModel() {
 
-    private val _userReviews = MutableStateFlow<List<Review>>(emptyList())
-    val userReviews: StateFlow<List<Review>> = _userReviews
+    private val _bookReviews = MutableStateFlow<List<ReviewResponse>>(emptyList())
+    val bookReviews: StateFlow<List<ReviewResponse>> = _bookReviews
 
-    private val _featuredReviews = MutableStateFlow<List<Review>>(emptyList())
-    val featuredReviews: StateFlow<List<Review>> = _featuredReviews
+    private val _userReviews = MutableStateFlow<List<ReviewResponse>>(emptyList())
+    val userReviews: StateFlow<List<ReviewResponse>> = _userReviews
 
-    private val _currentReview = MutableStateFlow<Review?>(null)
-    val currentReview: StateFlow<Review?> = _currentReview
+    private val _featuredReviews = MutableStateFlow<List<ReviewResponse>>(emptyList())
+    val featuredReviews: StateFlow<List<ReviewResponse>> = _featuredReviews
 
-    // Common state
+    private val _currentReview = MutableStateFlow<ReviewResponse?>(null)
+    val currentReview: StateFlow<ReviewResponse?> = _currentReview
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    private val _snackbarEvent = MutableSharedFlow<String>()
-    val snackbarEvent: SharedFlow<String> = _snackbarEvent
 
-    // Review operations
     fun loadBookReviews(bookId: String) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                println("DEBUG: Loading book reviews for bookId: $bookId")
-                val response = RetrofitInstance.api.getBookReviews(bookId)
-                println("DEBUG: Book reviews response code: ${response.code()}")
-                if (response.isSuccessful && response.body() != null) {
-                    val apiResponse = response.body()!!
-                    println("DEBUG: Book reviews API success: ${apiResponse.success}")
-                    if (apiResponse.success) {
-                        val reviews = apiResponse.data ?: emptyList()
-                        println("DEBUG: Loaded ${reviews.size} reviews")
-                        reviews.forEachIndexed { index, review ->
-                            println("DEBUG: Review $index: id=${review.id}, rating=${review.rating}, application=${review.application?.id}")
-                        }
+                val result = booksRepository.getBookAllReviews(bookId)
+                result
+                    .onSuccess { reviews ->
                         _bookReviews.value = reviews
-                    } else {
-                        println("DEBUG: Book reviews API error: ${apiResponse.message}")
-                        _snackbarEvent.emit(apiResponse.message ?: "Failed to load book reviews")
                     }
-                } else {
-                    val errorBody = response.errorBody()?.string()
-                    println("DEBUG: Book reviews HTTP error: ${response.code()} - ${response.message()}")
-                    println("DEBUG: Error body: $errorBody")
-                    _snackbarEvent.emit("Failed to load book reviews: ${response.message()}")
-                }
+                    .onFailure { e ->
+                        GlobalToastHandler.showError(e.message ?: "Failed to load book reviews")
+                    }
             } catch (e: Exception) {
                 println("DEBUG: Exception loading book reviews: ${e.message}")
                 e.printStackTrace()
-                _snackbarEvent.emit("Error loading book reviews: ${e.message}")
+                GlobalToastHandler.showError("Error loading book reviews: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -75,19 +64,16 @@ class ReviewViewModel(private val authManager: AuthManager) : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val response = RetrofitInstance.api.getUserReviews(userId)
-                if (response.isSuccessful && response.body() != null) {
-                    val apiResponse = response.body()!!
-                    if (apiResponse.success) {
-                        _userReviews.value = apiResponse.data ?: emptyList()
-                    } else {
-                        _snackbarEvent.emit(apiResponse.message ?: "Failed to load user reviews")
+                val result = reviewsRepository.getUserReviews(userId)
+                result
+                    .onSuccess { reviews ->
+                        _userReviews.value = reviews
                     }
-                } else {
-                    _snackbarEvent.emit("Failed to load user reviews: ${response.message()}")
-                }
+                    .onFailure { e ->
+                        GlobalToastHandler.showError(e.message ?: "Failed to load user reviews")
+                    }
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error loading user reviews: ${e.message}")
+                GlobalToastHandler.showError("Error loading user reviews: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -98,19 +84,16 @@ class ReviewViewModel(private val authManager: AuthManager) : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val response = RetrofitInstance.api.getFeaturedReviews()
-                if (response.isSuccessful && response.body() != null) {
-                    val apiResponse = response.body()!!
-                    if (apiResponse.success) {
-                        _featuredReviews.value = apiResponse.data ?: emptyList()
-                    } else {
-                        _snackbarEvent.emit(apiResponse.message ?: "Failed to load featured reviews")
+                val result = reviewsRepository.getFeaturedReviews()
+                result
+                    .onSuccess { reviews ->
+                        _featuredReviews.value = reviews
                     }
-                } else {
-                    _snackbarEvent.emit("Failed to load featured reviews: ${response.message()}")
-                }
+                    .onFailure { e ->
+                        GlobalToastHandler.showError(e.message ?: "Failed to load featured reviews")
+                    }
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error loading featured reviews: ${e.message}")
+                GlobalToastHandler.showError("Error loading featured reviews: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -121,19 +104,16 @@ class ReviewViewModel(private val authManager: AuthManager) : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val response = RetrofitInstance.api.getReview(reviewId)
-                if (response.isSuccessful && response.body() != null) {
-                    val apiResponse = response.body()!!
-                    if (apiResponse.success) {
-                        _currentReview.value = apiResponse.data
-                    } else {
-                        _snackbarEvent.emit(apiResponse.message ?: "Failed to load review")
+                val result = reviewsRepository.getReview(reviewId)
+                result
+                    .onSuccess { review ->
+                        _currentReview.value = review
                     }
-                } else {
-                    _snackbarEvent.emit("Failed to load review: ${response.message()}")
-                }
+                    .onFailure { e ->
+                        GlobalToastHandler.showError(e.message ?: "Failed to load review")
+                    }
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error loading review: ${e.message}")
+                GlobalToastHandler.showError("Error loading review: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -151,34 +131,27 @@ class ReviewViewModel(private val authManager: AuthManager) : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val response = RetrofitInstance.api.createReview(
-                    CreateReviewDto(
-                        applicationId = applicationId,
-                        rating = rating,
-                        reviewType = reviewType.value,
-                        reviewContent = reviewContent,
-                        reviewUrls = reviewUrls,
-                        isPublic = isPublic
-                    )
+                val request = CreateReviewRequest(
+                    applicationId = applicationId,
+                    rating = rating,
+                    reviewType = reviewType.value,
+                    reviewContent = reviewContent,
+                    reviewUrls = reviewUrls,
+                    isPublic = isPublic
                 )
-                if (response.isSuccessful && response.body() != null) {
-                    val apiResponse = response.body()!!
-                    if (apiResponse.success) {
-                        _snackbarEvent.emit("Review submitted successfully!")
-                        // Refresh relevant lists
-                        val review = apiResponse.data
-                        if (review?.application?.bookId != null) {
+                val result = reviewsRepository.createReview(request)
+                result
+                    .onSuccess { review ->
+                        GlobalToastHandler.showSuccess("Review submitted successfully!")
+                        if (review.application?.bookId != null) {
                             loadBookReviews(review.application.bookId)
                         }
-                    } else {
-                        _snackbarEvent.emit(apiResponse.message ?: "Failed to submit review")
                     }
-                } else {
-                    val errorBody = response.errorBody()?.string()
-                    _snackbarEvent.emit("Failed to submit review: ${response.message()}")
-                }
+                    .onFailure { e ->
+                        GlobalToastHandler.showError(e.message ?: "Failed to submit review")
+                    }
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error submitting review: ${e.message}")
+                GlobalToastHandler.showError("Error submitting review: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -196,34 +169,27 @@ class ReviewViewModel(private val authManager: AuthManager) : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val response = RetrofitInstance.api.updateReview(
-                    reviewId,
-                    UpdateReviewDto(
-                        rating = rating,
-                        reviewType = reviewType,
-                        reviewContent = reviewContent,
-                        reviewUrls = reviewUrls,
-                        isPublic = isPublic
-                    )
+                val request = UpdateReviewRequest(
+                    rating = rating,
+                    reviewType = reviewType?.value,
+                    reviewContent = reviewContent,
+                    reviewUrls = reviewUrls,
+                    isPublic = isPublic
                 )
-                if (response.isSuccessful && response.body() != null) {
-                    val apiResponse = response.body()!!
-                    if (apiResponse.success) {
-                        _snackbarEvent.emit("Review updated successfully!")
-                        _currentReview.value = apiResponse.data
-                        // Refresh relevant lists
-                        val review = apiResponse.data
-                        if (review?.application?.bookId != null) {
+                val result = reviewsRepository.updateReview(reviewId, request)
+                result
+                    .onSuccess { review ->
+                        GlobalToastHandler.showSuccess("Review updated successfully!")
+                        _currentReview.value = review
+                        if (review.application?.bookId != null) {
                             loadBookReviews(review.application.bookId)
                         }
-                    } else {
-                        _snackbarEvent.emit(apiResponse.message ?: "Failed to update review")
                     }
-                } else {
-                    _snackbarEvent.emit("Failed to update review: ${response.message()}")
-                }
+                    .onFailure { e ->
+                        GlobalToastHandler.showError(e.message ?: "Failed to update review")
+                    }
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error updating review: ${e.message}")
+                GlobalToastHandler.showError("Error updating review: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -234,56 +200,46 @@ class ReviewViewModel(private val authManager: AuthManager) : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val response = RetrofitInstance.api.deleteReview(reviewId)
-                if (response.isSuccessful && response.body() != null) {
-                    val apiResponse = response.body()!!
-                    if (apiResponse.success) {
-                        _snackbarEvent.emit("Review deleted successfully!")
-                        _currentReview.value = null
-                        // Refresh relevant lists
+                val result = reviewsRepository.deleteReview(reviewId)
+                result
+                    .onSuccess {
+                        GlobalToastHandler.showSuccess("Review deleted successfully!")
                         val currentReview = _currentReview.value
+                        _currentReview.value = null
                         if (currentReview?.application?.bookId != null) {
                             loadBookReviews(currentReview.application.bookId)
                         }
-                    } else {
-                        _snackbarEvent.emit(apiResponse.message ?: "Failed to delete review")
                     }
-                } else {
-                    _snackbarEvent.emit("Failed to delete review: ${response.message()}")
-                }
+                    .onFailure { e ->
+                        GlobalToastHandler.showError(e.message ?: "Failed to delete review")
+                    }
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error deleting review: ${e.message}")
+                GlobalToastHandler.showError("Error deleting review: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
         }
     }
 
-    // Author operations
     fun featureReview(reviewId: String) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val response = RetrofitInstance.api.featureReview(reviewId)
-                if (response.isSuccessful && response.body() != null) {
-                    val apiResponse = response.body()!!
-                    if (apiResponse.success) {
-                        _snackbarEvent.emit("Review featured!")
-                        _currentReview.value = apiResponse.data
-                        // Refresh relevant lists
-                        val review = apiResponse.data
-                        if (review?.application?.bookId != null) {
+                val result = reviewsRepository.featureReview(reviewId)
+                result
+                    .onSuccess { review ->
+                        GlobalToastHandler.showSuccess("Review featured!")
+                        _currentReview.value = review
+                        if (review.application?.bookId != null) {
                             loadBookReviews(review.application.bookId)
                         }
                         loadFeaturedReviews()
-                    } else {
-                        _snackbarEvent.emit(apiResponse.message ?: "Failed to feature review")
                     }
-                } else {
-                    _snackbarEvent.emit("Failed to feature review: ${response.message()}")
-                }
+                    .onFailure { e ->
+                        GlobalToastHandler.showError(e.message ?: "Failed to feature review")
+                    }
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error featuring review: ${e.message}")
+                GlobalToastHandler.showError("Error featuring review: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -294,62 +250,50 @@ class ReviewViewModel(private val authManager: AuthManager) : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val response = RetrofitInstance.api.unfeatureReview(reviewId)
-                if (response.isSuccessful && response.body() != null) {
-                    val apiResponse = response.body()!!
-                    if (apiResponse.success) {
-                        _snackbarEvent.emit("Review unfeatured!")
-                        _currentReview.value = apiResponse.data
-                        // Refresh relevant lists
-                        val review = apiResponse.data
-                        if (review?.application?.bookId != null) {
+                val result = reviewsRepository.unfeatureReview(reviewId)
+                result
+                    .onSuccess { review ->
+                        GlobalToastHandler.showSuccess("Review unfeatured!")
+                        _currentReview.value = review
+                        if (review.application?.bookId != null) {
                             loadBookReviews(review.application.bookId)
                         }
                         loadFeaturedReviews()
-                    } else {
-                        _snackbarEvent.emit(apiResponse.message ?: "Failed to unfeature review")
                     }
-                } else {
-                    _snackbarEvent.emit("Failed to unfeature review: ${response.message()}")
-                }
+                    .onFailure { e ->
+                        GlobalToastHandler.showError(e.message ?: "Failed to unfeature review")
+                    }
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error unfeaturing review: ${e.message}")
+                GlobalToastHandler.showError("Error unfeaturing review: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
         }
     }
 
-    // Helper functions
-    fun getAverageRating(reviews: List<Review>): Double {
+    fun getAverageRating(reviews: List<ReviewResponse>): Double {
         if (reviews.isEmpty()) return 0.0
         return reviews.map { it.rating }.average()
     }
 
-    fun getRatingDistribution(reviews: List<Review>): Map<Int, Int> {
+    fun getRatingDistribution(reviews: List<ReviewResponse>): Map<Int, Int> {
         return reviews.groupingBy { it.rating }.eachCount()
     }
 
-    fun canSubmitReview(application: Application): Boolean {
-        return application.status == "approved" && 
-               application.copyReceivedAt != null &&
-               application.reviewSubmittedAt == null
+    fun canSubmitReview(application: ApplicationResponse): Boolean {
+        return application.status == "approved" &&
+                application.copyReceivedAt != null &&
+                application.reviewSubmittedAt == null
     }
 
-    fun canUpdateReadingStatus(application: Application, newStatus: ReadingStatus): Boolean {
-        return when (application.status) {
-            "approved" -> true
-            else -> false
-        }
+    fun canUpdateReadingStatus(
+        application: ApplicationResponse,
+        newStatus: ReadingStatus
+    ): Boolean {
+        return application.status == "approved"
     }
-}
 
-class ReviewViewModelFactory(private val authManager: AuthManager) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(ReviewViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return ReviewViewModel(authManager) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
+    fun clearCurrentReview() {
+        _currentReview.value = null
     }
 }

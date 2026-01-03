@@ -8,8 +8,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 
 sealed class BottomBarScreen(val route: String, val title: String, val icon: ImageVector) {
     object Home : BottomBarScreen("home", "Home", Icons.Default.Home)
-    object MyApplications : BottomBarScreen("my_applications", "My Applications", Icons.Default.List)
-    object Browse : BottomBarScreen("browse?searchQuery={searchQuery}", "Browse", Icons.Default.Search) {
-        fun withQuery(query: String) = "browse?searchQuery=$query"
+    object MyApplications :
+        BottomBarScreen("my_applications", "My Applications", Icons.Default.List)
+
+    object Browse : BottomBarScreen("browse", "Browse", Icons.Default.Search) {
+        fun withQuery(query: String) = "browse/${android.net.Uri.encode(query)}"
     }
 }

@@ -1,56 +1,58 @@
 package com.example.booknest.viewmodel
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.booknest.data.AuthManager
-import com.example.booknest.network.ApiService
-import com.example.booknest.network.FriendRequest
-import com.example.booknest.network.FriendshipStatus
-import com.example.booknest.network.UserData
-import com.example.booknest.network.UserActivity
+import com.example.booknest.data.session.SessionManager
+import com.example.booknest.domain.model.response.FriendRequestResponse
+import com.example.booknest.domain.model.response.FriendshipStatusResponse
+import com.example.booknest.domain.model.response.UserActivityResponse
+import com.example.booknest.domain.model.response.UserResponse
+import com.example.booknest.domain.repository.FriendsRepository
+import com.example.booknest.domain.usecase.friends.GetFriendsUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class FriendViewModel(
-    private val apiService: ApiService,
-    private val authManager: AuthManager
+    private val friendsRepository: FriendsRepository,
+    private val sessionManager: SessionManager
 ) : ViewModel() {
-    
-    private val _friends = MutableStateFlow<List<FriendRequest>>(emptyList())
-    val friends: StateFlow<List<FriendRequest>> = _friends.asStateFlow()
-    
-    private val _friendRequests = MutableStateFlow<List<FriendRequest>>(emptyList())
-    val friendRequests: StateFlow<List<FriendRequest>> = _friendRequests.asStateFlow()
-    
-    private val _friendsActivity = MutableStateFlow<List<UserActivity>>(emptyList())
-    val friendsActivity: StateFlow<List<UserActivity>> = _friendsActivity.asStateFlow()
-    
-    private val _searchResults = MutableStateFlow<List<UserData>>(emptyList())
-    val searchResults: StateFlow<List<UserData>> = _searchResults.asStateFlow()
-    
+
+    private val _friends = MutableStateFlow<List<UserResponse>>(emptyList())
+    val friends: StateFlow<List<UserResponse>> = _friends.asStateFlow()
+
+    private val _sentRequests = MutableStateFlow<List<UserResponse>>(emptyList())
+    val sentRequests: StateFlow<List<UserResponse>> = _sentRequests.asStateFlow()
+
+    private val _receivedRequests = MutableStateFlow<List<UserResponse>>(emptyList())
+    val receivedRequests: StateFlow<List<UserResponse>> = _receivedRequests.asStateFlow()
+
+    private val _friendsActivity = MutableStateFlow<List<UserActivityResponse>>(emptyList())
+    val friendsActivity: StateFlow<List<UserActivityResponse>> = _friendsActivity.asStateFlow()
+
+    private val _searchResults = MutableStateFlow<List<UserResponse>>(emptyList())
+    val searchResults: StateFlow<List<UserResponse>> = _searchResults.asStateFlow()
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-    
+
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
-    
+
     fun loadFriends() {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
                 _error.value = null
-                
-                val response = apiService.getFriends()
-                if (response.isSuccessful) {
-                    response.body()?.data?.let { friendsList ->
+                val result = friendsRepository.getFriends()
+                result
+                    .onSuccess { friendsList ->
                         _friends.value = friendsList
                     }
-                } else {
-                    _error.value = "Failed to load friends"
-                }
+                    .onFailure { e ->
+                        _error.value = e.message ?: "Failed to load friends"
+                    }
             } catch (e: Exception) {
                 _error.value = e.message ?: "Unknown error occurred"
             } finally {
@@ -58,21 +60,20 @@ class FriendViewModel(
             }
         }
     }
-    
-    fun loadFriendRequests(type: String = "received") {
+
+    fun loadSentRequests() {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
                 _error.value = null
-                
-                val response = apiService.getFriendRequests(type = type)
-                if (response.isSuccessful) {
-                    response.body()?.data?.let { requestsList ->
-                        _friendRequests.value = requestsList
+                val result = friendsRepository.getSentFriendRequests()
+                result
+                    .onSuccess { requestsList ->
+                        _sentRequests.value = requestsList
                     }
-                } else {
-                    _error.value = "Failed to load friend requests"
-                }
+                    .onFailure { e ->
+                        _error.value = e.message ?: "Failed to load sent requests"
+                    }
             } catch (e: Exception) {
                 _error.value = e.message ?: "Unknown error occurred"
             } finally {
@@ -80,48 +81,89 @@ class FriendViewModel(
             }
         }
     }
-    
+
+    fun loadReceivedRequests() {
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+                _error.value = null
+                val result = friendsRepository.getReceivedFriendRequests()
+                result
+                    .onSuccess { requestsList ->
+                        _receivedRequests.value = requestsList
+                    }
+                    .onFailure { e ->
+                        _error.value = e.message ?: "Failed to load received requests"
+                    }
+            } catch (e: Exception) {
+                _error.value = e.message ?: "Unknown error occurred"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun loadAll() {
+        viewModelScope.launch {
+            loadFriends()
+            loadSentRequests()
+            loadReceivedRequests()
+        }
+    }
+
     fun loadFriendsActivity() {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
                 _error.value = null
-                
-                val response = apiService.getFriendsActivity()
-                if (response.isSuccessful) {
-                    response.body()?.data?.let { activityList ->
+                val result = friendsRepository.getFriendsActivity()
+                result
+                    .onSuccess { activityList ->
+                        android.util.Log.d(
+                            "FriendViewModel",
+                            "Friends activity loaded: ${activityList.size} activities"
+                        )
                         _friendsActivity.value = activityList
                     }
-                } else {
-                    _error.value = "Failed to load friends activity"
-                }
+                    .onFailure { e ->
+                        android.util.Log.e(
+                            "FriendViewModel",
+                            "Failed to load friends activity: ${e.message}",
+                            e
+                        )
+                        _error.value = e.message ?: "Failed to load friends activity"
+                    }
             } catch (e: Exception) {
+                android.util.Log.e(
+                    "FriendViewModel",
+                    "Exception loading friends activity: ${e.message}",
+                    e
+                )
                 _error.value = e.message ?: "Unknown error occurred"
             } finally {
                 _isLoading.value = false
             }
         }
     }
-    
+
     fun searchUsers(query: String) {
         if (query.isBlank()) {
             _searchResults.value = emptyList()
             return
         }
-        
+
         viewModelScope.launch {
             try {
                 _isLoading.value = true
                 _error.value = null
-                
-                val response = apiService.searchUsers(query)
-                if (response.isSuccessful) {
-                    response.body()?.data?.let { users ->
+                val result = friendsRepository.searchUsers(query)
+                result
+                    .onSuccess { users ->
                         _searchResults.value = users
                     }
-                } else {
-                    _error.value = "Failed to search users"
-                }
+                    .onFailure { e ->
+                        _error.value = e.message ?: "Failed to search users"
+                    }
             } catch (e: Exception) {
                 _error.value = e.message ?: "Unknown error occurred"
             } finally {
@@ -129,20 +171,20 @@ class FriendViewModel(
             }
         }
     }
-    
+
     fun sendFriendRequest(username: String) {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
                 _error.value = null
-                
-                val response = apiService.sendFriendRequest(username)
-                if (response.isSuccessful) {
-                    // Refresh friend requests
-                    loadFriendRequests("sent")
-                } else {
-                    _error.value = "Failed to send friend request"
-                }
+                val result = friendsRepository.sendFriendRequest(username)
+                result
+                    .onSuccess {
+                        loadSentRequests()
+                    }
+                    .onFailure { e ->
+                        _error.value = e.message ?: "Failed to send friend request"
+                    }
             } catch (e: Exception) {
                 _error.value = e.message ?: "Unknown error occurred"
             } finally {
@@ -150,21 +192,21 @@ class FriendViewModel(
             }
         }
     }
-    
+
     fun acceptFriendRequest(requesterId: String) {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
                 _error.value = null
-                
-                val response = apiService.acceptFriendRequest(requesterId)
-                if (response.isSuccessful) {
-                    // Refresh friends and requests
-                    loadFriends()
-                    loadFriendRequests("received")
-                } else {
-                    _error.value = "Failed to accept friend request"
-                }
+                val result = friendsRepository.acceptFriendRequest(requesterId)
+                result
+                    .onSuccess {
+                        loadFriends()
+                        loadReceivedRequests()
+                    }
+                    .onFailure { e ->
+                        _error.value = e.message ?: "Failed to accept friend request"
+                    }
             } catch (e: Exception) {
                 _error.value = e.message ?: "Unknown error occurred"
             } finally {
@@ -172,20 +214,20 @@ class FriendViewModel(
             }
         }
     }
-    
+
     fun declineFriendRequest(requesterId: String) {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
                 _error.value = null
-                
-                val response = apiService.declineFriendRequest(requesterId)
-                if (response.isSuccessful) {
-                    // Refresh friend requests
-                    loadFriendRequests("received")
-                } else {
-                    _error.value = "Failed to decline friend request"
-                }
+                val result = friendsRepository.declineFriendRequest(requesterId)
+                result
+                    .onSuccess {
+                        loadReceivedRequests()
+                    }
+                    .onFailure { e ->
+                        _error.value = e.message ?: "Failed to decline friend request"
+                    }
             } catch (e: Exception) {
                 _error.value = e.message ?: "Unknown error occurred"
             } finally {
@@ -193,20 +235,42 @@ class FriendViewModel(
             }
         }
     }
-    
+
+    fun cancelFriendRequest(addresseeId: String) {
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+                _error.value = null
+                val result = friendsRepository.cancelFriendRequest(addresseeId)
+                result
+                    .onSuccess {
+                        loadSentRequests()
+                    }
+                    .onFailure { e ->
+                        _error.value = e.message ?: "Failed to cancel friend request"
+                    }
+            } catch (e: Exception) {
+                _error.value = e.message ?: "Unknown error occurred"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
     fun unfriendUser(friendId: String) {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
                 _error.value = null
-                
-                val response = apiService.unfriendUser(friendId)
-                if (response.isSuccessful) {
-                    // Refresh friends
-                    loadFriends()
-                } else {
-                    _error.value = "Failed to unfriend user"
-                }
+                val result = friendsRepository.unfriendUser(friendId)
+                result
+                    .onSuccess {
+                        loadFriends()
+                        kotlinx.coroutines.delay(300)
+                    }
+                    .onFailure { e ->
+                        _error.value = e.message ?: "Failed to unfriend user"
+                    }
             } catch (e: Exception) {
                 _error.value = e.message ?: "Unknown error occurred"
             } finally {
@@ -214,20 +278,20 @@ class FriendViewModel(
             }
         }
     }
-    
+
     fun blockUser(userId: String) {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
                 _error.value = null
-                
-                val response = apiService.blockUser(userId)
-                if (response.isSuccessful) {
-                    // Refresh friends
-                    loadFriends()
-                } else {
-                    _error.value = "Failed to block user"
-                }
+                val result = friendsRepository.blockUser(userId)
+                result
+                    .onSuccess {
+                        loadFriends()
+                    }
+                    .onFailure { e ->
+                        _error.value = e.message ?: "Failed to block user"
+                    }
             } catch (e: Exception) {
                 _error.value = e.message ?: "Unknown error occurred"
             } finally {
@@ -235,20 +299,20 @@ class FriendViewModel(
             }
         }
     }
-    
+
     fun unblockUser(userId: String) {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
                 _error.value = null
-                
-                val response = apiService.unblockUser(userId)
-                if (response.isSuccessful) {
-                    // Refresh friends
-                    loadFriends()
-                } else {
-                    _error.value = "Failed to unblock user"
-                }
+                val result = friendsRepository.unblockUser(userId)
+                result
+                    .onSuccess {
+                        loadFriends()
+                    }
+                    .onFailure { e ->
+                        _error.value = e.message ?: "Failed to unblock user"
+                    }
             } catch (e: Exception) {
                 _error.value = e.message ?: "Unknown error occurred"
             } finally {
@@ -256,38 +320,34 @@ class FriendViewModel(
             }
         }
     }
-    
-    fun getFriendshipStatus(userId: String, onResult: (FriendshipStatus?) -> Unit) {
+
+    fun getFriendshipStatus(userId: String, onResult: (FriendshipStatusResponse?) -> Unit) {
         viewModelScope.launch {
             try {
-                val response = apiService.getFriendshipStatus(userId)
-                if (response.isSuccessful) {
-                    onResult(response.body()?.data)
-                } else {
-                    onResult(null)
-                }
+                val result = friendsRepository.getFriendshipStatus(userId)
+                onResult(result.getOrNull())
             } catch (e: Exception) {
                 onResult(null)
             }
         }
     }
-    
+
+    fun loadFriendSuggestions(onResult: (List<UserResponse>) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val result = friendsRepository.getFriendSuggestions(10)
+                result.onSuccess { suggestions ->
+                    onResult(suggestions)
+                }.onFailure {
+                    onResult(emptyList())
+                }
+            } catch (e: Exception) {
+                onResult(emptyList())
+            }
+        }
+    }
+
     fun clearError() {
         _error.value = null
-    }
-}
-
-class FriendViewModelFactory(
-    private val authManager: AuthManager
-) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(FriendViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return FriendViewModel(
-                apiService = authManager.apiService,
-                authManager = authManager
-            ) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

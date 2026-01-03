@@ -1,11 +1,18 @@
 package com.example.booknest.ui.books
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -13,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -21,21 +29,25 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.example.booknest.data.AuthManager
+import com.example.booknest.data.session.SessionManager
+import com.example.booknest.domain.model.response.ApplicationCheckApplicationResponse
+import com.example.booknest.domain.model.response.ApplicationResponse
+import com.example.booknest.domain.model.response.BookResponse
+import com.example.booknest.domain.model.response.RecommendedBookResponse
+import com.example.booknest.domain.model.response.ReviewResponse
 import com.example.booknest.navigation.Screen
-import com.example.booknest.network.*
 import com.example.booknest.viewmodel.ApplicationViewModel
-import com.example.booknest.viewmodel.ApplicationViewModelFactory
 import com.example.booknest.viewmodel.AuthorFollowViewModel
-import com.example.booknest.viewmodel.AuthorFollowViewModelFactory
 import com.example.booknest.viewmodel.BookViewModel
-import com.example.booknest.viewmodel.BookViewModelFactory
+import com.example.booknest.viewmodel.ProfileViewModel
+import com.example.booknest.viewmodel.ReviewType
 import com.example.booknest.viewmodel.ReviewViewModel
-import com.example.booknest.viewmodel.ReviewViewModelFactory
 import com.example.booknest.ui.components.ReviewLinkPreview
 import com.example.booknest.ui.components.BackButton
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import org.koin.androidx.compose.getViewModel
+import org.koin.compose.koinInject
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -43,149 +55,176 @@ import java.util.*
 @Composable
 fun BookDetailsScreen(
     navController: NavController,
-    authManager: AuthManager,
+    sessionManager: SessionManager = koinInject(),
     bookId: String,
-    applicationViewModel: ApplicationViewModel = viewModel(
-        factory = ApplicationViewModelFactory(authManager)
-    ),
-    reviewViewModel: ReviewViewModel = viewModel(
-        factory = ReviewViewModelFactory(authManager)
-    ),
-    bookViewModel: BookViewModel = viewModel(
-        factory = BookViewModelFactory(authManager)
-    )
+    applicationViewModel: ApplicationViewModel = getViewModel(),
+    reviewViewModel: ReviewViewModel = getViewModel(),
+    bookViewModel: BookViewModel = getViewModel()
 ) {
-    var book by remember { mutableStateOf<Book?>(null) }
+    var book by remember { mutableStateOf<BookResponse?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var showApplyDialog by remember { mutableStateOf(false) }
     var showWithdrawDialog by remember { mutableStateOf(false) }
-    var userApplication by remember { mutableStateOf<Application?>(null) }
-    val snackbarHostState = remember { SnackbarHostState() }
+    var userApplication by remember { mutableStateOf<ApplicationCheckApplicationResponse?>(null) }
+    var isApplying by remember { mutableStateOf(false) }
+    val isApplicationLoading by applicationViewModel.isLoading.collectAsState()
 
-    // Load book details, reviews, and user's applications
+    if (bookId.isBlank()) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("Invalid book ID")
+        }
+        return
+    }
+
+    val currentUser by sessionManager.currentUser.collectAsState()
+
     LaunchedEffect(bookId) {
         println("DEBUG: BookDetailsScreen - bookId: $bookId")
-        try {
-            val response = RetrofitInstance.api.getBookDetails(bookId)
-            if (response.isSuccessful && response.body() != null) {
-                val apiResponse = response.body()!!
-                if (apiResponse.success) {
-                    book = apiResponse.data
-                    // Load reviews regardless of book state
-                    reviewViewModel.loadBookReviews(bookId)
-                } else {
-                    println("DEBUG: Book details API error: ${apiResponse.message}")
-                }
-            } else {
-                println("DEBUG: Book details API error: ${response.code()} - ${response.message()}")
-            }
+
+        val allBooks = bookViewModel.books.value +
+                bookViewModel.featuredBooks.value +
+                bookViewModel.recommendedBooks.value +
+                bookViewModel.newReleases.value +
+                bookViewModel.homeSearchResults.value
+
+        val cachedBook = allBooks.find { it.id == bookId }
+        if (cachedBook != null) {
+            println("DEBUG: Found book in cache immediately, using cached data")
+            book = BookResponse(
+                id = cachedBook.id,
+                title = cachedBook.title,
+                authorName = cachedBook.resolvedAuthorName,
+                coverImageUrl = cachedBook.coverImageUrl,
+                rating = cachedBook.rating,
+                seriesName = cachedBook.seriesName,
+                seriesOrder = cachedBook.seriesOrder,
+                publishedAt = cachedBook.publishedAt,
+                applicationDeadline = cachedBook.applicationDeadline,
+                availableCopies = cachedBook.availableCopies,
+                totalCopies = cachedBook.totalCopies,
+                genres = cachedBook.genres,
+                distributionType = cachedBook.distributionType,
+                author = cachedBook.author
+            )
             isLoading = false
+        }
+
+        try {
+            bookViewModel.getBookDetails(bookId)
         } catch (e: Exception) {
             println("DEBUG: Book details API failed: ${e.message}")
             e.printStackTrace()
-            // Still try to load reviews even if book details failed
-            reviewViewModel.loadBookReviews(bookId)
-            isLoading = false
         }
-        
-        // Check if user has already applied for this book (this will also provide book info as fallback)
-        applicationViewModel.checkApplication(bookId)
-        
-        applicationViewModel.snackbarEvent.collectLatest { message ->
-            snackbarHostState.showSnackbar(message)
+
+        reviewViewModel.loadBookReviews(bookId)
+    }
+
+    LaunchedEffect(book, currentUser?.id) {
+        val currentBook = book
+        if (currentBook != null && currentUser?.id != null) {
+            val authorId = currentBook.authorId ?: currentBook.author?.id
+            val isAuthor = authorId != null && currentUser?.id == authorId
+            if (!isAuthor) {
+                applicationViewModel.checkApplication(bookId)
+            }
         }
     }
-    
-    // Use book data from main screen as primary fallback if main API failed
-    LaunchedEffect(bookViewModel.books, bookViewModel.featuredBooks, bookViewModel.recommendedBooks, bookViewModel.newReleases) {
+
+    val bookDetails by bookViewModel.bookDetails.collectAsState()
+    LaunchedEffect(bookDetails) {
+        bookDetails?.let { details ->
+            if (book == null || (details.fullDescription != null && book?.fullDescription == null)) {
+                book = details
+                isLoading = false
+            }
+        }
+    }
+
+    LaunchedEffect(
+        bookViewModel.books,
+        bookViewModel.featuredBooks,
+        bookViewModel.recommendedBooks,
+        bookViewModel.newReleases,
+        bookViewModel.homeSearchResults
+    ) {
         if (book == null) {
             println("DEBUG: Trying to find book in main screen data")
-            println("DEBUG: books.value size: ${bookViewModel.books.value.size}")
-            println("DEBUG: featuredBooks.value size: ${bookViewModel.featuredBooks.value.size}")
-            println("DEBUG: recommendedBooks.value size: ${bookViewModel.recommendedBooks.value.size}")
-            println("DEBUG: newReleases.value size: ${bookViewModel.newReleases.value.size}")
-            
-            val allBooks = bookViewModel.books.value + 
-                          bookViewModel.featuredBooks.value + 
-                          bookViewModel.recommendedBooks.value + 
-                          bookViewModel.newReleases.value
-            
+
+            val allBooks = bookViewModel.books.value +
+                    bookViewModel.featuredBooks.value +
+                    bookViewModel.recommendedBooks.value +
+                    bookViewModel.newReleases.value +
+                    bookViewModel.homeSearchResults.value
+
             println("DEBUG: Total books available: ${allBooks.size}")
             println("DEBUG: Looking for bookId: $bookId")
-            println("DEBUG: Available book IDs: ${allBooks.map { it.id }}")
-            
+
             val foundBook = allBooks.find { it.id == bookId }
             if (foundBook != null) {
                 println("DEBUG: Found book in main screen data: $foundBook")
-                book = foundBook
+                book = BookResponse(
+                    id = foundBook.id,
+                    title = foundBook.title,
+                    authorName = foundBook.resolvedAuthorName,
+                    coverImageUrl = foundBook.coverImageUrl,
+                    rating = foundBook.rating,
+                    seriesName = foundBook.seriesName,
+                    seriesOrder = foundBook.seriesOrder,
+                    publishedAt = foundBook.publishedAt,
+                    applicationDeadline = foundBook.applicationDeadline,
+                    availableCopies = foundBook.availableCopies,
+                    totalCopies = foundBook.totalCopies,
+                    genres = foundBook.genres,
+                    distributionType = foundBook.distributionType,
+                    author = foundBook.author
+                )
+                isLoading = false
             } else {
                 println("DEBUG: Book not found in main screen data")
             }
         }
     }
-    
-    // Use book info from application check as secondary fallback if main API failed and main screen data not available
-    LaunchedEffect(applicationViewModel.applicationCheck) {
-        applicationViewModel.applicationCheck.collect { appCheck ->
-            println("DEBUG: Application check fallback - book is null: ${book == null}")
-            println("DEBUG: Application check fallback - appCheck: $appCheck")
-            println("DEBUG: Application check fallback - appCheck?.application: ${appCheck?.application}")
-            println("DEBUG: Application check fallback - appCheck?.application?.book: ${appCheck?.application?.book}")
-            
-            // Only run fallback if book is null AND we have application check data
-            if (book == null && appCheck?.application?.book != null) {
-                val bookFromApp = appCheck.application.book
+
+    val applicationCheck by applicationViewModel.applicationCheck.collectAsState()
+    LaunchedEffect(applicationCheck) {
+        val check = applicationCheck
+        if (check != null) {
+            if (check.hasApplied == true && isApplying) {
+                isApplying = false
+            }
+            val previousApplication = userApplication
+            userApplication = check.application
+
+            if (isApplying && check.application != null) {
+                isApplying = false
+            }
+
+            if (book == null && check.application?.book != null) {
+                val bookFromApp = check.application.book
                 println("DEBUG: Creating fallback book from application check: $bookFromApp")
-                // Create a minimal Book object from the application check response
-                book = Book(
+                book = BookResponse(
                     id = bookFromApp.id,
-                    authorId = bookFromApp.authorId, // This will be set from ApplicationCheckBook
-                    title = bookFromApp.title,
-                    shortDescription = null,
-                    fullDescription = null,
-                    coverImageUrl = null,
-                    pageCount = null,
-                    ageRating = null,
-                    distributionType = null,
-                    fileUrl = null,
-                    fileSize = null,
-                    fileType = null,
-                    totalCopies = null,
-                    availableCopies = null,
-                    applicationDeadline = null,
-                    reviewDeadlineDays = null,
-                    selectionCriteria = null,
-                    selectionMethod = null,
-                    status = null,
-                    createdAt = null,
-                    updatedAt = null,
-                    publishedAt = null,
-                    seriesId = null,
-                    seriesOrder = null,
-                    seriesName = null,
-                    authorName = null,
-                    author = null,
-                    rating = null
+                    authorId = bookFromApp.authorId,
+                    title = bookFromApp.title
                 )
                 println("DEBUG: Application check fallback book created: $book")
-            } else if (book == null) {
-                println("DEBUG: No book data available in application check")
-            } else {
-                println("DEBUG: Book already exists, not using application check fallback")
+            }
+        }
+    }
+
+    LaunchedEffect(isApplicationLoading) {
+        if (!isApplicationLoading && isApplying) {
+            kotlinx.coroutines.delay(500)
+            if (userApplication != null) {
+                isApplying = false
             }
         }
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                title = { Text("Book Details", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    BackButton(onClick = { navController.popBackStack() })
-                }
-            )
-        }
     ) { paddingValues ->
         if (isLoading) {
             Box(
@@ -200,11 +239,14 @@ fun BookDetailsScreen(
             BookDetailsContent(
                 book = book!!,
                 navController = navController,
-                authManager = authManager,
+                sessionManager = sessionManager,
                 applicationViewModel = applicationViewModel,
                 reviewViewModel = reviewViewModel,
+                userApplication = userApplication,
                 onApplyClick = { showApplyDialog = true },
                 onWithdrawClick = { showWithdrawDialog = true },
+                isApplicationLoading = isApplicationLoading,
+                isApplying = isApplying,
                 modifier = Modifier.padding(paddingValues)
             )
         } else {
@@ -219,28 +261,25 @@ fun BookDetailsScreen(
         }
     }
 
-    // Apply dialog
     if (showApplyDialog && book != null) {
         ApplicationFormDialog(
             book = book!!,
             onDismiss = { showApplyDialog = false },
             onSubmit = { message ->
+                isApplying = true
                 applicationViewModel.createApplication(book!!.id, message)
-                // Refresh application check after creating application
                 applicationViewModel.checkApplication(bookId)
                 showApplyDialog = false
             }
         )
     }
-    
-    // Withdraw dialog
+
     if (showWithdrawDialog && userApplication != null) {
         WithdrawApplicationDialog(
             book = book!!,
             onDismiss = { showWithdrawDialog = false },
             onConfirm = {
                 applicationViewModel.withdrawApplication(userApplication!!.id)
-                // Refresh application check after withdrawal
                 applicationViewModel.checkApplication(bookId)
                 showWithdrawDialog = false
             }
@@ -250,207 +289,326 @@ fun BookDetailsScreen(
 
 @Composable
 fun BookDetailsContent(
-    book: Book,
+    book: BookResponse,
     navController: NavController,
-    authManager: AuthManager,
+    sessionManager: SessionManager,
     applicationViewModel: ApplicationViewModel,
     reviewViewModel: ReviewViewModel,
+    userApplication: ApplicationCheckApplicationResponse?,
     onApplyClick: () -> Unit,
     onWithdrawClick: () -> Unit,
+    isApplicationLoading: Boolean,
+    isApplying: Boolean,
     modifier: Modifier = Modifier
 ) {
     val bookReviews by reviewViewModel.bookReviews.collectAsState()
     val isLoadingReviews by reviewViewModel.isLoading.collectAsState()
-    val applicationCheck by applicationViewModel.applicationCheck.collectAsState()
-    
-    // Get user's application for this book
-    val userApplication = remember(book.id, applicationCheck) {
-        val check = applicationCheck
-        if (check?.hasApplied == true && check.application != null) {
-            // Convert ApplicationCheckApplication to Application-like object
-            Application(
-                id = check.application.id,
-                bookId = book.id,
-                bookTitle = book.title,
-                bookCoverImageUrl = book.coverImageUrl,
-                authorName = book.author?.name ?: book.authorName ?: "Unknown Author",
-                status = check.application.status,
-                appliedAt = check.application.appliedAt,
-                applicationMessage = null,
-                authorNotes = null,
-                respondedAt = null,
-                readingStatus = "not_started",
-                readingStartedAt = null,
-                readingCompletedAt = null
-            )
-        } else {
-            null
-        }
+    val currentUser by sessionManager.currentUser.collectAsState()
+
+    val isAuthor = remember(currentUser?.id, book.authorId, book.author?.id) {
+        val authorId = book.authorId ?: book.author?.id
+        currentUser?.id != null && authorId != null && currentUser?.id == authorId
     }
-    
-    // Check if application deadline has passed
+
     val isApplicationDeadlinePassed = remember(book.applicationDeadline) {
         try {
-            val deadlineFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
+            val deadlineFormat =
+                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
             val deadline = book.applicationDeadline?.let { deadlineFormat.parse(it) }
             val now = Date()
             deadline?.before(now) ?: true
         } catch (e: Exception) {
-            true // If we can't parse the date, assume deadline passed
+            true
         }
     }
 
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+    val coverWidth = 130.dp
+    val coverHeight = 195.dp
+    val halfCover = coverHeight / 2
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.secondary)
     ) {
-        // Book cover and basic info
-        item {
-            BookHeaderSection(book = book)
-        }
-
-        // Genre tags
-        item {
-            GenreTagsSection(book = book)
-        }
-
-        // Book description
-        item {
-            BookDescriptionSection(book = book)
-        }
-
-        // Book metadata
-        item {
-            BookMetadataSection(book = book)
-        }
-
-        // Application information and apply/withdraw button
-        item {
-            // Debug logging
-            LaunchedEffect(userApplication) {
-                println("DEBUG: userApplication = $userApplication")
-                println("DEBUG: userApplication?.status = ${userApplication?.status}")
-                println("DEBUG: isApplicationDeadlinePassed = $isApplicationDeadlinePassed")
-                println("DEBUG: showWithdrawButton = ${!isApplicationDeadlinePassed && userApplication?.status == "pending"}")
-            }
-            
-            ApplicationInfoSection(
-                book = book,
-                userApplication = userApplication,
-                onApplyClick = onApplyClick,
-                onWithdrawClick = onWithdrawClick,
-                showApplyButton = !isApplicationDeadlinePassed && (userApplication == null || userApplication.status == "withdrawn"),
-                showWithdrawButton = !isApplicationDeadlinePassed && userApplication?.status == "pending",
-                navController = navController
-            )
-        }
-
-        // About the author
-        item {
-            AboutAuthorSection(
-                book = book, 
-                navController = navController,
-                authManager = authManager
-            )
-        }
-
-        // Reviews section
-        item {
-            ReviewsSection(
-                reviews = bookReviews,
-                isLoading = isLoadingReviews,
-                bookId = book.id
-            )
-        }
-    }
-}
-
-@Composable
-fun BookHeaderSection(book: Book) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Top
-    ) {
-        // Book cover
-        Box(
+        Column(
             modifier = Modifier
-                .size(120.dp, 160.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
         ) {
-            if (book.coverImageUrl != null) {
-                AsyncImage(
-                    model = book.coverImageUrl,
-                    contentDescription = "Book Cover",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.statusBars)
+            ) {
+                BackButton(
+                    onClick = { navController.popBackStack() },
+                    modifier = Modifier.padding(start = 8.dp)
                 )
-            } else {
-                Box(
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp)
+            ) {
+                Surface(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .padding(top = halfCover),
+                    shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                    color = MaterialTheme.colorScheme.background,
+                    shadowElevation = 8.dp
                 ) {
-                    Icon(
-                        Icons.Filled.Star,
-                        contentDescription = "Book Cover",
-                        modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    Box(modifier = Modifier.height(halfCover + 32.dp))
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 24.dp, end = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(28.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(coverWidth)
+                            .height(coverHeight)
+                            .shadow(
+                                elevation = 12.dp,
+                                shape = RoundedCornerShape(12.dp),
+                                clip = false
+                            )
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (book.coverImageUrl != null) {
+                            AsyncImage(
+                                model = book.coverImageUrl,
+                                contentDescription = "Book Cover",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Icon(
+                                Icons.Filled.Book,
+                                contentDescription = "No cover",
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(coverHeight),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = book.title,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSecondary,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                softWrap = true
+                            )
+
+                            (book.author?.displayName
+                                ?: book.authorName)?.takeIf { it.isNotBlank() && it != "Unknown Author" }
+                                ?.let { authorName ->
+                                    Text(
+                                        text = "by $authorName",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.8f),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+
+                            if (book.seriesId != null) {
+                                val seriesName = book.seriesName ?: book.series?.name
+                                Text(
+                                    text = if (seriesName != null) {
+                                        "Book ${book.seriesOrder ?: 1} of $seriesName"
+                                    } else {
+                                        "Book ${book.seriesOrder ?: 1} of Series"
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.7f),
+                                    modifier = Modifier.clickable {
+                                        navController.navigate(
+                                            Screen.SeriesBooks.createRoute(
+                                                book.seriesId,
+                                                seriesName
+                                            )
+                                        )
+                                    }
+                                )
+                            }
+
+                            book.publishedAt?.let { published ->
+                                Text(
+                                    text = formatDateDMY(published),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.6f)
+                                )
+                            }
+                        }
+
+                        BookStatsRow(
+                            book = book,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .offset(y = (-16).dp)
+                                .padding(start = 8.dp)
+                                .padding(end = 8.dp)
+                        )
+                    }
+                }
+            }
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .windowInsetsPadding(WindowInsets.navigationBars)
+                        .padding(bottom = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    GenreTagsSection(book = book)
+
+                    BookDescriptionSection(book = book)
+
+                    if (!isAuthor) {
+                        ApplicationInfoSection(
+                            book = book,
+                            userApplication = userApplication,
+                            onApplyClick = onApplyClick,
+                            onWithdrawClick = onWithdrawClick,
+                            showApplyButton = !isApplicationDeadlinePassed && (userApplication == null || userApplication.status == "withdrawn") && !isApplicationLoading && !isApplying,
+                            showWithdrawButton = !isApplicationDeadlinePassed && userApplication?.status == "pending",
+                            navController = navController,
+                            sessionManager = sessionManager
+                        )
+                    }
+
+                    if (!isAuthor) {
+                        AboutAuthorSection(
+                            book = book,
+                            navController = navController,
+                            sessionManager = sessionManager
+                        )
+                    }
+
+                    ReviewsSection(
+                        reviews = bookReviews,
+                        isLoading = isLoadingReviews,
+                        bookId = book.id
                     )
                 }
             }
         }
+    }
+}
 
-        Spacer(modifier = Modifier.width(16.dp))
 
-        // Book info
+@Composable
+fun BookStatsRow(book: BookResponse, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
         Column(
-            modifier = Modifier.weight(1f),
+            horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Text(
-                text = book.title,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
+            Icon(
+                imageVector = Icons.Filled.Star,
+                contentDescription = "Rating",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp)
             )
-            
             Text(
-                text = "by ${book.author?.name ?: book.authorName ?: "Unknown Author"}",
-                style = MaterialTheme.typography.bodyLarge,
+                text = String.format("%.1f", book.rating ?: 0.0),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "Rating",
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            
-            // Series info not available in current model
-            if (book.seriesId != null) {
-                Text(
-                    text = "Book ${book.seriesOrder ?: 1} of Series",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
+        }
+
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.MenuBook,
+                contentDescription = "Pages",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp)
+            )
+            Text(
+                text = "${book.pageCount ?: 0}",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "Pages",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Info,
+                contentDescription = "Age Rating",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp)
+            )
+            Text(
+                text = book.ageRating?.uppercase() ?: "N/A",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "Age",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
 
 @Composable
-fun GenreTagsSection(book: Book) {
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(horizontal = 4.dp)
-    ) {
-        if (book.genres.isNullOrEmpty()) {
-            // Show fallback genre if no genres available
-            item {
-                GenreTag(
-                    text = "General",
-                    isPrimary = false
-                )
-            }
-        } else {
-            // Show actual genres from the book
-            items(book.genres.size) { index ->
-                val genre = book.genres[index]
+fun GenreTagsSection(book: BookResponse) {
+    val genresToShow = book.resolvedGenres.take(3)
+    if (genresToShow.isNotEmpty()) {
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(horizontal = 4.dp)
+        ) {
+            items(genresToShow.size) { index ->
+                val genre = genresToShow[index]
                 GenreTag(
                     text = genre.name,
                     isPrimary = true
@@ -491,30 +649,32 @@ fun GenreTag(
 }
 
 @Composable
-fun BookDescriptionSection(book: Book) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+fun BookDescriptionSection(book: BookResponse) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
             text = "Description",
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
         )
-        
+
         Text(
             text = book.fullDescription ?: book.shortDescription ?: "No description available.",
             style = MaterialTheme.typography.bodyMedium,
-            lineHeight = MaterialTheme.typography.bodyMedium.lineHeight
+            color = MaterialTheme.colorScheme.onSurface,
+            lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.2
         )
     }
 }
 
-@Composable
-fun BookMetadataSection(book: Book) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        MetadataRow(label = "Pages", value = book.pageCount?.toString() ?: "N/A")
-        Divider()
-        MetadataRow(label = "Age", value = book.ageRating?.uppercase() ?: "N/A")
-        Divider()
-        MetadataRow(label = "Distribution", value = book.distributionType?.replaceFirstChar { it.uppercase() } ?: "N/A")
+private fun formatDateDMY(dateString: String): String {
+    return try {
+        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
+        val outputFormat = SimpleDateFormat("d MMM yyyy", Locale.getDefault())
+        val date = inputFormat.parse(dateString)
+        outputFormat.format(date ?: Date())
+    } catch (e: Exception) {
+        dateString
     }
 }
 
@@ -540,20 +700,46 @@ fun MetadataRow(label: String, value: String) {
 
 @Composable
 fun ApplicationInfoSection(
-    book: Book,
-    userApplication: Application?,
+    book: BookResponse,
+    userApplication: ApplicationCheckApplicationResponse?,
     onApplyClick: () -> Unit,
     onWithdrawClick: () -> Unit,
     showApplyButton: Boolean,
     showWithdrawButton: Boolean,
-    navController: NavController? = null
+    navController: NavController? = null,
+    sessionManager: SessionManager? = null,
+    applicationViewModel: ApplicationViewModel = getViewModel()
 ) {
+    val profileViewModel: ProfileViewModel = getViewModel()
+    val myProfile by profileViewModel.myProfile.collectAsState()
+    val addresses by profileViewModel.addresses.collectAsState()
+    val currentUser = if (sessionManager != null) {
+        val user by sessionManager.currentUser.collectAsState()
+        user
+    } else {
+        null
+    }
+
+    val requiresPhysicalCopy = book.distributionType?.lowercase() in listOf("physical", "both")
+
+    val isEmailVerified = currentUser?.emailVerified == true
+
+    LaunchedEffect(requiresPhysicalCopy, profileViewModel) {
+        if (requiresPhysicalCopy) {
+            if (myProfile == null) {
+                profileViewModel.loadMyProfile()
+            }
+            profileViewModel.loadAddresses()
+        }
+    }
+
+    val hasAddresses = (myProfile?.addresses?.isNotEmpty() == true) || addresses.isNotEmpty()
+
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        // Application info card
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
             )
         ) {
             Column(
@@ -564,48 +750,111 @@ fun ApplicationInfoSection(
                     text = "Slots Filled: ${(book.totalCopies ?: 0) - (book.availableCopies ?: 0)}/${book.totalCopies ?: 0}",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                
+
                 Text(
                     text = "Application Deadline: ${book.applicationDeadline?.let { formatDate(it) } ?: "Not specified"}",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                
+
                 Text(
-                    text = if (book.reviewDeadlineDays != null) {
-                        "Review Deadline: ${book.reviewDeadlineDays} days after approval"
+                    text = if (book.reviewDeadline != null) {
+                        "Review Deadline: ${book.reviewDeadline?.let { formatDate(it) }}"
                     } else {
                         "Review Deadline: Not specified"
                     },
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+
+                if (book.distributionType != null || book.selectionMethod != null || book.status != null) {
+                    Divider(
+                        modifier = Modifier.padding(vertical = 4.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                    )
+
+                    book.distributionType?.let {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Distribution",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = it.replaceFirstChar { char -> char.uppercase() },
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    book.selectionMethod?.takeIf { it.isNotBlank() }?.let {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Selection Method",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = it.replaceFirstChar { char -> char.uppercase() },
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    book.status?.takeIf { it.isNotBlank() }?.let {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Status",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = it.replaceFirstChar { char -> char.uppercase() },
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
             }
         }
 
-        // Application status and buttons
-        // Debug logging
         LaunchedEffect(userApplication, showWithdrawButton, showApplyButton) {
             println("DEBUG ApplicationInfoSection: userApplication?.status = ${userApplication?.status}")
             println("DEBUG ApplicationInfoSection: showWithdrawButton = $showWithdrawButton")
             println("DEBUG ApplicationInfoSection: showApplyButton = $showApplyButton")
         }
-        
+
         when {
             userApplication?.status == "approved" -> {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "✅ Application Approved! Check your email for the book copy.",
+                        text = "✅ Application Approved! Check your books for the copy.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
+
             userApplication?.status == "rejected" -> {
                 Text(
                     text = "❌ Application Rejected",
@@ -614,6 +863,7 @@ fun ApplicationInfoSection(
                     modifier = Modifier.fillMaxWidth()
                 )
             }
+
             userApplication?.status == "withdrawn" -> {
                 Text(
                     text = "Application Withdrawn",
@@ -622,6 +872,7 @@ fun ApplicationInfoSection(
                     modifier = Modifier.fillMaxWidth()
                 )
             }
+
             showWithdrawButton -> {
                 OutlinedButton(
                     onClick = onWithdrawClick,
@@ -630,12 +881,125 @@ fun ApplicationInfoSection(
                     Text("Withdraw Application")
                 }
             }
+
             showApplyButton -> {
-                Button(
-                    onClick = onApplyClick,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Apply")
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (!isEmailVerified) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Filled.Warning,
+                                        contentDescription = "Warning",
+                                        tint = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                    Text(
+                                        text = "Email verification required to apply for books. Please verify your email address first.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
+                                if (navController != null) {
+                                    Button(
+                                        onClick = {
+                                            navController.navigate(
+                                                Screen.EmailVerification.createRoute(
+                                                    currentUser?.email
+                                                )
+                                            )
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.error
+                                        )
+                                    ) {
+                                        Text("Verify Email")
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (requiresPhysicalCopy && !hasAddresses) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Filled.Warning,
+                                        contentDescription = "Warning",
+                                        tint = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                    Text(
+                                        text = "A shipping address is required to apply for physical copies.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
+                                if (navController != null) {
+                                    Button(
+                                        onClick = {
+                                            navController.navigate(Screen.PrivacySettings.route)
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.error
+                                        )
+                                    ) {
+                                        Text("Add Address")
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    val isApplicationLoading by applicationViewModel.isLoading.collectAsState()
+
+                    Button(
+                        onClick = onApplyClick,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        enabled = isEmailVerified && (!requiresPhysicalCopy || hasAddresses) && !isApplicationLoading,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        ),
+                        shape = RoundedCornerShape(24.dp)
+                    ) {
+                        if (isApplicationLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        } else {
+                            Text(
+                                text = if (userApplication?.status == "approved") "Read Now" else "Apply",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -644,24 +1008,21 @@ fun ApplicationInfoSection(
 
 @Composable
 fun AboutAuthorSection(
-    book: Book, 
+    book: BookResponse,
     navController: NavController,
-    authManager: AuthManager
+    sessionManager: SessionManager
 ) {
-    val authorFollowViewModel: AuthorFollowViewModel = viewModel(
-        factory = AuthorFollowViewModelFactory(authManager)
-    )
-    
+    val authorFollowViewModel: AuthorFollowViewModel = getViewModel()
+
     var isFollowing by remember { mutableStateOf<Boolean?>(null) }
     val scope = rememberCoroutineScope()
-    
-    // Try to get author info from book.author first, fallback to book.authorId
+    val loadingAuthors by authorFollowViewModel.loadingAuthors.collectAsState()
+
     val authorId = book.resolvedAuthorId
     val authorUsername = book.author?.username
-    
-    // Check if following on load
+    val isAuthorLoading = authorId != null && loadingAuthors.contains(authorId)
+
     LaunchedEffect(authorId) {
-        // Default to false while checking
         isFollowing = false
         if (authorId != null) {
             authorFollowViewModel.checkIfFollowingAuthor(authorId) { following ->
@@ -669,12 +1030,10 @@ fun AboutAuthorSection(
             }
         }
     }
-    
-    // Listen for errors and update follow status
+
     LaunchedEffect(Unit) {
         authorFollowViewModel.error.collectLatest { error ->
             error?.let {
-                // On error, refresh follow status
                 if (authorId != null) {
                     authorFollowViewModel.checkIfFollowingAuthor(authorId) { following ->
                         isFollowing = following
@@ -683,18 +1042,26 @@ fun AboutAuthorSection(
             }
         }
     }
-    
+
+    LaunchedEffect(isAuthorLoading) {
+        if (!isAuthorLoading && authorId != null) {
+            kotlinx.coroutines.delay(300)
+            authorFollowViewModel.checkIfFollowingAuthor(authorId) { following ->
+                isFollowing = following
+            }
+        }
+    }
+
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
             text = "About the Author",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
-        
+
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Author profile picture
             Box(
                 modifier = Modifier
                     .size(60.dp)
@@ -702,33 +1069,33 @@ fun AboutAuthorSection(
                     .background(MaterialTheme.colorScheme.primary),
                 contentAlignment = Alignment.Center
             ) {
-                book.author?.profilePictureUrl?.let { profileUrl ->
+                book.author?.avatarUrl?.let { profileUrl ->
                     AsyncImage(
                         model = profileUrl,
-                        contentDescription = book.author?.name,
+                        contentDescription = book.author?.displayName,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
                 } ?: Text(
-                    text = book.author?.name?.firstOrNull()?.uppercase() ?: "?",
-                    color = Color.White,
+                    text = book.author?.displayName?.firstOrNull()?.uppercase() ?: "?",
+                    color = MaterialTheme.colorScheme.onPrimary,
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
             }
-            
+
             Spacer(modifier = Modifier.width(12.dp))
-            
+
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    text = book.author?.name ?: book.authorName ?: "Unknown Author",
+                    text = book.author?.displayName ?: book.authorName ?: "Unknown Author",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
-                
+
                 Text(
                     text = "Author of ${book.title}",
                     style = MaterialTheme.typography.bodyMedium,
@@ -736,37 +1103,45 @@ fun AboutAuthorSection(
                 )
             }
         }
-        
+
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Only show Follow button if we have authorId
             if (authorId != null) {
                 OutlinedButton(
-                    onClick = { 
-                        if (isFollowing == true) {
+                    onClick = {
+                        val wasFollowing = isFollowing == true
+                        isFollowing = !wasFollowing
+                        if (wasFollowing) {
                             authorFollowViewModel.unfollowAuthor(authorId)
-                            isFollowing = false
                         } else {
                             authorFollowViewModel.followAuthor(authorId)
-                            isFollowing = true
                         }
                     },
                     modifier = Modifier.weight(1f),
-                    enabled = isFollowing != null
+                    enabled = isFollowing != null && !isAuthorLoading
                 ) {
+                    if (isAuthorLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                    }
                     Text(if (isFollowing == true) "Unfollow" else "Follow Author")
                 }
             }
-            
+
             OutlinedButton(
-                onClick = { 
-                    authorId?.let { 
+                onClick = {
+                    authorUsername?.let {
                         navController.navigate("profile/$it")
+                    } ?: run {
+                        println("DEBUG: Cannot navigate to author profile - username is missing")
                     }
                 },
                 modifier = Modifier.weight(1f),
-                enabled = authorId != null
+                enabled = authorUsername != null
             ) {
                 Text("View Profile")
             }
@@ -776,7 +1151,7 @@ fun AboutAuthorSection(
 
 @Composable
 fun ReviewsSection(
-    reviews: List<Review>,
+    reviews: List<ReviewResponse>,
     isLoading: Boolean,
     bookId: String
 ) {
@@ -786,7 +1161,7 @@ fun ReviewsSection(
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
-        
+
         if (isLoading) {
             Box(
                 modifier = Modifier
@@ -808,10 +1183,10 @@ fun ReviewsSection(
                 reviews.take(3).forEach { review ->
                     ReviewCard(review = review)
                 }
-                
+
                 if (reviews.size > 3) {
                     TextButton(
-                        onClick = { /* TODO: Navigate to all reviews */ }
+                        onClick = { }
                     ) {
                         Text("View All Reviews (${reviews.size})")
                     }
@@ -822,16 +1197,19 @@ fun ReviewsSection(
 }
 
 @Composable
-fun ReviewCard(review: Review) {
+fun ReviewCard(review: ReviewResponse) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(1.dp)
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        elevation = CardDefaults.cardElevation(2.dp),
+        shape = RoundedCornerShape(12.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Review header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -840,14 +1218,13 @@ fun ReviewCard(review: Review) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Reviewer profile picture
                     val reviewer = review.application?.reader
                     val reviewerInitial = reviewer?.username?.firstOrNull()?.uppercase() ?: "R"
-                    val reviewerName = reviewer?.username 
+                    val reviewerName = reviewer?.username
                         ?: "${reviewer?.firstName ?: ""} ${reviewer?.lastName ?: ""}".trim()
-                        .takeIf { it.isNotBlank() }
+                            .takeIf { it.isNotBlank() }
                         ?: "Reviewer"
-                    
+
                     Box(
                         modifier = Modifier
                             .size(32.dp)
@@ -864,14 +1241,14 @@ fun ReviewCard(review: Review) {
                             )
                         } ?: Text(
                             text = reviewerInitial,
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onPrimary,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold
                         )
                     }
-                    
+
                     Spacer(modifier = Modifier.width(8.dp))
-                    
+
                     Column {
                         Text(
                             text = reviewerName,
@@ -885,8 +1262,7 @@ fun ReviewCard(review: Review) {
                         )
                     }
                 }
-                
-                // Rating stars
+
                 Row {
                     (1..5).forEach { star ->
                         Icon(
@@ -898,11 +1274,10 @@ fun ReviewCard(review: Review) {
                     }
                 }
             }
-            
-            // Review content
-            val reviewType = review.reviewType ?: ReviewType.TEXT
+
+            val reviewType = review.reviewType
             when (reviewType) {
-                ReviewType.TEXT -> {
+                ReviewType.TEXT.value -> {
                     review.reviewContent?.let { content ->
                         Text(
                             text = content,
@@ -912,7 +1287,8 @@ fun ReviewCard(review: Review) {
                         )
                     }
                 }
-                ReviewType.LINK -> {
+
+                ReviewType.LINK.value -> {
                     review.reviewUrls?.forEach { url ->
                         if (url.isNotBlank()) {
                             Spacer(modifier = Modifier.height(8.dp))
@@ -924,8 +1300,7 @@ fun ReviewCard(review: Review) {
                     }
                 }
             }
-            
-            // Show both text and links if both are present
+
             if (review.reviewContent != null && review.reviewUrls != null && review.reviewUrls.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 review.reviewUrls.forEach { url ->
@@ -944,7 +1319,7 @@ fun ReviewCard(review: Review) {
 
 @Composable
 fun ApplicationFormDialog(
-    book: Book,
+    book: BookResponse,
     onDismiss: () -> Unit,
     onSubmit: (String?) -> Unit
 ) {
@@ -956,7 +1331,7 @@ fun ApplicationFormDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text("You are applying to review \"${book.title}\"")
-                
+
                 OutlinedTextField(
                     value = message,
                     onValueChange = { message = it },
@@ -981,7 +1356,7 @@ fun ApplicationFormDialog(
 
 @Composable
 fun WithdrawApplicationDialog(
-    book: Book,
+    book: BookResponse,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
@@ -1019,3 +1394,4 @@ private fun formatDate(dateString: String): String {
         dateString
     }
 }
+

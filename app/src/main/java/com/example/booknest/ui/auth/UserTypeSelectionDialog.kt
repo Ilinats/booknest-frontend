@@ -21,7 +21,7 @@ fun UserTypeSelectionDialog(
     modifier: Modifier = Modifier
 ) {
     var selectedUserType by remember { mutableStateOf("") }
-    
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -42,8 +42,7 @@ fun UserTypeSelectionDialog(
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
-                
-                // Reader Option
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -79,10 +78,9 @@ fun UserTypeSelectionDialog(
                         )
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(8.dp))
-                
-                // Author Option
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()

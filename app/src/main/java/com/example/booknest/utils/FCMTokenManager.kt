@@ -14,11 +14,11 @@ object FCMTokenManager {
             null
         }
     }
-    
+
     fun getDeviceId(context: Context): String {
         return Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: ""
     }
-    
+
     fun getAppVersion(context: Context): String {
         return try {
             val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)

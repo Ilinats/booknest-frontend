@@ -1,12 +1,9 @@
 package com.example.booknest.viewmodel
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.booknest.data.AuthManager
-import com.example.booknest.network.LoginRequest
-import com.example.booknest.network.RetrofitInstance
-import com.example.booknest.network.TokenCache
+import com.example.booknest.data.session.SessionManager
+import com.example.booknest.domain.usecase.auth.LoginUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -18,7 +15,10 @@ sealed class LoginUiState {
     data class Error(val error: String) : LoginUiState()
 }
 
-class LoginViewModel(private val authManager: AuthManager) : ViewModel() {
+class LoginViewModel(
+    private val loginUseCase: LoginUseCase,
+    private val sessionManager: SessionManager
+) : ViewModel() {
     private val _loginState = MutableStateFlow<LoginUiState>(LoginUiState.Idle)
     val loginState: StateFlow<LoginUiState> = _loginState
 
@@ -26,46 +26,55 @@ class LoginViewModel(private val authManager: AuthManager) : ViewModel() {
         viewModelScope.launch {
             _loginState.value = LoginUiState.Loading
             try {
-                val loginRequest = LoginRequest(identifier = identifier, password = password)
-                val response = RetrofitInstance.api.login(loginRequest)
+                val result = loginUseCase(identifier, password)
+                result
+                    .onSuccess { loginResponse ->
+                        val accessToken = loginResponse.accessToken
+                        if (accessToken.isNotEmpty()) {
+                            sessionManager.updateTokens(
+                                accessToken = accessToken,
+                                refreshToken = loginResponse.refreshToken
+                            )
 
-                if (response.isSuccessful && response.body() != null) {
-                    val loginResponse = response.body()!!
-                    if (loginResponse.success && !loginResponse.data.accessToken.isNullOrEmpty()) {
-                        TokenCache.accessToken = loginResponse.data.accessToken
-                        authManager.login(loginResponse)
-                        val userName = loginResponse.data.user.username
-                        _loginState.value = LoginUiState.Success(loginResponse.message ?: "Welcome $userName! Logged in successfully!")
-                        onLoginComplete(true)
-                    } else {
-                        val errorMessage = loginResponse.message ?: "Login failed"
-                        _loginState.value = LoginUiState.Error(errorMessage)
+                            try {
+                                val profilesService = org.koin.core.context.GlobalContext.get()
+                                    .get<com.example.booknest.data.service.ProfilesService>()
+                                val userResponse = profilesService.getMe()
+                                if (userResponse.isSuccessful) {
+                                    userResponse.body()?.let { user ->
+                                        println("DEBUG LoginViewModel: Got user after login, userType=${user.userType}")
+                                        sessionManager.updateUser(user)
+                                    }
+                                } else {
+                                    println("DEBUG LoginViewModel: Failed to fetch user, response code=${userResponse.code()}")
+                                }
+                            } catch (e: Exception) {
+                                println("DEBUG LoginViewModel: Exception fetching user after login: ${e.message}")
+                                e.printStackTrace()
+                            }
+
+                            _loginState.value = LoginUiState.Success(
+                                "Logged in successfully!"
+                            )
+                            onLoginComplete(true)
+                        } else {
+                            _loginState.value =
+                                LoginUiState.Error("Login failed: empty access token")
+                            onLoginComplete(false)
+                        }
+                    }
+                    .onFailure { throwable ->
+                        _loginState.value = LoginUiState.Error(throwable.message ?: "Login failed")
                         onLoginComplete(false)
                     }
-                } else {
-                    val errorBody = response.errorBody()?.string()
-                    val errorMessage = if (!errorBody.isNullOrEmpty()) {
-                        "Server error: ${response.code()} - ${response.message()}\n${errorBody}"
-                    } else {
-                        "Server error: ${response.code()} - ${response.message()}"
-                    }
-                    _loginState.value = LoginUiState.Error(errorMessage)
-                    onLoginComplete(false)
-                }
             } catch (e: Exception) {
                 _loginState.value = LoginUiState.Error("Network error: ${e.localizedMessage}")
                 onLoginComplete(false)
             }
         }
     }
-}
 
-class LoginViewModelFactory(private val authManager: AuthManager) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(LoginViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return LoginViewModel(authManager) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
+    fun resetState() {
+        _loginState.value = LoginUiState.Idle
     }
 }

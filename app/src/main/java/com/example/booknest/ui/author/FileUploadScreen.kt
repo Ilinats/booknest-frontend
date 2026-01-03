@@ -59,7 +59,6 @@ fun FileUploadScreen(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Header
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
@@ -90,8 +89,7 @@ fun FileUploadScreen(
                 )
             }
         }
-        
-        // File Selection
+
         Card(
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -116,8 +114,7 @@ fun FileUploadScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Choose File")
                 }
-                
-                // File Info
+
                 selectedFile?.let { file ->
                     Spacer(modifier = Modifier.height(16.dp))
                     FileInfoCard(
@@ -131,8 +128,7 @@ fun FileUploadScreen(
                 }
             }
         }
-        
-        // Validation Result
+
         validationResult?.let { result ->
             when (result) {
                 is FileUploadManager.ValidationResult.Success -> {
@@ -165,8 +161,7 @@ fun FileUploadScreen(
                 }
             }
         }
-        
-        // Error Message
+
         errorMessage?.let { error ->
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -181,8 +176,7 @@ fun FileUploadScreen(
                 )
             }
         }
-        
-        // Upload Progress
+
         if (isUploading) {
             Card(
                 modifier = Modifier.fillMaxWidth()
@@ -207,17 +201,12 @@ fun FileUploadScreen(
                 }
             }
         }
-        
-        // Upload Button
+
         if (selectedFile != null && validationResult is FileUploadManager.ValidationResult.Success && !isUploading) {
             Button(
                 onClick = {
-                    // TODO: Implement actual upload logic
                     isUploading = true
                     uploadProgress = 0f
-                    
-                    // Simulate upload progress
-                    // In real implementation, this would call the API
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -229,8 +218,7 @@ fun FileUploadScreen(
                 Text("Upload File")
             }
         }
-        
-        // Supported Formats Info
+
         Card(
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -244,7 +232,7 @@ fun FileUploadScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "PDF, EPUB, MOBI, DOC, DOCX, TXT",
+                    text = "PDF, EPUB",
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Spacer(modifier = Modifier.height(4.dp))

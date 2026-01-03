@@ -35,17 +35,15 @@ fun FileDownloadScreen(
     var downloadProgress by remember { mutableStateOf(0f) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var downloadedBooks by remember { mutableStateOf<List<File>>(emptyList()) }
-    
-    // Check if book is already downloaded
+
     val isBookDownloaded = remember(bookId) {
         downloadManager.isBookDownloaded(bookId)
     }
-    
-    // Load downloaded books
+
     LaunchedEffect(Unit) {
         downloadedBooks = downloadManager.getDownloadedBooks()
     }
-    
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -53,7 +51,6 @@ fun FileDownloadScreen(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Header
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
@@ -83,8 +80,7 @@ fun FileDownloadScreen(
                 )
             }
         }
-        
-        // Download Status
+
         if (isBookDownloaded) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -119,15 +115,10 @@ fun FileDownloadScreen(
                 }
             }
         } else {
-            // Download Button
             Button(
                 onClick = {
-                    // TODO: Implement actual download logic
                     isDownloading = true
                     downloadProgress = 0f
-                    
-                    // Simulate download progress
-                    // In real implementation, this would call the API and download the file
                 },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !isDownloading
@@ -140,8 +131,7 @@ fun FileDownloadScreen(
                 Text("Download Book")
             }
         }
-        
-        // Download Progress
+
         if (isDownloading) {
             Card(
                 modifier = Modifier.fillMaxWidth()
@@ -166,8 +156,7 @@ fun FileDownloadScreen(
                 }
             }
         }
-        
-        // Error Message
+
         errorMessage?.let { error ->
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -182,8 +171,7 @@ fun FileDownloadScreen(
                 )
             }
         }
-        
-        // Downloaded Books Section
+
         if (downloadedBooks.isNotEmpty()) {
             Card(
                 modifier = Modifier.fillMaxWidth()
@@ -206,7 +194,7 @@ fun FileDownloadScreen(
                         )
                     }
                     Spacer(modifier = Modifier.height(12.dp))
-                    
+
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
@@ -224,8 +212,7 @@ fun FileDownloadScreen(
                 }
             }
         }
-        
-        // Info Card
+
         Card(
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -281,7 +268,7 @@ private fun DownloadedBookItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            
+
             IconButton(
                 onClick = onDelete
             ) {

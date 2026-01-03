@@ -1,5 +1,6 @@
 package com.example.booknest.ui.profile
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -25,6 +27,7 @@ import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -33,7 +36,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.ui.graphics.Color
+import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -45,44 +51,57 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.booknest.data.AuthManager
-import com.example.booknest.network.CustomSocialLink
-import com.example.booknest.network.SocialMedia
+import com.example.booknest.data.session.SessionManager
+import com.example.booknest.domain.model.response.CustomSocialLinkResponse
+import com.example.booknest.domain.model.response.SocialMediaResponse
 import com.example.booknest.viewmodel.ProfileViewModel
-import com.example.booknest.viewmodel.ProfileViewModelFactory
+import org.koin.androidx.compose.getViewModel
+import org.koin.compose.koinInject
+
+fun isValidUrl(url: String): Boolean {
+    return url.isNotBlank() && (url.startsWith("http://") || url.startsWith("https://"))
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SocialMediaManagementScreen(
     navController: NavController,
-    authManager: AuthManager,
-    profileViewModel: ProfileViewModel = viewModel(
-        factory = ProfileViewModelFactory(authManager)
-    )
+    sessionManager: SessionManager = koinInject(),
+    profileViewModel: ProfileViewModel = getViewModel()
 ) {
     val myProfile by profileViewModel.myProfile.collectAsState()
     val isLoading by profileViewModel.isLoading.collectAsState()
     val error by profileViewModel.error.collectAsState()
-    
-    // Social media state
     var instagram by remember { mutableStateOf("") }
     var tiktok by remember { mutableStateOf("") }
     var youtube by remember { mutableStateOf("") }
     var goodreads by remember { mutableStateOf("") }
-    var customLinks by remember { mutableStateOf<List<CustomSocialLink>>(emptyList()) }
-    
-    // UI state
+    var customLinks by remember { mutableStateOf<List<CustomSocialLinkResponse>>(emptyList()) }
+
+    var initialInstagram by remember { mutableStateOf<String?>(null) }
+    var initialTiktok by remember { mutableStateOf<String?>(null) }
+    var initialYoutube by remember { mutableStateOf<String?>(null) }
+    var initialGoodreads by remember { mutableStateOf<String?>(null) }
+    var initialCustomLinks by remember { mutableStateOf<List<CustomSocialLinkResponse>?>(null) }
+
     var showAddCustom by remember { mutableStateOf(false) }
     var newCustomPlatform by remember { mutableStateOf("") }
     var newCustomUrl by remember { mutableStateOf("") }
     var editingCustomIndex by remember { mutableStateOf<Int?>(null) }
-    
+    var hasJustSaved by remember { mutableStateOf(false) }
+
+    val isCustomUrlValid = remember(newCustomUrl) {
+        newCustomUrl.isBlank() || isValidUrl(newCustomUrl)
+    }
+    val isCustomFormValid = remember(newCustomPlatform, newCustomUrl) {
+        newCustomPlatform.isNotBlank() && newCustomUrl.isNotBlank() && isValidUrl(newCustomUrl)
+    }
+
     LaunchedEffect(Unit) {
         profileViewModel.loadMyProfile()
     }
-    
+
     LaunchedEffect(myProfile) {
         myProfile?.socialMedia?.let { socialMedia ->
             instagram = socialMedia.instagram ?: ""
@@ -92,7 +111,45 @@ fun SocialMediaManagementScreen(
             customLinks = socialMedia.custom ?: emptyList()
         }
     }
-    
+
+    LaunchedEffect(isLoading, error) {
+        if (hasJustSaved && !isLoading && error == null) {
+            hasJustSaved = false
+            navController.popBackStack()
+        } else if (hasJustSaved && !isLoading && error != null) {
+            hasJustSaved = false
+        }
+    }
+
+    LaunchedEffect(myProfile) {
+        myProfile?.socialMedia?.let { socialMedia ->
+            val newInstagram = socialMedia.instagram ?: ""
+            val newTiktok = socialMedia.tiktok ?: ""
+            val newYoutube = socialMedia.youtube ?: ""
+            val newGoodreads = socialMedia.goodreads ?: ""
+            val newCustomLinks = socialMedia.custom ?: emptyList()
+
+            if (initialInstagram == null) {
+                initialInstagram = newInstagram
+                initialTiktok = newTiktok
+                initialYoutube = newYoutube
+                initialGoodreads = newGoodreads
+                initialCustomLinks = newCustomLinks
+            }
+        }
+    }
+
+    val hasChanges = remember(
+        instagram, tiktok, youtube, goodreads, customLinks,
+        initialInstagram, initialTiktok, initialYoutube, initialGoodreads, initialCustomLinks
+    ) {
+        instagram.trim() != (initialInstagram ?: "") ||
+                tiktok.trim() != (initialTiktok ?: "") ||
+                youtube.trim() != (initialYoutube ?: "") ||
+                goodreads.trim() != (initialGoodreads ?: "") ||
+                customLinks != (initialCustomLinks ?: emptyList<CustomSocialLinkResponse>())
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -101,7 +158,7 @@ fun SocialMediaManagementScreen(
                     BackButton(onClick = { navController.popBackStack() })
                 }
             )
-        }
+        },
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
@@ -110,7 +167,6 @@ fun SocialMediaManagementScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Header
             item {
                 Column {
                     Text(
@@ -125,8 +181,7 @@ fun SocialMediaManagementScreen(
                     )
                 }
             }
-            
-            // Predefined Social Media Platforms
+
             item {
                 Text(
                     text = "Popular Platforms",
@@ -134,8 +189,7 @@ fun SocialMediaManagementScreen(
                     fontWeight = FontWeight.Bold
                 )
             }
-            
-            // Instagram
+
             item {
                 SocialMediaInputCard(
                     platform = "Instagram",
@@ -145,8 +199,7 @@ fun SocialMediaManagementScreen(
                     placeholder = "https://instagram.com/username"
                 )
             }
-            
-            // TikTok
+
             item {
                 SocialMediaInputCard(
                     platform = "TikTok",
@@ -156,8 +209,7 @@ fun SocialMediaManagementScreen(
                     placeholder = "https://tiktok.com/@username"
                 )
             }
-            
-            // YouTube
+
             item {
                 SocialMediaInputCard(
                     platform = "YouTube",
@@ -167,8 +219,7 @@ fun SocialMediaManagementScreen(
                     placeholder = "https://youtube.com/@username"
                 )
             }
-            
-            // Goodreads
+
             item {
                 SocialMediaInputCard(
                     platform = "Goodreads",
@@ -178,8 +229,7 @@ fun SocialMediaManagementScreen(
                     placeholder = "https://goodreads.com/user/show/username"
                 )
             }
-            
-            // Custom Links Section
+
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -200,8 +250,7 @@ fun SocialMediaManagementScreen(
                     }
                 }
             }
-            
-            // Custom Links List
+
             items(customLinks.size) { index ->
                 val customLink = customLinks[index]
                 CustomLinkCard(
@@ -210,7 +259,7 @@ fun SocialMediaManagementScreen(
                     onEdit = { editingCustomIndex = index },
                     onSave = { platform, url ->
                         customLinks = customLinks.toMutableList().apply {
-                            set(index, CustomSocialLink(platform, url))
+                            set(index, CustomSocialLinkResponse(platform, url))
                         }
                         editingCustomIndex = null
                     },
@@ -220,13 +269,14 @@ fun SocialMediaManagementScreen(
                     }
                 )
             }
-            
-            // Add Custom Link Dialog
+
             if (showAddCustom) {
                 item {
-                    Card(
+                    Surface(
                         modifier = Modifier.fillMaxWidth(),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 2.dp
                     ) {
                         Column(
                             modifier = Modifier.padding(16.dp)
@@ -237,7 +287,7 @@ fun SocialMediaManagementScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             Spacer(modifier = Modifier.height(12.dp))
-                            
+
                             OutlinedTextField(
                                 value = newCustomPlatform,
                                 onValueChange = { newCustomPlatform = it },
@@ -245,25 +295,30 @@ fun SocialMediaManagementScreen(
                                 placeholder = { Text("e.g., Twitter, Personal Blog") },
                                 modifier = Modifier.fillMaxWidth()
                             )
-                            
+
                             Spacer(modifier = Modifier.height(8.dp))
-                            
+
                             OutlinedTextField(
                                 value = newCustomUrl,
                                 onValueChange = { newCustomUrl = it },
                                 label = { Text("URL") },
                                 placeholder = { Text("https://example.com") },
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
+                                isError = !isCustomUrlValid,
+                                supportingText = if (!isCustomUrlValid && newCustomUrl.isNotBlank()) {
+                                    { Text("Please enter a valid URL starting with http:// or https://") }
+                                } else null,
+                                singleLine = true
                             )
-                            
+
                             Spacer(modifier = Modifier.height(12.dp))
-                            
+
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.End
                             ) {
                                 Button(
-                                    onClick = { 
+                                    onClick = {
                                         showAddCustom = false
                                         newCustomPlatform = ""
                                         newCustomUrl = ""
@@ -274,8 +329,8 @@ fun SocialMediaManagementScreen(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Button(
                                     onClick = {
-                                        if (newCustomPlatform.isNotBlank() && newCustomUrl.isNotBlank()) {
-                                            customLinks = customLinks + CustomSocialLink(
+                                        if (isCustomFormValid) {
+                                            customLinks = customLinks + CustomSocialLinkResponse(
                                                 platform = newCustomPlatform,
                                                 url = newCustomUrl
                                             )
@@ -283,7 +338,8 @@ fun SocialMediaManagementScreen(
                                             newCustomUrl = ""
                                             showAddCustom = false
                                         }
-                                    }
+                                    },
+                                    enabled = isCustomFormValid
                                 ) {
                                     Text("Add")
                                 }
@@ -292,13 +348,13 @@ fun SocialMediaManagementScreen(
                     }
                 }
             }
-            
-            // Save Button
+
             item {
                 Button(
                     onClick = {
+                        hasJustSaved = true
                         profileViewModel.updateSocialMedia(
-                            SocialMedia(
+                            SocialMediaResponse(
                                 instagram = instagram.takeIf { it.isNotBlank() },
                                 tiktok = tiktok.takeIf { it.isNotBlank() },
                                 youtube = youtube.takeIf { it.isNotBlank() },
@@ -306,21 +362,33 @@ fun SocialMediaManagementScreen(
                                 custom = customLinks.takeIf { it.isNotEmpty() }
                             )
                         )
+                        initialInstagram = instagram
+                        initialTiktok = tiktok
+                        initialYoutube = youtube
+                        initialGoodreads = goodreads
+                        initialCustomLinks = customLinks
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = hasChanges && !isLoading
                 ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = Color.White
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
                     Text("Save Changes")
                 }
             }
-            
-            // Error Display
+
             if (error != null) {
                 item {
-                    Card(
+                    Surface(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer
-                        )
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.errorContainer
                     ) {
                         Text(
                             text = error ?: "Unknown error",
@@ -343,37 +411,73 @@ fun SocialMediaInputCard(
     onValueChange: (String) -> Unit,
     placeholder: String
 ) {
-    Card(
+    val hasValue = value.isNotBlank()
+
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 1.dp
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    Icons.Default.Link,
-                    contentDescription = platform,
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = platform,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Medium
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Link,
+                        contentDescription = platform,
+                        modifier = Modifier.size(20.dp),
+                        tint = if (hasValue)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = platform,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (hasValue)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                if (hasValue) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(
+                                MaterialTheme.colorScheme.primary,
+                                CircleShape
+                            )
+                    )
+                }
             }
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
+
             OutlinedTextField(
                 value = value,
                 onValueChange = onValueChange,
-                placeholder = { Text(placeholder) },
+                placeholder = {
+                    Text(
+                        placeholder,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                singleLine = true,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent
+                )
             )
         }
     }
@@ -381,19 +485,21 @@ fun SocialMediaInputCard(
 
 @Composable
 fun CustomLinkCard(
-    customLink: CustomSocialLink,
+    customLink: CustomSocialLinkResponse,
     isEditing: Boolean,
     onEdit: () -> Unit,
     onSave: (String, String) -> Unit,
     onCancel: () -> Unit,
-    onDelete: (CustomSocialLink) -> Unit
+    onDelete: (CustomSocialLinkResponse) -> Unit
 ) {
     var platform by remember { mutableStateOf(customLink.platform) }
     var url by remember { mutableStateOf(customLink.url) }
-    
-    Card(
+
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 1.dp
     ) {
         if (isEditing) {
             Column(
@@ -405,25 +511,25 @@ fun CustomLinkCard(
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                
+
                 OutlinedTextField(
                     value = platform,
                     onValueChange = { platform = it },
                     label = { Text("Platform Name") },
                     modifier = Modifier.fillMaxWidth()
                 )
-                
+
                 Spacer(modifier = Modifier.height(8.dp))
-                
+
                 OutlinedTextField(
                     value = url,
                     onValueChange = { url = it },
                     label = { Text("URL") },
                     modifier = Modifier.fillMaxWidth()
                 )
-                
+
                 Spacer(modifier = Modifier.height(12.dp))
-                
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
@@ -452,7 +558,7 @@ fun CustomLinkCard(
                     tint = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.width(12.dp))
-                
+
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = customLink.platform,
@@ -465,7 +571,7 @@ fun CustomLinkCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                
+
                 IconButton(onClick = onEdit) {
                     Icon(
                         Icons.Default.Edit,
@@ -473,7 +579,7 @@ fun CustomLinkCard(
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
-                
+
                 IconButton(
                     onClick = { onDelete(customLink) }
                 ) {
