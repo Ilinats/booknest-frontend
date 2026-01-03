@@ -1,40 +1,53 @@
 package com.example.booknest.viewmodel
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.booknest.data.AuthManager
-import com.example.booknest.network.Book
-import com.example.booknest.network.RecommendedBook
-import com.example.booknest.network.RetrofitInstance
+import com.example.booknest.domain.model.response.BookResponse
+import com.example.booknest.domain.model.response.RecommendedBookResponse
+import com.example.booknest.domain.model.response.TrendingBookResponse
+import com.example.booknest.domain.usecase.books.BrowseBooksUseCase
+import com.example.booknest.domain.usecase.books.GetBookDetailsUseCase
+import com.example.booknest.domain.usecase.books.GetNewReleasesUseCase
+import com.example.booknest.domain.usecase.books.GetRecommendedBooksUseCase
+import com.example.booknest.domain.usecase.books.SearchBooksUseCase
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 @OptIn(FlowPreview::class)
-class BookViewModel(private val authManager: AuthManager) : ViewModel() {
+class BookViewModel(
+    private val getRecommendedBooksUseCase: GetRecommendedBooksUseCase,
+    private val getNewReleasesUseCase: GetNewReleasesUseCase,
+    private val browseBooksUseCase: BrowseBooksUseCase,
+    private val searchBooksUseCase: SearchBooksUseCase,
+    private val getBookDetailsUseCase: GetBookDetailsUseCase
+) : ViewModel() {
 
-    private val _books = MutableStateFlow<List<Book>>(emptyList())
-    val books: StateFlow<List<Book>> = _books
+    private val _books = MutableStateFlow<List<RecommendedBookResponse>>(emptyList())
+    val books: StateFlow<List<RecommendedBookResponse>> = _books
 
-    private val _featuredBooks = MutableStateFlow<List<Book>>(emptyList())
-    val featuredBooks: StateFlow<List<Book>> = _featuredBooks
+    private val _featuredBooks = MutableStateFlow<List<RecommendedBookResponse>>(emptyList())
+    val featuredBooks: StateFlow<List<RecommendedBookResponse>> = _featuredBooks
 
-    private val _bookDetails = MutableStateFlow<Book?>(null)
-    val bookDetails: StateFlow<Book?> = _bookDetails
+    private val _bookDetails = MutableStateFlow<BookResponse?>(null)
+    val bookDetails: StateFlow<BookResponse?> = _bookDetails
 
-    private val _recommendedBooks = MutableStateFlow<List<Book>>(emptyList())
-    val recommendedBooks: StateFlow<List<Book>> = _recommendedBooks
+    private val _recommendedBooks = MutableStateFlow<List<RecommendedBookResponse>>(emptyList())
+    val recommendedBooks: StateFlow<List<RecommendedBookResponse>> = _recommendedBooks
 
-    private val _newReleases = MutableStateFlow<List<Book>>(emptyList())
-    val newReleases: StateFlow<List<Book>> = _newReleases
+    private val _newReleases = MutableStateFlow<List<RecommendedBookResponse>>(emptyList())
+    val newReleases: StateFlow<List<RecommendedBookResponse>> = _newReleases
+
+    private val _trendingBooks = MutableStateFlow<List<TrendingBookResponse>>(emptyList())
+    val trendingBooks: StateFlow<List<TrendingBookResponse>> = _trendingBooks
+
+    private val _homeSearchResults = MutableStateFlow<List<RecommendedBookResponse>>(emptyList())
+    val homeSearchResults: StateFlow<List<RecommendedBookResponse>> = _homeSearchResults
 
     private val _searchQuery = MutableStateFlow("")
-    
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
@@ -45,8 +58,6 @@ class BookViewModel(private val authManager: AuthManager) : ViewModel() {
                 .collect { query ->
                     if (query.isNotBlank()) {
                         searchBooks(query)
-                    } else {
-                        _books.value = emptyList()
                     }
                 }
         }
@@ -60,24 +71,15 @@ class BookViewModel(private val authManager: AuthManager) : ViewModel() {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
-                val response = RetrofitInstance.api.getRecommendedBooks(10)
-                if (response.isSuccessful && response.body() != null) {
-                    val apiResponse = response.body()!!
-                    if (apiResponse.success) {
-                        // Convert RecommendedBook to Book for UI compatibility
-                        val books = (apiResponse.data ?: emptyList()).map { recommendedBook ->
-                            recommendedBook.toBook()
-                        }
+                val result = getRecommendedBooksUseCase(10)
+                result
+                    .onSuccess { books ->
                         _recommendedBooks.value = books
                         println("Recommended books loaded: ${books.size} books")
-                    } else {
-                        println("Recommended books API error: ${apiResponse.message}")
                     }
-                } else {
-                    println("Recommended books API error: ${response.code()} - ${response.message()}")
-                    val errorBody = response.errorBody()?.string()
-                    println("Error body: $errorBody")
-                }
+                    .onFailure { e ->
+                        println("Recommended books error: ${e.message}")
+                    }
             } catch (e: Exception) {
                 println("Recommended books exception: ${e.message}")
             } finally {
@@ -85,81 +87,20 @@ class BookViewModel(private val authManager: AuthManager) : ViewModel() {
             }
         }
     }
-    
-    // Extension function to convert RecommendedBook to Book
-    private fun RecommendedBook.toBook(): Book {
-        return Book(
-            id = this.id,
-            authorId = "", // Required but not available in RecommendedBook
-            title = this.title,
-            shortDescription = null,
-            fullDescription = null,
-            coverImageUrl = this.coverImageUrl,
-            pageCount = null,
-            ageRating = null,
-            distributionType = null,
-            fileUrl = null,
-            fileSize = null,
-            fileType = null,
-            totalCopies = null,
-            availableCopies = null,
-            applicationDeadline = null,
-            reviewDeadlineDays = null,
-            selectionCriteria = null,
-            selectionMethod = null,
-            status = null, // Required but not available in RecommendedBook
-            createdAt = null,
-            updatedAt = null,
-            publishedAt = this.publishedAt, // Nullable in Book
-            seriesId = null, // Required but not available in RecommendedBook
-            seriesOrder = this.seriesOrder,
-            seriesName = this.seriesName,
-            authorName = this.authorName,
-            author = null,
-            rating = this.rating,
-            genres = null
-        )
-    }
-    
-    
 
     fun getNewReleases() {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
-                // Get books from the last 30 days
-                val thirtyDaysAgo = LocalDate.now().minusDays(30)
-                val formatter = DateTimeFormatter.ISO_LOCAL_DATE
-                val formattedDate = thirtyDaysAgo.format(formatter)
-                
-                val response = RetrofitInstance.api.browseBooks(
-                    query = null,
-                    genreId = null,
-                    ageRating = null,
-                    distributionType = null,
-                    publishedFrom = formattedDate,
-                    publishedTo = null,
-                    skip = null,
-                    take = 10,
-                    status = "active"
-                )
-                if (response.isSuccessful && response.body() != null) {
-                    val apiResponse = response.body()!!
-                    if (apiResponse.success) {
-                        // Convert RecommendedBook to Book for UI compatibility
-                        val books = (apiResponse.data ?: emptyList()).map { recommendedBook ->
-                            recommendedBook.toBook()
-                        }
+                val result = getNewReleasesUseCase(daysBack = 30, take = 10)
+                result
+                    .onSuccess { books ->
                         _newReleases.value = books
                         println("New releases loaded: ${books.size} books")
-                    } else {
-                        println("New releases API error: ${apiResponse.message}")
                     }
-                } else {
-                    println("New releases API error: ${response.code()} - ${response.message()}")
-                    val errorBody = response.errorBody()?.string()
-                    println("New releases error body: $errorBody")
-                }
+                    .onFailure { e ->
+                        println("New releases error: ${e.message}")
+                    }
             } catch (e: Exception) {
                 println("New releases exception: ${e.message}")
                 e.printStackTrace()
@@ -171,73 +112,110 @@ class BookViewModel(private val authManager: AuthManager) : ViewModel() {
 
     fun browseBooks(
         query: String? = null,
-        genreId: Int? = null,
+        genres: List<Int>? = null,
+        title: String? = null,
+        authorName: String? = null,
+        authorId: String? = null,
+        seriesName: String? = null,
+        seriesId: String? = null,
         ageRating: String? = null,
         distributionType: String? = null,
         publishedFrom: String? = null,
         publishedTo: String? = null,
+        createdFrom: String? = null,
+        createdTo: String? = null,
+        minAvgRating: Double? = null,
+        maxAvgRating: Double? = null,
         skip: Int? = null,
-        take: Int? = null
+        take: Int? = null,
+        status: String? = "active",
+        applicationStatus: String? = null,
+        deadlineFilter: String? = null,
+        sortBy: String? = null,
+        append: Boolean = false
     ) {
         viewModelScope.launch {
             try {
-                val response = RetrofitInstance.api.browseBooks(
-                    query,
-                    genreId,
-                    ageRating,
-                    distributionType,
-                    publishedFrom,
-                    publishedTo,
-                    skip,
-                    take,
-                    status = "active"
+                _isLoading.value = true
+                val result = browseBooksUseCase(
+                    query = query,
+                    genres = genres,
+                    title = title,
+                    authorName = authorName,
+                    authorId = authorId,
+                    seriesName = seriesName,
+                    seriesId = seriesId,
+                    ageRating = ageRating,
+                    distributionType = distributionType,
+                    publishedFrom = publishedFrom,
+                    publishedTo = publishedTo,
+                    createdFrom = createdFrom,
+                    createdTo = createdTo,
+                    minAvgRating = minAvgRating,
+                    maxAvgRating = maxAvgRating,
+                    skip = skip,
+                    take = take,
+                    status = status,
+                    applicationStatus = applicationStatus,
+                    deadlineFilter = deadlineFilter,
+                    sortBy = sortBy
                 )
-                if (response.isSuccessful && response.body() != null) {
-                    val apiResponse = response.body()!!
-                    if (apiResponse.success) {
-                        // Convert RecommendedBook to Book for UI compatibility
-                        val books = (apiResponse.data ?: emptyList()).map { recommendedBook ->
-                            recommendedBook.toBook()
+                result
+                    .onSuccess { books ->
+                        if (append && skip != null && skip > 0) {
+                            _books.value = _books.value + books
+                        } else {
+                            _books.value = books
                         }
-                        _books.value = books
+                        _lastFetchCount.value = books.size
                     }
-                }
+                    .onFailure { e ->
+                        println("Browse books error: ${e.message}")
+                        _lastFetchCount.value = 0
+                    }
             } catch (e: Exception) {
                 println("Browse books exception: ${e.message}")
+                _lastFetchCount.value = 0
+            } finally {
+                _isLoading.value = false
             }
         }
     }
 
+    private val _lastFetchCount = MutableStateFlow(0)
+    val lastFetchCount: StateFlow<Int> = _lastFetchCount
+
     fun getFeaturedBooks() {
         viewModelScope.launch {
             try {
-                // Use browseBooks endpoint to get featured books
-                val response = RetrofitInstance.api.browseBooks(
+                val result = browseBooksUseCase(
                     query = null,
-                    genreId = null,
+                    genres = null,
+                    title = null,
+                    authorName = null,
+                    authorId = null,
+                    seriesName = null,
+                    seriesId = null,
                     ageRating = null,
                     distributionType = null,
                     publishedFrom = null,
                     publishedTo = null,
+                    createdFrom = null,
+                    createdTo = null,
+                    minAvgRating = null,
+                    maxAvgRating = null,
                     skip = null,
                     take = 10,
                     status = "active"
                 )
-                if (response.isSuccessful && response.body() != null) {
-                    val apiResponse = response.body()!!
-                    if (apiResponse.success) {
-                        // Convert RecommendedBook to Book for UI compatibility
-                        val books = (apiResponse.data ?: emptyList()).map { recommendedBook ->
-                            recommendedBook.toBook()
-                        }
+                result
+                    .onSuccess { books ->
                         _featuredBooks.value = books
                         println("Featured books loaded: ${books.size} books")
-                    } else {
-                        println("Featured books API error: ${apiResponse.message}")
                     }
-                } else {
-                    println("Featured books API error: ${response.code()} - ${response.message()}")
-                }
+                    .onFailure { e ->
+                        println("Featured books error: ${e.message}")
+                    }
             } catch (e: Exception) {
                 println("Featured books exception: ${e.message}")
             }
@@ -247,22 +225,15 @@ class BookViewModel(private val authManager: AuthManager) : ViewModel() {
     private fun searchBooks(query: String, skip: Int? = null, take: Int? = null) {
         viewModelScope.launch {
             try {
-                val response = RetrofitInstance.api.searchBooks(query, skip, take)
-                if (response.isSuccessful && response.body() != null) {
-                    val apiResponse = response.body()!!
-                    if (apiResponse.success) {
-                        // Convert RecommendedBook to Book for UI compatibility
-                        val books = (apiResponse.data ?: emptyList()).map { recommendedBook ->
-                            recommendedBook.toBook()
-                        }
+                val result = searchBooksUseCase(query, skip, take)
+                result
+                    .onSuccess { books ->
                         _books.value = books
                         println("Search books loaded: ${books.size} books for query: $query")
-                    } else {
-                        println("Search books API error: ${apiResponse.message}")
                     }
-                } else {
-                    println("Search books API error: ${response.code()} - ${response.message()}")
-                }
+                    .onFailure { e ->
+                        println("Search books error: ${e.message}")
+                    }
             } catch (e: Exception) {
                 println("Search books exception: ${e.message}")
                 e.printStackTrace()
@@ -273,26 +244,63 @@ class BookViewModel(private val authManager: AuthManager) : ViewModel() {
     fun getBookDetails(bookId: String) {
         viewModelScope.launch {
             try {
-                val response = RetrofitInstance.api.getBookDetails(bookId)
-                if (response.isSuccessful && response.body() != null) {
-                    val apiResponse = response.body()!!
-                    if (apiResponse.success) {
-                        _bookDetails.value = apiResponse.data
+                val result = getBookDetailsUseCase(bookId)
+                result
+                    .onSuccess { book ->
+                        _bookDetails.value = book
                     }
-                }
+                    .onFailure { e ->
+                        println("Book details error: ${e.message}")
+                    }
             } catch (e: Exception) {
-                // Handle error
             }
         }
     }
-}
 
-class BookViewModelFactory(private val authManager: AuthManager) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(BookViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return BookViewModel(authManager) as T
+    fun clearBookDetails() {
+        _bookDetails.value = null
+    }
+
+    fun searchForHomeScreen(query: String, take: Int = 20) {
+        viewModelScope.launch {
+            try {
+                val result = browseBooksUseCase(
+                    query = query,
+                    take = take,
+                    status = "active"
+                )
+                result
+                    .onSuccess { books ->
+                        _homeSearchResults.value = books
+                    }
+                    .onFailure { e ->
+                        println("Home search error: ${e.message}")
+                    }
+            } catch (e: Exception) {
+                println("Home search exception: ${e.message}")
+            }
         }
-        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+
+    fun clearHomeSearchResults() {
+        _homeSearchResults.value = emptyList()
+    }
+
+    fun getTrendingBooks() {
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+                val booksService = org.koin.core.context.GlobalContext.get()
+                    .get<com.example.booknest.data.service.BooksService>()
+                val response = booksService.getTrendingBooks(10)
+                if (response.isSuccessful && response.body() != null) {
+                    _trendingBooks.value = response.body()!!
+                }
+            } catch (e: Exception) {
+                println("Trending books error: ${e.message}")
+            } finally {
+                _isLoading.value = false
+            }
+        }
     }
 }

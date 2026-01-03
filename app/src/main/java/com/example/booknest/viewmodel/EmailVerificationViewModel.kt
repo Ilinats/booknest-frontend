@@ -2,8 +2,8 @@ package com.example.booknest.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.booknest.data.AuthManager
-import com.example.booknest.network.VerifyEmailDto
+import com.example.booknest.domain.usecase.auth.ResendVerificationCodeUseCase
+import com.example.booknest.domain.usecase.auth.VerifyEmailUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,19 +17,20 @@ data class EmailVerificationUiState(
 )
 
 class EmailVerificationViewModel(
-    private val authManager: AuthManager,
+    private val verifyEmailUseCase: VerifyEmailUseCase,
+    private val resendVerificationCodeUseCase: ResendVerificationCodeUseCase,
     private val userEmail: String? = null
 ) : ViewModel() {
-    
+
     private val _uiState = MutableStateFlow(EmailVerificationUiState())
     val uiState: StateFlow<EmailVerificationUiState> = _uiState.asStateFlow()
-    
+
     fun verifyEmail(code: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            
+
             try {
-                val result = authManager.verifyEmail(code)
+                val result = verifyEmailUseCase(code)
                 result.onSuccess { response ->
                     println("DEBUG: Email verification successful in ViewModel")
                     println("DEBUG: Setting isVerificationSuccessful to true")
@@ -60,13 +61,23 @@ class EmailVerificationViewModel(
             }
         }
     }
-    
+
     fun resendVerificationCode() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            
+
+            val email = userEmail
+            if (email.isNullOrBlank()) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = "Email is required",
+                    snackbarMessage = "Email is required"
+                )
+                return@launch
+            }
+
             try {
-                val result = authManager.resendVerificationCode(userEmail)
+                val result = resendVerificationCodeUseCase(email)
                 result.onSuccess {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false
@@ -94,36 +105,46 @@ class EmailVerificationViewModel(
             }
         }
     }
-    
+
     fun clearSnackbarMessage() {
         _uiState.value = _uiState.value.copy(snackbarMessage = null)
     }
-    
+
     private fun getErrorMessage(error: String?): String {
         return when {
-            error?.contains("Invalid or expired verification code", ignoreCase = true) == true -> 
+            error?.contains("Invalid or expired verification code", ignoreCase = true) == true ->
                 "Code is invalid or expired. Please try again."
-            error?.contains("Code must be exactly 6 digits", ignoreCase = true) == true -> 
+
+            error?.contains("Code must be exactly 6 digits", ignoreCase = true) == true ->
                 "Please enter a 6-digit code"
-            error?.contains("Email is already verified", ignoreCase = true) == true -> 
+
+            error?.contains("Email is already verified", ignoreCase = true) == true ->
                 "Email is already verified"
-            error?.contains("User not found", ignoreCase = true) == true -> 
+
+            error?.contains("User not found", ignoreCase = true) == true ->
                 "No account found with this email"
-            error?.contains("Too many requests", ignoreCase = true) == true -> 
+
+            error?.contains("Too many requests", ignoreCase = true) == true ->
                 "Too many attempts. Please wait before trying again."
+
             else -> error ?: "An error occurred. Please try again."
         }
     }
 }
 
 class EmailVerificationViewModelFactory(
-    private val authManager: AuthManager,
+    private val verifyEmailUseCase: VerifyEmailUseCase,
+    private val resendVerificationCodeUseCase: ResendVerificationCodeUseCase,
     private val userEmail: String? = null
 ) : androidx.lifecycle.ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(EmailVerificationViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return EmailVerificationViewModel(authManager, userEmail) as T
+            return EmailVerificationViewModel(
+                verifyEmailUseCase = verifyEmailUseCase,
+                resendVerificationCodeUseCase = resendVerificationCodeUseCase,
+                userEmail = userEmail
+            ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
