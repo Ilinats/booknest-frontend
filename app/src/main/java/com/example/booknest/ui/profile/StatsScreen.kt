@@ -38,13 +38,6 @@ fun StatsScreen(
     val currentUser by sessionManager.currentUser.collectAsState()
     val statsState by profileViewModel.statsState.collectAsState()
     val currentStats by profileViewModel.currentStats.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    LaunchedEffect(Unit) {
-        profileViewModel.snackbarEvent.collectLatest { message ->
-            snackbarHostState.showSnackbar(message)
-        }
-    }
 
     LaunchedEffect(authorId) {
         if (authorId != null) {
@@ -63,7 +56,6 @@ fun StatsScreen(
                 }
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         val currentStatsState = statsState
         when (currentStatsState) {

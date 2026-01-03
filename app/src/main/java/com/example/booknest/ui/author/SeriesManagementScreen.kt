@@ -29,8 +29,6 @@ import com.example.booknest.domain.model.response.BookResponse
 import com.example.booknest.domain.model.response.RecommendedBookResponse
 import com.example.booknest.navigation.Screen
 import com.example.booknest.ui.components.BackButton
-import com.example.booknest.ui.theme.DarkNavyBlue
-import com.example.booknest.ui.theme.SkyBluePeriwinkle
 import com.example.booknest.viewmodel.BookViewModel
 import com.example.booknest.viewmodel.SeriesViewModel
 import com.example.booknest.domain.usecase.books.BrowseBooksUseCase
@@ -50,8 +48,6 @@ fun SeriesManagementScreen(
 ) {
     val series by seriesViewModel.series.collectAsState()
     val isLoading by seriesViewModel.isLoading.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-
     var showCreateDialog by remember { mutableStateOf(false) }
     var editingSeries by remember {
         mutableStateOf<com.example.booknest.domain.model.response.SeriesResponse?>(
@@ -75,9 +71,6 @@ fun SeriesManagementScreen(
 
     LaunchedEffect(Unit) {
         seriesViewModel.loadMySeries()
-        seriesViewModel.snackbarEvent.collectLatest { message ->
-            snackbarHostState.showSnackbar(message)
-        }
     }
 
     LaunchedEffect(series) {
@@ -146,7 +139,7 @@ fun SeriesManagementScreen(
                             "Series Management",
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp,
-                            color = DarkNavyBlue
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                     },
                     navigationIcon = {
@@ -157,14 +150,13 @@ fun SeriesManagementScreen(
                             Icon(
                                 Icons.Default.Add,
                                 contentDescription = "Add Series",
-                                tint = DarkNavyBlue
+                                tint = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
                 )
             }
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showCreateDialog = true }
@@ -176,7 +168,7 @@ fun SeriesManagementScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF1E9EE))
+                .background(MaterialTheme.colorScheme.background)
         ) {
             Box(
                 modifier = Modifier
@@ -184,7 +176,7 @@ fun SeriesManagementScreen(
                     .offset(x = (-175).dp, y = (-175).dp)
                     .size(350.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
             )
             Box(
                 modifier = Modifier
@@ -192,7 +184,7 @@ fun SeriesManagementScreen(
                     .offset(x = (-135).dp, y = (-135).dp)
                     .size(270.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle)
+                    .background(MaterialTheme.colorScheme.secondary)
             )
             Box(
                 modifier = Modifier
@@ -200,7 +192,7 @@ fun SeriesManagementScreen(
                     .offset(x = 175.dp, y = 175.dp)
                     .size(350.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
             )
             Box(
                 modifier = Modifier
@@ -208,7 +200,7 @@ fun SeriesManagementScreen(
                     .offset(x = 135.dp, y = 135.dp)
                     .size(270.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle)
+                    .background(MaterialTheme.colorScheme.secondary)
             )
 
             if (isLoading && series.isEmpty()) {
@@ -340,7 +332,7 @@ fun SeriesCard(
             .shadow(elevation = 2.dp, shape = RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFE8DFE4)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -438,7 +430,7 @@ fun SeriesCard(
                                 book = book,
                                 order = book.seriesOrder ?: (index + 1),
                                 onClick = {
-                                    navController.navigate(Screen.BookDetails.createRoute(book.id))
+                                    navController.navigate(Screen.BookApplicationDetail.createRoute(book.id))
                                 }
                             )
                             if (index < books.size - 1) {

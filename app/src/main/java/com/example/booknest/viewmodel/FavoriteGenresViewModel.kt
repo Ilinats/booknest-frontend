@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.example.booknest.ui.toast.GlobalToastHandler
 
 class FavoriteGenresViewModel(
     private val getGenresUseCase: GetGenresUseCase,
@@ -40,7 +41,9 @@ class FavoriteGenresViewModel(
                         _genres.value = genres
                     }
                     .onFailure { e ->
-                        _message.value = e.localizedMessage ?: "Failed to load genres"
+                        val errorMsg = e.localizedMessage ?: "Failed to load genres"
+                        _message.value = errorMsg
+                        GlobalToastHandler.showError(errorMsg)
                     }
 
                 val preferencesResult = getGenrePreferencesUseCase()
@@ -54,7 +57,9 @@ class FavoriteGenresViewModel(
                         println("DEBUG: Failed to load genre preferences: ${e.message}")
                     }
             } catch (e: Exception) {
-                _message.value = e.localizedMessage ?: "Failed to load genres"
+                val errorMsg = e.localizedMessage ?: "Failed to load genres"
+                _message.value = errorMsg
+                GlobalToastHandler.showError(errorMsg)
             } finally {
                 _isLoading.value = false
             }
@@ -72,7 +77,9 @@ class FavoriteGenresViewModel(
     fun savePreferences() {
         viewModelScope.launch {
             if (_selectedGenreIds.value.isEmpty()) {
-                _message.value = "Select at least one genre."
+                val errorMsg = "Select at least one genre."
+                _message.value = errorMsg
+                GlobalToastHandler.showError(errorMsg)
                 return@launch
             }
             _isLoading.value = true
@@ -86,13 +93,21 @@ class FavoriteGenresViewModel(
                 }
 
                 val allSucceeded = results.all { it.isSuccess }
-                _message.value = if (allSucceeded) {
+                val msg = if (allSucceeded) {
                     "Favorite genres saved."
                 } else {
                     "Some preferences could not be saved."
                 }
+                _message.value = msg
+                if (allSucceeded) {
+                    GlobalToastHandler.showSuccess(msg)
+                } else {
+                    GlobalToastHandler.showError(msg)
+                }
             } catch (e: Exception) {
-                _message.value = "Failed to save preferences: ${e.localizedMessage}"
+                val errorMsg = "Failed to save preferences: ${e.localizedMessage}"
+                _message.value = errorMsg
+                GlobalToastHandler.showError(errorMsg)
             } finally {
                 _isLoading.value = false
             }

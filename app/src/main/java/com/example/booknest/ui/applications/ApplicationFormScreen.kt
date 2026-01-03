@@ -29,20 +29,16 @@ fun ApplicationFormScreen(
 ) {
     var applicationMessage by remember { mutableStateOf("") }
     var isSubmitting by remember { mutableStateOf(false) }
-    val snackbarHostState = remember { SnackbarHostState() }
     val currentUser by sessionManager.currentUser.collectAsState()
 
-    LaunchedEffect(Unit) {
-        applicationViewModel.snackbarEvent.collectLatest { message ->
-            snackbarHostState.showSnackbar(message)
-            if (message.contains("successfully")) {
-                navController.popBackStack()
-            }
+    val applicationCheck by applicationViewModel.applicationCheck.collectAsState()
+    LaunchedEffect(applicationCheck) {
+        if (applicationCheck?.hasApplied == true && !isSubmitting) {
+            navController.popBackStack()
         }
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Apply for Review", fontWeight = FontWeight.Bold) },

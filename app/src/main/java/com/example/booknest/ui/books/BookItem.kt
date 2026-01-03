@@ -52,9 +52,6 @@ import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.filled.StarHalf
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
-import com.example.booknest.ui.theme.DarkNavyBlue
-import com.example.booknest.ui.theme.DarkTealSlate
-import com.example.booknest.ui.theme.DarkTealSlate
 
 @Composable
 fun BookItem(
@@ -93,9 +90,9 @@ fun BookItem(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 20.dp),
+                    shadowElevation = 3.dp,
                     shape = RoundedCornerShape(16.dp),
-                    color = Color.White,
-                    shadowElevation = 3.dp
+                    color = MaterialTheme.colorScheme.surfaceVariant
                 ) {
                     Row(
                         modifier = Modifier
@@ -113,7 +110,7 @@ fun BookItem(
                                 text = book.title,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = DarkNavyBlue,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -123,7 +120,7 @@ fun BookItem(
                                     Text(
                                         text = authorName,
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = Color(0xFF666666),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
@@ -174,12 +171,12 @@ fun BookItem(
                                 book.distributionType?.let { distType ->
                                     Surface(
                                         shape = RoundedCornerShape(16.dp),
-                                        color = Color(0xFFF5F0ED)
+                                        color = MaterialTheme.colorScheme.surfaceVariant
                                     ) {
                                         Text(
                                             text = distType.replaceFirstChar { it.uppercase() },
                                             style = MaterialTheme.typography.labelMedium,
-                                            color = DarkNavyBlue,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.padding(
                                                 horizontal = 12.dp,
                                                 vertical = 4.dp
@@ -195,9 +192,10 @@ fun BookItem(
 
                                     Surface(
                                         shape = RoundedCornerShape(16.dp),
-                                        color = if (isLowAvailability) Color(0xFFFFEBEE) else Color(
-                                            0xFFF5F0ED
-                                        ),
+                                        color = if (isLowAvailability) 
+                                            MaterialTheme.colorScheme.errorContainer 
+                                        else 
+                                            MaterialTheme.colorScheme.surfaceVariant,
                                         border = if (isLowAvailability) BorderStroke(
                                             1.dp,
                                             MaterialTheme.colorScheme.error
@@ -206,7 +204,10 @@ fun BookItem(
                                         Text(
                                             text = slotsText,
                                             style = MaterialTheme.typography.labelMedium,
-                                            color = if (isLowAvailability) MaterialTheme.colorScheme.error else DarkNavyBlue,
+                                            color = if (isLowAvailability) 
+                                                MaterialTheme.colorScheme.onErrorContainer 
+                                            else 
+                                                MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.padding(
                                                 horizontal = 12.dp,
                                                 vertical = 4.dp
@@ -230,7 +231,7 @@ fun BookItem(
                             clip = false
                         )
                         .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFFF5EDE8)),
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center
                 ) {
                     if (!book.coverImageUrl.isNullOrBlank()) {
@@ -247,7 +248,7 @@ fun BookItem(
                             imageVector = Icons.Filled.Book,
                             contentDescription = "No cover",
                             modifier = Modifier.size(28.dp),
-                            tint = DarkNavyBlue
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -264,7 +265,7 @@ fun BookItem(
                         .height(120.dp)
                         .shadow(4.dp, RoundedCornerShape(4.dp))
                         .clip(RoundedCornerShape(4.dp))
-                        .background(Color(0xFFF5EDE8)),
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center
                 ) {
                     if (!book.coverImageUrl.isNullOrBlank()) {
@@ -281,7 +282,7 @@ fun BookItem(
                             imageVector = Icons.Filled.Book,
                             contentDescription = "No cover",
                             modifier = Modifier.size(28.dp),
-                            tint = DarkNavyBlue
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -333,7 +334,7 @@ fun BookItem(
                         text = book.title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = DarkNavyBlue,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -343,7 +344,7 @@ fun BookItem(
                             Text(
                                 text = "By $authorName",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color(0xFF757575),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -359,12 +360,12 @@ fun BookItem(
                             Surface(
                                 shape = RoundedCornerShape(16.dp),
                                 color = Color.Transparent,
-                                border = BorderStroke(1.dp, DarkTealSlate)
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                             ) {
                                 Text(
                                     text = distType.replaceFirstChar { it.uppercase() },
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = DarkNavyBlue,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.padding(
                                         horizontal = 12.dp,
                                         vertical = 6.dp
@@ -385,15 +386,13 @@ fun BookItem(
                                 color = Color.Transparent,
                                 border = BorderStroke(
                                     1.dp,
-                                    if (isLowAvailability) MaterialTheme.colorScheme.error else Color(
-                                        0xFFCCCCCC
-                                    )
+                                    if (isLowAvailability) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
                                 )
                             ) {
                                 Text(
                                     text = slotsText,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = if (isLowAvailability) MaterialTheme.colorScheme.error else DarkNavyBlue,
+                                    color = if (isLowAvailability) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.padding(
                                         horizontal = 12.dp,
                                         vertical = 6.dp
@@ -459,7 +458,7 @@ fun SimpleBookItem(
                         imageVector = Icons.Filled.Book,
                         contentDescription = "No cover",
                         modifier = Modifier.size(32.dp),
-                        tint = DarkNavyBlue
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -470,7 +469,7 @@ fun SimpleBookItem(
                 text = book.title,
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
-                color = DarkNavyBlue,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 fontSize = 18.sp,

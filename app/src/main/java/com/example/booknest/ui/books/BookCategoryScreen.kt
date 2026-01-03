@@ -21,8 +21,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.booknest.ui.components.BackButton
-import com.example.booknest.ui.theme.BackgroundWhite
-import com.example.booknest.ui.theme.DarkNavyBlue
 import com.example.booknest.viewmodel.AuthorFollowViewModel
 import com.example.booknest.viewmodel.BookViewModel
 import org.koin.androidx.compose.getViewModel
@@ -74,7 +72,7 @@ fun BookCategoryScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(BackgroundWhite)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(
             modifier = Modifier
@@ -95,7 +93,7 @@ fun BookCategoryScreen(
                     text = screenTitle,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = DarkNavyBlue
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
 
@@ -108,7 +106,7 @@ fun BookCategoryScreen(
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = DarkNavyBlue)
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             } else if (currentBooks.isEmpty()) {
                 Box(
@@ -118,7 +116,7 @@ fun BookCategoryScreen(
                     Text(
                         text = "No books found",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = Color(0xFF757575)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             } else {

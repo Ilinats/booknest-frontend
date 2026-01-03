@@ -46,7 +46,7 @@ fun ActivityItem(
     navController: NavController,
     modifier: Modifier = Modifier
 ) {
-    Surface(
+    Card(
         modifier = modifier
             .fillMaxWidth()
             .clickable {
@@ -55,8 +55,10 @@ fun ActivityItem(
                 }
             },
         shape = RoundedCornerShape(16.dp),
-        tonalElevation = 2.dp,
-        color = MaterialTheme.colorScheme.surface
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
         Row(
             modifier = Modifier

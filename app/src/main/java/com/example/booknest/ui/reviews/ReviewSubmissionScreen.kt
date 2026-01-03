@@ -12,6 +12,8 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -81,9 +83,9 @@ fun ReviewSubmissionScreen(
     var isSubmitting by remember { mutableStateOf(false) }
     var showConfirmDialog by remember { mutableStateOf(false) }
     var showGuidelines by remember { mutableStateOf(false) }
+    var hasJustSaved by remember { mutableStateOf(false) }
 
     var application by remember { mutableStateOf<ApplicationResponse?>(null) }
-    val snackbarHostState = remember { SnackbarHostState() }
     val currentReview by reviewViewModel.currentReview.collectAsState()
 
     LaunchedEffect(applicationId) {
@@ -92,7 +94,7 @@ fun ReviewSubmissionScreen(
                 application = app
             }
             .onFailure { e ->
-                snackbarHostState.showSnackbar("Failed to load application: ${e.message}")
+                com.example.booknest.ui.toast.GlobalToastHandler.showError("Failed to load application: ${e.message}")
             }
     }
 
@@ -118,17 +120,12 @@ fun ReviewSubmissionScreen(
         isSubmitting = isLoading
     }
 
-    LaunchedEffect(Unit) {
-        reviewViewModel.snackbarEvent.collectLatest { message ->
-            if (message.contains("successfully", ignoreCase = true)) {
-                isSubmitting = false
-                applicationViewModel.loadMyApplications()
-                delay(100)
-                navController.popBackStack()
-            } else {
-                snackbarHostState.showSnackbar(message)
-                isSubmitting = false
-            }
+    LaunchedEffect(isLoading) {
+        if (hasJustSaved && !isLoading && !isSubmitting) {
+            hasJustSaved = false
+            applicationViewModel.loadMyApplications()
+            kotlinx.coroutines.delay(100)
+            navController.popBackStack()
         }
     }
 
@@ -162,7 +159,6 @@ fun ReviewSubmissionScreen(
     val isValid = validationIssues.isEmpty()
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Surface(
                 shadowElevation = 4.dp,
@@ -187,9 +183,8 @@ fun ReviewSubmissionScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .windowInsetsPadding(WindowInsets.systemBars)
                     .padding(paddingValues)
-                    .padding(top = 32.dp, bottom = 32.dp)
+                    .padding(top = 8.dp)
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -419,7 +414,7 @@ fun ReviewSubmissionScreen(
                     ) {
                         if (isSubmitting) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
+                                modifier = Modifier.size(28.dp),
                                 color = MaterialTheme.colorScheme.onPrimary
                             )
                             Spacer(modifier = Modifier.width(14.dp))
@@ -432,7 +427,7 @@ fun ReviewSubmissionScreen(
                             },
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
+                            fontSize = 20.sp,
                             color = if (!isSubmitting && isValid)
                                 MaterialTheme.colorScheme.onPrimary
                             else
@@ -446,7 +441,7 @@ fun ReviewSubmissionScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.3f))
+                        .background(MaterialTheme.colorScheme.scrim)
                         .clickable(enabled = false) { },
                     contentAlignment = Alignment.Center
                 ) {
@@ -480,6 +475,7 @@ fun ReviewSubmissionScreen(
             AlertDialog(
                 onDismissRequest = { showConfirmDialog = false },
                 title = { Text(if (isEditMode) "Update Review?" else "Submit Review?") },
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Are you sure you want to submit this review?")
@@ -522,6 +518,7 @@ fun ReviewSubmissionScreen(
 
                             val intRating = rating.roundToInt().coerceIn(1, 5)
 
+                            hasJustSaved = true
                             if (isEditMode && reviewId != null) {
                                 reviewViewModel.updateReview(
                                     reviewId = reviewId,
@@ -541,9 +538,14 @@ fun ReviewSubmissionScreen(
                                     isPublic = isPublic
                                 )
                             }
-                        }
+                        },
+                        modifier = Modifier.height(56.dp)
                     ) {
-                        Text("Submit")
+                        Text(
+                            text = if (isEditMode) "Update" else "Submit",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 },
                 dismissButton = {
@@ -567,7 +569,10 @@ fun BookReferenceHeader(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
-        elevation = CardDefaults.cardElevation(2.dp)
+        elevation = CardDefaults.cardElevation(2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
         Column(
             modifier = Modifier
@@ -643,13 +648,13 @@ fun BookReferenceHeader(
                 if (daysLeft != null) {
                     val backgroundColor = when {
                         isCritical -> MaterialTheme.colorScheme.errorContainer
-                        isUrgent -> MaterialTheme.colorScheme.tertiaryContainer
+                        isUrgent -> MaterialTheme.colorScheme.primaryContainer
                         else -> MaterialTheme.colorScheme.surface
                     }
 
                     val textColor = when {
                         isCritical -> MaterialTheme.colorScheme.onErrorContainer
-                        isUrgent -> MaterialTheme.colorScheme.onTertiaryContainer
+                        isUrgent -> MaterialTheme.colorScheme.onPrimaryContainer
                         else -> MaterialTheme.colorScheme.onSurface
                     }
 
@@ -711,6 +716,37 @@ fun EnhancedRatingSelector(
     currentRating: Float,
     onRatingChange: (Float) -> Unit
 ) {
+    var ratingText by remember {
+        mutableStateOf(String.format("%.2f", currentRating)) 
+    }
+    var isFocused by remember { mutableStateOf(false) }
+
+    LaunchedEffect(currentRating) {
+        if (!isFocused) {
+            ratingText = String.format("%.2f", currentRating)
+        }
+    }
+    
+    fun validateAndFormatInput(input: String): String? {
+        if (input.isEmpty()) return "0"
+
+        val filtered = input.filter { it.isDigit() || it == '.' }
+        if (filtered != input) return null
+
+        val parts = filtered.split('.')
+        if (parts.size > 2) return null
+        if (parts.size == 2 && parts[1].length > 2) return null
+
+        if (filtered == "." || filtered.isEmpty()) return filtered
+
+        val value = filtered.toFloatOrNull()
+        if (value != null && (value < 0f || value > 5f)) return null
+        
+        return filtered
+    }
+    
+    val integerPart = currentRating.toInt()
+    
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -723,15 +759,19 @@ fun EnhancedRatingSelector(
                 Box(
                     modifier = Modifier
                         .size(56.dp)
-                        .clickable { onRatingChange(star.toFloat()) }
+                        .clickable { 
+                            val newRating = star.toFloat()
+                            onRatingChange(newRating)
+                            ratingText = String.format("%.2f", newRating)
+                        }
                 ) {
                     Icon(
-                        imageVector = if (star <= currentRating.toInt()) Icons.Filled.Star else Icons.Filled.StarBorder,
+                        imageVector = if (star <= integerPart) Icons.Filled.Star else Icons.Filled.StarBorder,
                         contentDescription = "$star stars",
                         modifier = Modifier
                             .size(40.dp)
                             .align(Alignment.Center),
-                        tint = if (star <= currentRating.toInt())
+                        tint = if (star <= integerPart)
                             MaterialTheme.colorScheme.primary
                         else
                             MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
@@ -745,49 +785,79 @@ fun EnhancedRatingSelector(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val interactionSource = remember { MutableInteractionSource() }
+            val isFocusedState = interactionSource.collectIsFocusedAsState()
+            
+            LaunchedEffect(isFocusedState.value) {
+                if (!isFocusedState.value) {
+                    val value = ratingText.toFloatOrNull()?.coerceIn(0f, 5f)
+                    if (value != null) {
+                        ratingText = String.format("%.2f", value)
+                        onRatingChange(value)
+                    } else {
+                        ratingText = String.format("%.2f", currentRating)
+                    }
+                    isFocused = false
+                } else {
+                    isFocused = true
+                }
+            }
+            
             OutlinedTextField(
-                value = String.format("%.2f", currentRating),
+                value = ratingText,
                 onValueChange = { newValue ->
-                    val newRating = newValue.toFloatOrNull()?.coerceIn(0f, 5f)
-                    if (newRating != null) {
-                        onRatingChange(newRating)
+                    val validated = validateAndFormatInput(newValue)
+                    if (validated != null) {
+                        ratingText = validated
+                        val newRating = validated.toFloatOrNull()?.coerceIn(0f, 5f)
+                        if (newRating != null) {
+                            onRatingChange(newRating)
+                        } else if (validated.isEmpty() || validated == ".") {
+                            onRatingChange(0f)
+                        }
                     }
                 },
-                modifier = Modifier.width(80.dp),
+                modifier = Modifier.width(100.dp),
                 label = { Text("Rating") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Decimal
-                )
+                ),
+                interactionSource = interactionSource,
+                supportingText = {
+                    Text(
+                        text = "0.00 - 5.00",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             )
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            val currentStar = currentRating.toInt()
+            val currentStar = integerPart
             if (currentStar in 1..4) {
                 TextButton(onClick = {
-                    onRatingChange(
-                        (currentStar + 0.25f).coerceIn(
-                            0f,
-                            5f
-                        )
-                    )
+                    val newRating = (currentStar + 0.25f).coerceIn(0f, 5f)
+                    onRatingChange(newRating)
+                    ratingText = String.format("%.2f", newRating)
                 }) {
                     Text("+0.25", style = MaterialTheme.typography.labelSmall)
                 }
                 TextButton(onClick = {
-                    onRatingChange(
-                        (currentStar + 0.5f).coerceIn(
-                            0f,
-                            5f
-                        )
-                    )
+                    val newRating = (currentStar + 0.5f).coerceIn(0f, 5f)
+                    onRatingChange(newRating)
+                    ratingText = String.format("%.2f", newRating)
                 }) {
                     Text("+0.5", style = MaterialTheme.typography.labelSmall)
                 }
             }
             if (currentStar in 2..5 && currentRating % 1f > 0f) {
-                TextButton(onClick = { onRatingChange(currentStar.toFloat()) }) {
+                TextButton(onClick = { 
+                    val newRating = currentStar.toFloat()
+                    onRatingChange(newRating)
+                    ratingText = String.format("%.2f", newRating)
+                }) {
                     Text("Full", style = MaterialTheme.typography.labelSmall)
                 }
             }

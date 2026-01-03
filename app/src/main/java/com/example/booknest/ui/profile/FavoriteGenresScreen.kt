@@ -18,9 +18,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -43,8 +40,6 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.model.response.GenreResponse
-import com.example.booknest.ui.theme.DarkNavyBlue
-import com.example.booknest.ui.theme.SkyBluePeriwinkle
 import com.example.booknest.viewmodel.FavoriteGenresViewModel
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
@@ -59,9 +54,6 @@ fun FavoriteGenresScreen(
     val genres by viewModel.genres.collectAsState()
     val selected by viewModel.selectedGenreIds.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
-    val message by viewModel.message.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-
     var initialSelected by remember { mutableStateOf<Set<Int>?>(null) }
 
     LaunchedEffect(selected, genres, isLoading) {
@@ -82,20 +74,16 @@ fun FavoriteGenresScreen(
         viewModel.loadGenres()
     }
 
+    val message by viewModel.message.collectAsState()
     LaunchedEffect(message) {
         message?.let { msg ->
-            val snackbarResult = snackbarHostState.showSnackbar(
-                message = msg,
-                duration = if (msg.contains("saved", ignoreCase = true)) {
-                    SnackbarDuration.Short
-                } else {
-                    SnackbarDuration.Long
-                }
-            )
             if (msg == "Favorite genres saved.") {
                 initialSelected = selected.toSet()
+                viewModel.clearMessage()
+                navController.popBackStack()
+            } else {
+                viewModel.clearMessage()
             }
-            viewModel.clearMessage()
         }
     }
 
@@ -113,13 +101,12 @@ fun FavoriteGenresScreen(
                     }
                 )
             }
-        },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+        }
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF1E9EE))
+                .background(MaterialTheme.colorScheme.background)
         ) {
             Box(
                 modifier = Modifier
@@ -127,7 +114,7 @@ fun FavoriteGenresScreen(
                     .offset(x = (-175).dp, y = (-175).dp)
                     .size(350.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
             )
             Box(
                 modifier = Modifier
@@ -135,7 +122,7 @@ fun FavoriteGenresScreen(
                     .offset(x = (-135).dp, y = (-135).dp)
                     .size(270.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle)
+                    .background(MaterialTheme.colorScheme.secondary)
             )
             Box(
                 modifier = Modifier
@@ -143,7 +130,7 @@ fun FavoriteGenresScreen(
                     .offset(x = 175.dp, y = 175.dp)
                     .size(350.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
             )
             Box(
                 modifier = Modifier
@@ -151,7 +138,7 @@ fun FavoriteGenresScreen(
                     .offset(x = 135.dp, y = 135.dp)
                     .size(270.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle)
+                    .background(MaterialTheme.colorScheme.secondary)
             )
 
             if (isLoading && genres.isEmpty()) {
@@ -184,7 +171,7 @@ fun FavoriteGenresScreen(
                                 fontSize = 24.sp,
                                 fontWeight = FontWeight.Bold
                             ),
-                            color = DarkNavyBlue,
+                            color = MaterialTheme.colorScheme.onBackground,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
@@ -194,7 +181,7 @@ fun FavoriteGenresScreen(
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 fontSize = 14.sp
                             ),
-                            color = Color(0xFF757575),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(bottom = 24.dp)
                         )
@@ -286,22 +273,22 @@ fun FavoriteGenresScreen(
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = if (isButtonEnabled)
-                                    DarkNavyBlue
+                                    MaterialTheme.colorScheme.primary
                                 else
-                                    Color(0xFFE0E0E0),
-                                disabledContainerColor = Color(0xFFE0E0E0),
+                                    MaterialTheme.colorScheme.surfaceVariant,
+                                disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                                 contentColor = if (isButtonEnabled)
-                                    Color.White
+                                    MaterialTheme.colorScheme.onPrimary
                                 else
-                                    Color(0xFF757575),
-                                disabledContentColor = Color(0xFF757575)
+                                    MaterialTheme.colorScheme.onSurfaceVariant,
+                                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         ) {
                             if (isLoading && selected.isNotEmpty()) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(20.dp),
                                     strokeWidth = 2.dp,
-                                    color = Color.White
+                                    color = MaterialTheme.colorScheme.onPrimary
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                             }
@@ -386,12 +373,12 @@ fun GenreButton(
             .defaultMinSize(minHeight = 40.dp)
             .clip(RoundedCornerShape(30.dp))
             .background(
-                if (isSelected) Color(0xFFE8DFE4) else Color.White,
+                if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
                 RoundedCornerShape(30.dp)
             )
             .border(
                 width = if (isSelected) 2.dp else 1.dp,
-                color = if (isSelected) DarkNavyBlue else Color(0xFFE0E0E0),
+                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
                 shape = RoundedCornerShape(30.dp)
             )
             .clickable { onClick() },
@@ -403,7 +390,7 @@ fun GenreButton(
                 fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
                 fontSize = 13.sp
             ),
-            color = if (isSelected) DarkNavyBlue else Color(0xFF757575),
+            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             maxLines = 2,
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)

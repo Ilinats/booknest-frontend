@@ -35,7 +35,6 @@ fun PasswordResetScreen(
     viewModel: PasswordResetViewModel = getViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
 
     var showPasswordInput by remember { mutableStateOf(false) }
     var enteredCode by remember { mutableStateOf("") }
@@ -54,13 +53,6 @@ fun PasswordResetScreen(
         }
     }
 
-    LaunchedEffect(uiState.snackbarMessage) {
-        uiState.snackbarMessage?.let { message ->
-            snackbarHostState.showSnackbar(message)
-            viewModel.clearSnackbarMessage()
-        }
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -69,8 +61,7 @@ fun PasswordResetScreen(
                     BackButton(onClick = { navController.popBackStack() })
                 }
             )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier

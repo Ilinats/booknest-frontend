@@ -21,7 +21,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.offset
-import com.example.booknest.ui.theme.SkyBluePeriwinkle
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material.icons.Icons
 import com.example.booknest.ui.components.BackButton
@@ -81,6 +80,7 @@ fun PrivacySettingsScreen(
     val myProfile by profileViewModel.myProfile.collectAsState()
     val isLoading by profileViewModel.isLoading.collectAsState()
     val error by profileViewModel.error.collectAsState()
+    var hasJustSaved by remember { mutableStateOf(false) }
 
     var activityPrivacy by remember { mutableStateOf("friends") }
     var profilePrivacy by remember { mutableStateOf("friends") }
@@ -172,6 +172,15 @@ fun PrivacySettingsScreen(
         }
     }
 
+    LaunchedEffect(isLoading, error) {
+        if (hasJustSaved && !isLoading && error == null) {
+            hasJustSaved = false
+            navController.popBackStack()
+        } else if (hasJustSaved && !isLoading && error != null) {
+            hasJustSaved = false
+        }
+    }
+
     val hasChanges = remember(
         activityPrivacy,
         profilePrivacy,
@@ -228,7 +237,7 @@ fun PrivacySettingsScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF1E9EE))
+                .background(MaterialTheme.colorScheme.background)
         ) {
             Box(
                 modifier = Modifier
@@ -236,7 +245,7 @@ fun PrivacySettingsScreen(
                     .offset(x = (-175).dp, y = (-175).dp)
                     .size(350.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
             )
             Box(
                 modifier = Modifier
@@ -244,7 +253,7 @@ fun PrivacySettingsScreen(
                     .offset(x = (-135).dp, y = (-135).dp)
                     .size(270.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle)
+                    .background(MaterialTheme.colorScheme.secondary)
             )
             Box(
                 modifier = Modifier
@@ -252,7 +261,7 @@ fun PrivacySettingsScreen(
                     .offset(x = 175.dp, y = 175.dp)
                     .size(350.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
             )
             Box(
                 modifier = Modifier
@@ -260,7 +269,7 @@ fun PrivacySettingsScreen(
                     .offset(x = 135.dp, y = 135.dp)
                     .size(270.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle)
+                    .background(MaterialTheme.colorScheme.secondary)
             )
 
             if (isLoading && myProfile == null) {
@@ -344,8 +353,12 @@ fun PrivacySettingsScreen(
 
                     item {
                         Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
                         ) {
                             Row(
                                 modifier = Modifier
@@ -465,7 +478,10 @@ fun PrivacySettingsScreen(
                     item {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
                         ) {
                             Column(
                                 modifier = Modifier.padding(16.dp),
@@ -595,17 +611,24 @@ fun PrivacySettingsScreen(
                                 initialApplicationRejected = applicationRejected
                                 initialReviewDeadlineReminders = reviewDeadlineReminders
                                 initialAuthorBookPublished = authorBookPublished
+                                hasJustSaved = true
                             },
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
                             enabled = hasChanges && !isLoading
                         ) {
                             if (isLoading) {
                                 CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
+                                    modifier = Modifier.size(24.dp),
                                     strokeWidth = 2.dp
                                 )
                             } else {
-                                Text("Save Settings")
+                                Text(
+                                    "Save Settings",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
                         }
                     }
@@ -656,8 +679,12 @@ fun NotificationPreferenceCard(
     enabled: Boolean
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        modifier = Modifier
+            .fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
         Row(
             modifier = Modifier
@@ -702,7 +729,7 @@ fun PrivacySettingCard(
             .shadow(elevation = 2.dp, shape = RoundedCornerShape(12.dp)),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFE8DFE4)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -774,8 +801,12 @@ fun AddressManagementSection(
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        modifier = Modifier
+            .fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -844,7 +875,8 @@ fun AddressCard(
     onDelete: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = if (address.isPrimary)
                 MaterialTheme.colorScheme.primaryContainer
@@ -936,6 +968,7 @@ fun AddEditAddressDialog(
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (address == null) "Add Address" else "Edit Address") },
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
         text = {
             Column(
                 verticalArrangement = Arrangement.spacedBy(12.dp)

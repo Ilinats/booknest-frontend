@@ -28,6 +28,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -74,7 +75,12 @@ fun MainScreen(sessionManager: SessionManager = koinInject()) {
     val isLoggedIn by sessionManager.isLoggedIn.collectAsState()
 
     androidx.compose.runtime.LaunchedEffect(isLoggedIn) {
+        if (isLoggedIn == false) {
+            kotlinx.coroutines.delay(300)
+        }
         if (isLoggedIn == true && currentUser == null) {
+            val token = sessionManager.getToken()
+            if (token.isNotEmpty()) {
             try {
                 val profilesService = org.koin.core.context.GlobalContext.get()
                     .get<com.example.booknest.data.service.ProfilesService>()
@@ -86,6 +92,7 @@ fun MainScreen(sessionManager: SessionManager = koinInject()) {
                 }
             } catch (e: Exception) {
                 println("DEBUG: Failed to fetch user: ${e.message}")
+                }
             }
         }
     }
@@ -121,6 +128,11 @@ fun MainScreen(sessionManager: SessionManager = koinInject()) {
 
     androidx.compose.runtime.LaunchedEffect(isLoggedIn, currentRoute) {
         if (isLoggedIn == true && currentRoute != null) {
+            val token = sessionManager.getToken()
+            if (token.isEmpty()) {
+                return@LaunchedEffect
+            }
+
             val isMainScreen = currentRoute == BottomBarScreen.Home.route ||
                     currentRoute == BottomBarScreen.MyApplications.route ||
                     currentRoute.startsWith("browse")
@@ -203,7 +215,9 @@ fun BottomBar(navController: NavHostController) {
         tonalElevation = 4.dp,
         color = MaterialTheme.colorScheme.surface
     ) {
-        NavigationBar {
+        NavigationBar(
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
             screens.forEach { screen ->
                 AddItem(
                     screen = screen,
@@ -221,18 +235,25 @@ fun RowScope.AddItem(
     currentDestination: NavDestination?,
     navController: NavHostController
 ) {
+    val isSelected = currentDestination?.hierarchy?.any {
+        it.route == screen.route
+    } == true
+    
     NavigationBarItem(
         label = { Text(text = screen.title) },
         icon = { Icon(imageVector = screen.icon, contentDescription = "Navigation Icon") },
-        selected = currentDestination?.hierarchy?.any {
-            it.route == screen.route
-        } == true,
+        selected = isSelected,
         onClick = {
             navController.navigate(screen.route) {
                 popUpTo(navController.graph.findStartDestination().id)
                 launchSingleTop = true
             }
-        }
+        },
+        colors = NavigationBarItemDefaults.colors(
+            selectedIconColor = MaterialTheme.colorScheme.primary,
+            selectedTextColor = MaterialTheme.colorScheme.primary,
+            indicatorColor = MaterialTheme.colorScheme.primaryContainer
+        )
     )
 }
 
@@ -307,7 +328,8 @@ private fun MainTopBar(
                     ProfileAvatar(user = currentUser, onClick = { menuExpanded = true })
                     DropdownMenu(
                         expanded = menuExpanded,
-                        onDismissRequest = { menuExpanded = false }
+                        onDismissRequest = { menuExpanded = false },
+                        Modifier.background(MaterialTheme.colorScheme.surface)
                     ) {
                         DropdownMenuItem(
                             text = { Text("Account") },

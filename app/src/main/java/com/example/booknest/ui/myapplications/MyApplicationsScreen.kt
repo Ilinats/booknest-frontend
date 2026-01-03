@@ -56,8 +56,6 @@ fun MyApplicationsScreen(
     val myApplications by applicationViewModel.myApplications.collectAsState()
     val isLoading by applicationViewModel.isLoading.collectAsState()
     val fileUiState by fileViewModel.uiState.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-
     var selectedTab by remember { mutableStateOf(0) }
     var sortOption by remember { mutableStateOf(SortOption.APPLICATION_DATE) }
     var showSortMenu by remember { mutableStateOf(false) }
@@ -66,33 +64,24 @@ fun MyApplicationsScreen(
 
     LaunchedEffect(Unit) {
         applicationViewModel.loadMyApplications()
-        applicationViewModel.snackbarEvent.collectLatest { message ->
-            snackbarHostState.showSnackbar(message)
-        }
     }
 
     LaunchedEffect(fileUiState.error) {
         fileUiState.error?.let { error ->
-            snackbarHostState.showSnackbar(error)
+            com.example.booknest.ui.toast.GlobalToastHandler.showError(error)
             fileViewModel.clearError()
         }
     }
 
     LaunchedEffect(fileUiState.downloadingMessage) {
         fileUiState.downloadingMessage?.let { message ->
-            snackbarHostState.showSnackbar(
-                message = message,
-                duration = SnackbarDuration.Long
-            )
+            com.example.booknest.ui.toast.GlobalToastHandler.showInfo(message)
         }
     }
 
     LaunchedEffect(fileUiState.successMessage) {
         fileUiState.successMessage?.let { message ->
-            snackbarHostState.showSnackbar(
-                message = message,
-                duration = SnackbarDuration.Short
-            )
+            com.example.booknest.ui.toast.GlobalToastHandler.showSuccess(message)
             fileViewModel.clearSuccessMessage()
             fileViewModel.clearDownloadingMessage()
         }
@@ -224,7 +213,6 @@ fun MyApplicationsScreen(
         )
 
         Scaffold(
-            snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 TopAppBar(
                     title = {
@@ -289,9 +277,10 @@ fun MyApplicationsScreen(
             }
 
             item {
-                TabRow(
+                ScrollableTabRow(
                     selectedTabIndex = selectedTab,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    edgePadding = 0.dp
                 ) {
                     tabs.forEachIndexed { index, title ->
                         val count = when (index) {
@@ -317,10 +306,46 @@ fun MyApplicationsScreen(
                             onClick = { selectedTab = index },
                             text = {
                                 Text(
-                                    if (count > 0) "$title ($count)" else title
+                                    if (count > 0) "$title ($count)" else title,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         )
+                    }
+                }
+            }
+
+            if (selectedTab == 0 && filteredAndSortedApplications.isNotEmpty()) {
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = "For detailed information and actions, check the Pending, Approved, Completed, and Rejected tabs.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }

@@ -95,7 +95,7 @@ class SignupViewModel(
 
     fun updatePersonalInfo(first: String, last: String, email: String, password: String) {
         signupData =
-            signupData.copy(firstName = first, lastName = last, email = email, password = password)
+            signupData.copy(firstName = first, lastName = last, email = email.trim(), password = password)
     }
 
     fun updateUsername(username: String) {
@@ -142,9 +142,12 @@ class SignupViewModel(
         viewModelScope.launch {
             _signupState.value = SignupUiState.Loading
             try {
+                val email = signupData.email?.trim()?.takeIf { it.isNotBlank() }
+                    ?: throw IllegalArgumentException("Email is required")
+                
                 val result = registerUseCase(
                     username = signupData.username ?: "",
-                    email = signupData.email ?: "",
+                    email = email,
                     password = signupData.password ?: "",
                     userType = signupData.userType ?: "reader",
                     firstName = signupData.firstName ?: "",

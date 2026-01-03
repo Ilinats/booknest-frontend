@@ -13,11 +13,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.model.response.ReviewResponse
+import com.example.booknest.domain.model.response.UserResponse
 import com.example.booknest.navigation.Screen
 import com.example.booknest.ui.components.BackButton
 import com.example.booknest.viewmodel.ReviewViewModel
 import org.koin.androidx.compose.getViewModel
+import org.koin.compose.koinInject
+import androidx.compose.runtime.collectAsState
 import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -26,21 +30,17 @@ fun UserReviewsScreen(
     navController: NavController,
     userId: String,
     userName: String? = null,
+    sessionManager: SessionManager = koinInject(),
     reviewViewModel: ReviewViewModel = getViewModel()
 ) {
+    val currentUser by sessionManager.currentUser.collectAsState()
     val userReviews by reviewViewModel.userReviews.collectAsState()
     val isLoading by reviewViewModel.isLoading.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-
     LaunchedEffect(userId) {
         reviewViewModel.loadUserReviews(userId)
-        reviewViewModel.snackbarEvent.collectLatest { message ->
-            snackbarHostState.showSnackbar(message)
-        }
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -100,8 +100,15 @@ fun UserReviewsScreen(
                                 ReviewCard(
                                     review = review,
                                     isFeatured = true,
+                                    currentUser = currentUser,
                                     onBookClick = { bookId ->
-                                        navController.navigate(Screen.BookDetails.createRoute(bookId))
+                                        val isAuthor = currentUser?.userType == "author"
+                                        val isMyBook = isAuthor && review.application?.book?.authorId == currentUser?.id
+                                        if (isMyBook) {
+                                            navController.navigate(Screen.BookApplicationDetail.createRoute(bookId))
+                                        } else {
+                                            navController.navigate(Screen.BookDetails.createRoute(bookId))
+                                        }
                                     }
                                 )
                             }
@@ -120,8 +127,15 @@ fun UserReviewsScreen(
                             ReviewCard(
                                 review = review,
                                 isFeatured = false,
+                                currentUser = currentUser,
                                 onBookClick = { bookId ->
-                                    navController.navigate(Screen.BookDetails.createRoute(bookId))
+                                    val isAuthor = currentUser?.userType == "author"
+                                    val isMyBook = isAuthor && review.application?.book?.authorId == currentUser?.id
+                                    if (isMyBook) {
+                                        navController.navigate(Screen.BookApplicationDetail.createRoute(bookId))
+                                    } else {
+                                        navController.navigate(Screen.BookDetails.createRoute(bookId))
+                                    }
                                 }
                             )
                         }
@@ -136,8 +150,15 @@ fun UserReviewsScreen(
 fun ReviewCard(
     review: ReviewResponse,
     isFeatured: Boolean,
+    currentUser: UserResponse? = null,
     onBookClick: (String) -> Unit
 ) {
+    val bookTitle = review.application?.book?.title 
+        ?: review.application?.bookTitle 
+        ?: "Unknown Book"
+    val isAuthor = currentUser?.userType == "author"
+    val isMyBook = isAuthor && review.application?.book?.authorId == currentUser?.id
+    val isClickable = !isMyBook && review.application?.bookId != null
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(
@@ -159,21 +180,22 @@ fun ReviewCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                review.application?.bookId?.let { bookId ->
-                    Text(
-                        text = review.application?.bookTitle ?: "Unknown Book",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable { onBookClick(bookId) },
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                } ?: Text(
-                    text = review.application?.bookTitle ?: "Unknown Book",
+                Text(
+                    text = bookTitle,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Medium,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .weight(1f)
+                        .then(
+                            if (isClickable) {
+                                Modifier.clickable { 
+                                    review.application?.bookId?.let { onBookClick(it) }
+                                }
+                            } else {
+                                Modifier
+                            }
+                        ),
+                    color = if (isClickable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                 )
 
                 Row(verticalAlignment = Alignment.CenterVertically) {

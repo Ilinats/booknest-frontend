@@ -84,8 +84,6 @@ import com.example.booknest.data.session.SearchHistoryManager
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.model.response.GenreResponse
 import com.example.booknest.domain.usecase.genres.GetGenresUseCase
-import com.example.booknest.ui.theme.DarkNavyBlue
-import com.example.booknest.ui.theme.SkyBluePeriwinkle
 import com.example.booknest.viewmodel.BookViewModel
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.getViewModel
@@ -368,7 +366,7 @@ fun BookListScreen(
                         screenTitle,
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp,
-                        color = DarkNavyBlue
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                 },
                 actions = {
@@ -388,7 +386,7 @@ fun BookListScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF1E9EE))
+                .background(MaterialTheme.colorScheme.background)
         ) {
             Box(
                 modifier = Modifier
@@ -396,7 +394,7 @@ fun BookListScreen(
                     .offset(x = (-175).dp, y = (-175).dp)
                     .size(350.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
             )
             Box(
                 modifier = Modifier
@@ -404,7 +402,7 @@ fun BookListScreen(
                     .offset(x = (-135).dp, y = (-135).dp)
                     .size(270.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle)
+                    .background(MaterialTheme.colorScheme.secondary)
             )
             Box(
                 modifier = Modifier
@@ -412,7 +410,7 @@ fun BookListScreen(
                     .offset(x = 175.dp, y = 175.dp)
                     .size(350.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
             )
             Box(
                 modifier = Modifier
@@ -420,7 +418,7 @@ fun BookListScreen(
                     .offset(x = 135.dp, y = 135.dp)
                     .size(270.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle)
+                    .background(MaterialTheme.colorScheme.secondary)
             )
 
             LazyColumn(
@@ -457,7 +455,7 @@ fun BookListScreen(
                                 placeholder = {
                                     Text(
                                         "Search by title, author, or series",
-                                        color = Color(0xFF757575)
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 },
                                 modifier = Modifier
@@ -470,10 +468,10 @@ fun BookListScreen(
                                 singleLine = true,
                                 shape = RoundedCornerShape(28.dp),
                                 colors = TextFieldDefaults.colors(
-                                    focusedTextColor = Color.Black,
-                                    unfocusedTextColor = Color.Black,
-                                    focusedContainerColor = Color(0xFFE8DFE4),
-                                    unfocusedContainerColor = Color(0xFFE8DFE4),
+                                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                                     focusedIndicatorColor = Color.Transparent,
                                     unfocusedIndicatorColor = Color.Transparent,
                                     disabledIndicatorColor = Color.Transparent
@@ -511,7 +509,7 @@ fun BookListScreen(
                                     Icon(
                                         Icons.Filled.FilterList,
                                         contentDescription = "Filters",
-                                        tint = if (showFilters) MaterialTheme.colorScheme.primary else DarkNavyBlue
+                                        tint = MaterialTheme.colorScheme.primary
                                     )
                                 }
                             }
@@ -530,7 +528,7 @@ fun BookListScreen(
                                     ),
                                 shape = RoundedCornerShape(16.dp),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = Color(0xFFE8DFE4)
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
                                 ),
                                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                             ) {
@@ -599,7 +597,7 @@ fun BookListScreen(
                                 ),
                             shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = Color(0xFFE8DFE4)
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
                             ),
                             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                         ) {
@@ -809,7 +807,7 @@ fun BookListScreen(
                                     ),
                                 shape = RoundedCornerShape(16.dp),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = Color(0xFFE8DFE4)
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
                                 ),
                                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                             ) {
@@ -908,148 +906,207 @@ fun BookListScreen(
                                 }
                             }
                         }
+                    }
 
-                        if (currentIsLoading && currentBooks.isEmpty()) {
-                            item {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 32.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    CircularProgressIndicator()
+                    if (currentIsLoading && currentBooks.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        }
+                    }
+
+                    if (currentBooks.isEmpty() && !currentIsLoading) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = when {
+                                        category == "recommended" -> "No recommended books available"
+                                        category == "new_releases" -> "No new releases available"
+                                        category == "followed_authors" -> "No books from followed authors"
+                                        category == "search" -> "No books found for \"$debouncedSearchQuery\""
+                                        debouncedSearchQuery.isBlank() && selectedGenres.isEmpty() && selectedAgeRating == null && selectedDistributionType == null -> "No books available"
+                                        else -> "No books found matching your filters"
+                                    },
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    if (currentBooks.isNotEmpty() && showFiltersForBrowse) {
+                        item {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Found ${currentBooks.size} book${if (currentBooks.size != 1) "s" else ""}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Row {
+                                    IconButton(
+                                        onClick = { isGridView = false },
+                                        modifier = Modifier.size(40.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Filled.List,
+                                            contentDescription = "List view",
+                                            tint = if (!isGridView) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = { isGridView = true },
+                                        modifier = Modifier.size(40.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Filled.ViewModule,
+                                            contentDescription = "Grid view",
+                                            tint = if (isGridView) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
                             }
                         }
+                    }
 
-                        if (currentBooks.isEmpty() && !currentIsLoading) {
-                            item {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 32.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = when {
-                                            category == "recommended" -> "No recommended books available"
-                                            category == "new_releases" -> "No new releases available"
-                                            category == "followed_authors" -> "No books from followed authors"
-                                            category == "search" -> "No books found for \"$debouncedSearchQuery\""
-                                            debouncedSearchQuery.isBlank() && selectedGenres.isEmpty() && selectedAgeRating == null && selectedDistributionType == null -> "No books available"
-                                            else -> "No books found matching your filters"
-                                        },
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-
-                        if (currentBooks.isNotEmpty() && showFiltersForBrowse) {
-                            item {
+                    if (currentBooks.isNotEmpty()) {
+                        if (isGridView && showFiltersForBrowse) {
+                            val chunkedBooks = currentBooks.chunked(2)
+                            items(chunkedBooks.size) { rowIndex ->
+                                val row = chunkedBooks[rowIndex]
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Text(
-                                        text = "Found ${currentBooks.size} book${if (currentBooks.size != 1) "s" else ""}",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Row {
-                                        IconButton(
-                                            onClick = { isGridView = false },
-                                            modifier = Modifier.size(40.dp)
-                                        ) {
-                                            Icon(
-                                                Icons.Filled.List,
-                                                contentDescription = "List view",
-                                                tint = if (!isGridView) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    row.forEach { book ->
+                                        Box(modifier = Modifier.weight(1f)) {
+                                            SimpleBookItem(
+                                                book = book,
+                                                navController = navController
                                             )
                                         }
-                                        IconButton(
-                                            onClick = { isGridView = true },
-                                            modifier = Modifier.size(40.dp)
-                                        ) {
-                                            Icon(
-                                                Icons.Filled.ViewModule,
-                                                contentDescription = "Grid view",
-                                                tint = if (isGridView) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
+                                    }
+                                    if (row.size == 1) {
+                                        Spacer(modifier = Modifier.weight(1f))
+                                    }
+                                }
+
+                                if (rowIndex == chunkedBooks.size - 1 && hasMore && !isLoadingMore && category == null) {
+                                    loadMore()
+                                }
+                            }
+
+                            if (isLoadingMore) {
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator()
+                                    }
+                                }
+                            }
+                        } else {
+                            items(currentBooks.size) { index ->
+                                val book = currentBooks[index]
+                                BookItem(
+                                    book = book,
+                                    navController = navController,
+                                    isFullWidth = true
+                                )
+
+                                if (index == currentBooks.size - 1 && hasMore && !isLoadingMore && category == null) {
+                                    loadMore()
+                                }
+                            }
+
+                            if (isLoadingMore) {
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator()
                                     }
                                 }
                             }
                         }
+                    }
+                }
 
-                        if (currentBooks.isNotEmpty()) {
-                            if (isGridView && showFiltersForBrowse) {
-                                val chunkedBooks = currentBooks.chunked(2)
-                                items(chunkedBooks.size) { rowIndex ->
-                                    val row = chunkedBooks[rowIndex]
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        row.forEach { book ->
-                                            Box(modifier = Modifier.weight(1f)) {
-                                                SimpleBookItem(
-                                                    book = book,
-                                                    navController = navController
-                                                )
-                                            }
-                                        }
-                                        if (row.size == 1) {
-                                            Spacer(modifier = Modifier.weight(1f))
-                                        }
-                                    }
-
-                                    if (rowIndex == chunkedBooks.size - 1 && hasMore && !isLoadingMore && category == null) {
-                                        loadMore()
-                                    }
-                                }
-
-                                if (isLoadingMore) {
-                                    item {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(16.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            CircularProgressIndicator()
-                                        }
-                                    }
-                                }
-                            } else {
-                                items(currentBooks.size) { index ->
-                                    val book = currentBooks[index]
-                                    BookItem(
-                                        book = book,
-                                        navController = navController,
-                                        isFullWidth = true
-                                    )
-
-                                    if (index == currentBooks.size - 1 && hasMore && !isLoadingMore && category == null) {
-                                        loadMore()
-                                    }
-                                }
-
-                                if (isLoadingMore) {
-                                    item {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(16.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            CircularProgressIndicator()
-                                        }
-                                    }
-                                }
+                if (category == "search") {
+                    if (currentIsLoading && currentBooks.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
                             }
+                        }
+                    }
+
+                    if (currentBooks.isEmpty() && !currentIsLoading) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "No books found for \"$debouncedSearchQuery\"",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    if (currentBooks.isNotEmpty()) {
+                        item {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Found ${currentBooks.size} book${if (currentBooks.size != 1) "s" else ""}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    if (currentBooks.isNotEmpty()) {
+                        items(currentBooks.size) { index ->
+                            val book = currentBooks[index]
+                            BookItem(
+                                book = book,
+                                navController = navController,
+                                isFullWidth = true
+                            )
                         }
                     }
                 }

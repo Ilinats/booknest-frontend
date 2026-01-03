@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import com.example.booknest.ui.toast.GlobalToastHandler
 
 enum class ReadingStatus(val value: String) {
     NOT_STARTED("not_started"),
@@ -52,8 +53,6 @@ class ApplicationViewModel(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    private val _snackbarEvent = MutableSharedFlow<String>()
-    val snackbarEvent: SharedFlow<String> = _snackbarEvent
 
     fun loadMyApplications() {
         viewModelScope.launch {
@@ -65,10 +64,10 @@ class ApplicationViewModel(
                         _myApplications.value = applications
                     }
                     .onFailure { e ->
-                        _snackbarEvent.emit(e.message ?: "Failed to load applications")
+                        GlobalToastHandler.showError(e.message ?: "Failed to load applications")
                     }
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error loading applications: ${e.message}")
+                GlobalToastHandler.showError("Error loading applications: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -85,10 +84,10 @@ class ApplicationViewModel(
                         _applicationCheck.value = check
                     }
                     .onFailure { e ->
-                        _snackbarEvent.emit(e.message ?: "Failed to check application status")
+                        GlobalToastHandler.showError(e.message ?: "Failed to check application status")
                     }
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error checking application status: ${e.message}")
+                GlobalToastHandler.showError("Error checking application status: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -122,7 +121,7 @@ class ApplicationViewModel(
                 val result = applicationsRepository.createApplication(request)
                 result
                     .onSuccess {
-                        _snackbarEvent.emit("Application submitted successfully!")
+                        GlobalToastHandler.showSuccess("Application submitted successfully!")
                         checkApplication(bookId)
                         loadMyApplications()
                     }
@@ -169,7 +168,7 @@ class ApplicationViewModel(
                                 }
                             }
                         }
-                        _snackbarEvent.emit(errorMessage)
+                        GlobalToastHandler.showError(errorMessage)
                     }
             } catch (e: Exception) {
                 val errorMessage = when (e) {
@@ -186,7 +185,7 @@ class ApplicationViewModel(
                         }
                     }
                 }
-                _snackbarEvent.emit(errorMessage)
+                GlobalToastHandler.showError(errorMessage)
             } finally {
                 _isLoading.value = false
             }
@@ -201,14 +200,14 @@ class ApplicationViewModel(
                 val result = applicationsRepository.updateApplication(applicationId, request)
                 result
                     .onSuccess {
-                        _snackbarEvent.emit("Application updated successfully!")
+                        GlobalToastHandler.showSuccess("Application updated successfully!")
                         loadMyApplications()
                     }
                     .onFailure { e ->
-                        _snackbarEvent.emit(e.message ?: "Failed to update application")
+                        GlobalToastHandler.showError(e.message ?: "Failed to update application")
                     }
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error updating application: ${e.message}")
+                GlobalToastHandler.showError("Error updating application: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -222,14 +221,14 @@ class ApplicationViewModel(
                 val result = applicationsRepository.withdrawApplication(applicationId)
                 result
                     .onSuccess {
-                        _snackbarEvent.emit("Application withdrawn successfully!")
+                        GlobalToastHandler.showSuccess("Application withdrawn successfully!")
                         loadMyApplications()
                     }
                     .onFailure { e ->
-                        _snackbarEvent.emit(e.message ?: "Failed to withdraw application")
+                        GlobalToastHandler.showError(e.message ?: "Failed to withdraw application")
                     }
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error withdrawing application: ${e.message}")
+                GlobalToastHandler.showError("Error withdrawing application: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -243,14 +242,14 @@ class ApplicationViewModel(
                 val result = applicationsRepository.markCopyReceived(applicationId)
                 result
                     .onSuccess {
-                        _snackbarEvent.emit("Copy marked as received!")
+                        GlobalToastHandler.showSuccess("Copy marked as received!")
                         loadMyApplications()
                     }
                     .onFailure { e ->
-                        _snackbarEvent.emit(e.message ?: "Failed to mark copy as received")
+                        GlobalToastHandler.showError(e.message ?: "Failed to mark copy as received")
                     }
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error marking copy as received: ${e.message}")
+                GlobalToastHandler.showError("Error marking copy as received: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -265,15 +264,15 @@ class ApplicationViewModel(
                 val result = applicationsRepository.updateReadingStatus(applicationId, request)
                 result
                     .onSuccess {
-                        _snackbarEvent.emit("Reading status updated!")
+                        GlobalToastHandler.showSuccess("Reading status updated!")
                         loadMyApplications()
                         loadReadingProgress()
                     }
                     .onFailure { e ->
-                        _snackbarEvent.emit(e.message ?: "Failed to update reading status")
+                        GlobalToastHandler.showError(e.message ?: "Failed to update reading status")
                     }
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error updating reading status: ${e.message}")
+                GlobalToastHandler.showError("Error updating reading status: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -290,10 +289,10 @@ class ApplicationViewModel(
                         _bookApplications.value = apps
                     }
                     .onFailure { e ->
-                        _snackbarEvent.emit(e.message ?: "Failed to load book applications")
+                        GlobalToastHandler.showError(e.message ?: "Failed to load book applications")
                     }
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error loading book applications: ${e.message}")
+                GlobalToastHandler.showError("Error loading book applications: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -312,17 +311,17 @@ class ApplicationViewModel(
                     applicationsRepository.updateApplicationComplete(applicationId, request)
                 result
                     .onSuccess {
-                        _snackbarEvent.emit("Application approved!")
+                        GlobalToastHandler.showSuccess("Application approved!")
                         val currentBookId = _bookApplications.value.firstOrNull()?.bookId
                         if (currentBookId != null) {
                             loadBookApplications(currentBookId)
                         }
                     }
                     .onFailure { e ->
-                        _snackbarEvent.emit(e.message ?: "Failed to approve application")
+                        GlobalToastHandler.showError(e.message ?: "Failed to approve application")
                     }
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error approving application: ${e.message}")
+                GlobalToastHandler.showError("Error approving application: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -341,17 +340,17 @@ class ApplicationViewModel(
                     applicationsRepository.updateApplicationComplete(applicationId, request)
                 result
                     .onSuccess {
-                        _snackbarEvent.emit("Application rejected!")
+                        GlobalToastHandler.showSuccess("Application rejected!")
                         val currentBookId = _bookApplications.value.firstOrNull()?.bookId
                         if (currentBookId != null) {
                             loadBookApplications(currentBookId)
                         }
                     }
                     .onFailure { e ->
-                        _snackbarEvent.emit(e.message ?: "Failed to reject application")
+                        GlobalToastHandler.showError(e.message ?: "Failed to reject application")
                     }
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error rejecting application: ${e.message}")
+                GlobalToastHandler.showError("Error rejecting application: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -368,7 +367,7 @@ class ApplicationViewModel(
             try {
                 val currentBookId = _bookApplications.value.firstOrNull()?.bookId
                 if (currentBookId == null) {
-                    _snackbarEvent.emit("Error: Book ID not found")
+                    GlobalToastHandler.showError("Error: Book ID not found")
                     _isLoading.value = false
                     return@launch
                 }
@@ -381,14 +380,14 @@ class ApplicationViewModel(
                 val result = applicationsRepository.bulkActionApplications(currentBookId, request)
                 result
                     .onSuccess {
-                        _snackbarEvent.emit("Bulk action completed!")
+                        GlobalToastHandler.showSuccess("Bulk action completed!")
                         loadBookApplications(currentBookId)
                     }
                     .onFailure { e ->
-                        _snackbarEvent.emit(e.message ?: "Failed to perform bulk action")
+                        GlobalToastHandler.showError(e.message ?: "Failed to perform bulk action")
                     }
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error performing bulk action: ${e.message}")
+                GlobalToastHandler.showError("Error performing bulk action: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -402,17 +401,17 @@ class ApplicationViewModel(
                 val result = applicationsRepository.markCopySent(applicationId)
                 result
                     .onSuccess {
-                        _snackbarEvent.emit("Copy marked as sent!")
+                        GlobalToastHandler.showSuccess("Copy marked as sent!")
                         val currentBookId = _bookApplications.value.firstOrNull()?.bookId
                         if (currentBookId != null) {
                             loadBookApplications(currentBookId)
                         }
                     }
                     .onFailure { e ->
-                        _snackbarEvent.emit(e.message ?: "Failed to mark copy as sent")
+                        GlobalToastHandler.showError(e.message ?: "Failed to mark copy as sent")
                     }
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error marking copy as sent: ${e.message}")
+                GlobalToastHandler.showError("Error marking copy as sent: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -427,7 +426,7 @@ class ApplicationViewModel(
                 result
                     .onSuccess { lotteryResult ->
                         val message = "Lottery completed: ${lotteryResult.approved} approved, ${lotteryResult.rejected} rejected"
-                        _snackbarEvent.emit(message)
+                        GlobalToastHandler.showSuccess(message)
                         loadBookApplications(bookId)
                     }
                     .onFailure { e ->
@@ -443,10 +442,10 @@ class ApplicationViewModel(
                             }
                             else -> e.message ?: "Failed to run lottery"
                         }
-                        _snackbarEvent.emit(errorMessage)
+                        GlobalToastHandler.showError(errorMessage)
                     }
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error running lottery: ${e.message}")
+                GlobalToastHandler.showError("Error running lottery: ${e.message}")
             } finally {
                 _isLoading.value = false
             }

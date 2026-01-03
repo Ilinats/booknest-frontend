@@ -35,8 +35,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
@@ -61,6 +59,10 @@ import com.example.booknest.viewmodel.ProfileViewModel
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
 
+fun isValidUrl(url: String): Boolean {
+    return url.isNotBlank() && (url.startsWith("http://") || url.startsWith("https://"))
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SocialMediaManagementScreen(
@@ -71,8 +73,6 @@ fun SocialMediaManagementScreen(
     val myProfile by profileViewModel.myProfile.collectAsState()
     val isLoading by profileViewModel.isLoading.collectAsState()
     val error by profileViewModel.error.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-
     var instagram by remember { mutableStateOf("") }
     var tiktok by remember { mutableStateOf("") }
     var youtube by remember { mutableStateOf("") }
@@ -89,6 +89,14 @@ fun SocialMediaManagementScreen(
     var newCustomPlatform by remember { mutableStateOf("") }
     var newCustomUrl by remember { mutableStateOf("") }
     var editingCustomIndex by remember { mutableStateOf<Int?>(null) }
+    var hasJustSaved by remember { mutableStateOf(false) }
+
+    val isCustomUrlValid = remember(newCustomUrl) {
+        newCustomUrl.isBlank() || isValidUrl(newCustomUrl)
+    }
+    val isCustomFormValid = remember(newCustomPlatform, newCustomUrl) {
+        newCustomPlatform.isNotBlank() && newCustomUrl.isNotBlank() && isValidUrl(newCustomUrl)
+    }
 
     LaunchedEffect(Unit) {
         profileViewModel.loadMyProfile()
@@ -104,18 +112,12 @@ fun SocialMediaManagementScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        profileViewModel.snackbarEvent.collectLatest { message ->
-            snackbarHostState.showSnackbar(message)
-            if (message.contains("updated successfully", ignoreCase = true)) {
-                initialInstagram = instagram
-                initialTiktok = tiktok
-                initialYoutube = youtube
-                initialGoodreads = goodreads
-                initialCustomLinks = customLinks
-                profileViewModel.loadMyProfile()
-                navController.popBackStack()
-            }
+    LaunchedEffect(isLoading, error) {
+        if (hasJustSaved && !isLoading && error == null) {
+            hasJustSaved = false
+            navController.popBackStack()
+        } else if (hasJustSaved && !isLoading && error != null) {
+            hasJustSaved = false
         }
     }
 
@@ -157,7 +159,6 @@ fun SocialMediaManagementScreen(
                 }
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
@@ -302,7 +303,12 @@ fun SocialMediaManagementScreen(
                                 onValueChange = { newCustomUrl = it },
                                 label = { Text("URL") },
                                 placeholder = { Text("https://example.com") },
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
+                                isError = !isCustomUrlValid,
+                                supportingText = if (!isCustomUrlValid && newCustomUrl.isNotBlank()) {
+                                    { Text("Please enter a valid URL starting with http:// or https://") }
+                                } else null,
+                                singleLine = true
                             )
 
                             Spacer(modifier = Modifier.height(12.dp))
@@ -323,7 +329,7 @@ fun SocialMediaManagementScreen(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Button(
                                     onClick = {
-                                        if (newCustomPlatform.isNotBlank() && newCustomUrl.isNotBlank()) {
+                                        if (isCustomFormValid) {
                                             customLinks = customLinks + CustomSocialLinkResponse(
                                                 platform = newCustomPlatform,
                                                 url = newCustomUrl
@@ -332,7 +338,8 @@ fun SocialMediaManagementScreen(
                                             newCustomUrl = ""
                                             showAddCustom = false
                                         }
-                                    }
+                                    },
+                                    enabled = isCustomFormValid
                                 ) {
                                     Text("Add")
                                 }
@@ -345,6 +352,7 @@ fun SocialMediaManagementScreen(
             item {
                 Button(
                     onClick = {
+                        hasJustSaved = true
                         profileViewModel.updateSocialMedia(
                             SocialMediaResponse(
                                 instagram = instagram.takeIf { it.isNotBlank() },

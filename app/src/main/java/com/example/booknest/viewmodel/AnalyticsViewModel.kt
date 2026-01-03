@@ -9,12 +9,11 @@ import com.example.booknest.domain.model.response.RatingDistributionResponse
 import com.example.booknest.domain.repository.BooksRepository
 import com.example.booknest.domain.usecase.analytics.GetAuthorAnalyticsUseCase
 import com.example.booknest.domain.usecase.analytics.GetDetailedBookAnalyticsUseCase
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.example.booknest.ui.toast.GlobalToastHandler
 
 sealed class BookAnalyticsUiState {
     object Idle : BookAnalyticsUiState()
@@ -58,8 +57,6 @@ class AnalyticsViewModel(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    private val _snackbarEvent = MutableSharedFlow<String>()
-    val snackbarEvent: SharedFlow<String> = _snackbarEvent
 
     fun loadDetailedBookAnalytics(bookId: String) {
         viewModelScope.launch {
@@ -74,12 +71,12 @@ class AnalyticsViewModel(
                     .onFailure { e ->
                         val errorMessage = e.message ?: "Failed to load book analytics"
                         _bookAnalyticsState.value = BookAnalyticsUiState.Error(errorMessage)
-                        _snackbarEvent.emit("Error: $errorMessage")
+                        GlobalToastHandler.showError("Error: $errorMessage")
                     }
             } catch (e: Exception) {
                 val errorMessage = "Network error: ${e.message}"
                 _bookAnalyticsState.value = BookAnalyticsUiState.Error(errorMessage)
-                _snackbarEvent.emit(errorMessage)
+                GlobalToastHandler.showError(errorMessage)
             }
         }
     }
@@ -97,12 +94,12 @@ class AnalyticsViewModel(
                     .onFailure { e ->
                         val errorMessage = e.message ?: "Failed to load author analytics"
                         _authorAnalyticsState.value = AuthorAnalyticsUiState.Error(errorMessage)
-                        _snackbarEvent.emit("Error: $errorMessage")
+                        GlobalToastHandler.showError("Error: $errorMessage")
                     }
             } catch (e: Exception) {
                 val errorMessage = "Network error: ${e.message}"
                 _authorAnalyticsState.value = AuthorAnalyticsUiState.Error(errorMessage)
-                _snackbarEvent.emit(errorMessage)
+                GlobalToastHandler.showError(errorMessage)
             }
         }
     }
@@ -126,12 +123,12 @@ class AnalyticsViewModel(
                         _bookPerformanceComparison.value = comparison
                     }
                     .onFailure { e ->
-                        _snackbarEvent.emit(
+                        GlobalToastHandler.showError(
                             e.message ?: "Failed to load book performance comparison"
                         )
                     }
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error loading book performance comparison: ${e.message}")
+                GlobalToastHandler.showError("Error loading book performance comparison: ${e.message}")
             }
         }
     }

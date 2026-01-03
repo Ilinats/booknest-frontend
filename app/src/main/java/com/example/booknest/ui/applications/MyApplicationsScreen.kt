@@ -48,44 +48,11 @@ fun MyApplicationsScreen(
     val myApplications by applicationViewModel.myApplications.collectAsState()
     val isLoading by applicationViewModel.isLoading.collectAsState()
     val fileUiState by fileViewModel.uiState.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("Pending", "Approved", "Completed", "Rejected")
 
     LaunchedEffect(Unit) {
         applicationViewModel.loadMyApplications()
-        applicationViewModel.snackbarEvent.collectLatest { message ->
-            snackbarHostState.showSnackbar(message)
-        }
-    }
-
-    LaunchedEffect(fileUiState.downloadingMessage) {
-        fileUiState.downloadingMessage?.let { message ->
-            snackbarHostState.showSnackbar(
-                message = message,
-                duration = SnackbarDuration.Long
-            )
-        }
-    }
-
-    LaunchedEffect(fileUiState.successMessage) {
-        fileUiState.successMessage?.let {
-            snackbarHostState.showSnackbar(
-                message = it,
-                duration = SnackbarDuration.Short
-            )
-            fileViewModel.clearSuccessMessage()
-            fileViewModel.clearDownloadingMessage()
-        }
-    }
-
-    LaunchedEffect(fileUiState.error) {
-        fileUiState.error?.let {
-            snackbarHostState.showSnackbar(it)
-            fileViewModel.clearError()
-            fileViewModel.clearDownloadingMessage()
-        }
     }
 
     val filteredApplications = remember(selectedTab, myApplications) {
@@ -102,7 +69,6 @@ fun MyApplicationsScreen(
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {

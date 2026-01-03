@@ -8,12 +8,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.example.booknest.ui.toast.GlobalToastHandler
 
 data class PasswordResetUiState(
     val isLoading: Boolean = false,
     val isPasswordResetSuccessful: Boolean = false,
-    val error: String? = null,
-    val snackbarMessage: String? = null
+    val isCodeSent: Boolean = false,
+    val error: String? = null
 )
 
 class PasswordResetViewModel(
@@ -38,9 +39,7 @@ class PasswordResetViewModel(
                     isLoading = false,
                     error = e.message ?: "Code verification failed"
                 )
-                _uiState.value = _uiState.value.copy(
-                    snackbarMessage = getErrorMessage(e.message)
-                )
+                GlobalToastHandler.showError(getErrorMessage(e.message))
             }
         }
     }
@@ -56,23 +55,20 @@ class PasswordResetViewModel(
                         isLoading = false,
                         isPasswordResetSuccessful = true
                     )
+                    GlobalToastHandler.showSuccess("Password reset successfully!")
                 }.onFailure { exception ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         error = exception.message ?: "Password reset failed"
                     )
-                    _uiState.value = _uiState.value.copy(
-                        snackbarMessage = getErrorMessage(exception.message)
-                    )
+                    GlobalToastHandler.showError(getErrorMessage(exception.message))
                 }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = e.message ?: "Password reset failed"
                 )
-                _uiState.value = _uiState.value.copy(
-                    snackbarMessage = getErrorMessage(e.message)
-                )
+                GlobalToastHandler.showError(getErrorMessage(e.message))
             }
         }
     }
@@ -84,39 +80,34 @@ class PasswordResetViewModel(
             try {
                 val result = requestPasswordResetUseCase(email)
                 result.onSuccess {
-                    _uiState.value = _uiState.value.copy(isLoading = false)
                     _uiState.value = _uiState.value.copy(
-                        snackbarMessage = "Reset code sent to your email"
+                        isLoading = false,
+                        isCodeSent = true
                     )
+                    GlobalToastHandler.showSuccess("Reset code sent to your email")
                 }.onFailure { exception ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         error = exception.message ?: "Failed to resend code"
                     )
-                    _uiState.value = _uiState.value.copy(
-                        snackbarMessage = getErrorMessage(exception.message)
-                    )
+                    GlobalToastHandler.showError(getErrorMessage(exception.message))
                 }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = e.message ?: "Failed to resend code"
                 )
-                _uiState.value = _uiState.value.copy(
-                    snackbarMessage = getErrorMessage(e.message)
-                )
+                GlobalToastHandler.showError(getErrorMessage(e.message))
             }
         }
     }
 
     fun showError(message: String) {
-        _uiState.value = _uiState.value.copy(
-            snackbarMessage = message
-        )
+        GlobalToastHandler.showError(message)
     }
-
-    fun clearSnackbarMessage() {
-        _uiState.value = _uiState.value.copy(snackbarMessage = null)
+    
+    fun clearCodeSentState() {
+        _uiState.value = _uiState.value.copy(isCodeSent = false)
     }
 
     private fun getErrorMessage(error: String?): String {

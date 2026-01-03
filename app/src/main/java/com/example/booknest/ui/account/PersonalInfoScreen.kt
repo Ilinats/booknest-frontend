@@ -34,9 +34,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.booknest.navigation.Screen
-import com.example.booknest.ui.theme.BackgroundWhite
-import com.example.booknest.ui.theme.DarkNavyBlue
-import com.example.booknest.ui.theme.SkyBluePeriwinkle
 import com.example.booknest.viewmodel.SignupViewModel
 import com.example.booknest.data.service.AuthService
 import org.koin.compose.koinInject
@@ -225,7 +222,32 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
     val isBirthDateValid = remember(birthDate) {
         birthDate?.let {
             val datePattern = Regex("^\\d{4}-\\d{2}-\\d{2}$")
-            datePattern.matches(it)
+            if (!datePattern.matches(it)) {
+                return@remember false
+            }
+            try {
+                val dateFormat =
+                    java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                val birthDateObj = dateFormat.parse(it)
+                val today = java.util.Calendar.getInstance()
+                val birthCalendar = java.util.Calendar.getInstance()
+                birthDateObj?.let { birthCalendar.time = it }
+
+                var age =
+                    today.get(java.util.Calendar.YEAR) - birthCalendar.get(java.util.Calendar.YEAR)
+                val monthDiff =
+                    today.get(java.util.Calendar.MONTH) - birthCalendar.get(java.util.Calendar.MONTH)
+                if (monthDiff < 0 || (monthDiff == 0 && today.get(java.util.Calendar.DAY_OF_MONTH) < birthCalendar.get(
+                        java.util.Calendar.DAY_OF_MONTH
+                    ))
+                ) {
+                    age--
+                }
+
+                age >= 10
+            } catch (e: Exception) {
+                false
+            }
         } ?: false
     }
 
@@ -242,7 +264,7 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF1E9EE))
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Box(
             modifier = Modifier
@@ -250,7 +272,7 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
                 .offset(x = (-175).dp, y = (-175).dp)
                 .size(350.dp)
                 .clip(CircleShape)
-                .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
         )
         Box(
             modifier = Modifier
@@ -258,7 +280,7 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
                 .offset(x = (-135).dp, y = (-135).dp)
                 .size(270.dp)
                 .clip(CircleShape)
-                .background(SkyBluePeriwinkle)
+                .background(MaterialTheme.colorScheme.secondary)
         )
         Box(
             modifier = Modifier
@@ -266,7 +288,7 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
                 .offset(x = 175.dp, y = 175.dp)
                 .size(350.dp)
                 .clip(CircleShape)
-                .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
         )
         Box(
             modifier = Modifier
@@ -274,7 +296,7 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
                 .offset(x = 135.dp, y = 135.dp)
                 .size(270.dp)
                 .clip(CircleShape)
-                .background(SkyBluePeriwinkle)
+                .background(MaterialTheme.colorScheme.secondary)
         )
 
         Column(
@@ -291,19 +313,22 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
                     modifier = Modifier
                         .weight(1f)
                         .height(4.dp)
-                        .background(DarkNavyBlue, RoundedCornerShape(2.dp))
+                        .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp))
                 )
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .height(4.dp)
-                        .background(DarkNavyBlue, RoundedCornerShape(2.dp))
+                        .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp))
                 )
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .height(4.dp)
-                        .background(Color(0xFFE0E0E0), RoundedCornerShape(2.dp))
+                        .background(
+                            MaterialTheme.colorScheme.surfaceVariant,
+                            RoundedCornerShape(2.dp)
+                        )
                 )
             }
 
@@ -322,7 +347,7 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
                         fontSize = 40.sp,
                         fontWeight = FontWeight.Bold
                     ),
-                    color = DarkNavyBlue,
+                    color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
@@ -338,13 +363,18 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.Medium
                         ),
-                        color = DarkNavyBlue,
+                        color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.padding(horizontal = 8.dp)
                     )
                     OutlinedTextField(
                         value = firstName,
                         onValueChange = { if (it.length <= 100) firstName = it },
-                        placeholder = { Text("First Name", color = Color(0xFF757575)) },
+                        placeholder = {
+                            Text(
+                                "First Name",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp)
@@ -355,10 +385,10 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
                         singleLine = true,
                         shape = RoundedCornerShape(28.dp),
                         colors = TextFieldDefaults.colors(
-                            focusedTextColor = Color.Black,
-                            unfocusedTextColor = Color.Black,
-                            focusedContainerColor = Color(0xFFE8DFE4),
-                            unfocusedContainerColor = Color(0xFFE8DFE4),
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             disabledIndicatorColor = Color.Transparent
@@ -368,7 +398,7 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
                         firstName.isBlank() -> Text(
                             "Required (1-100 characters)",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF757575),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 8.dp)
                         )
 
@@ -404,7 +434,7 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.Medium
                         ),
-                        color = DarkNavyBlue,
+                        color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.padding(horizontal = 8.dp)
                     )
                     OutlinedTextField(
@@ -421,10 +451,10 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
                         singleLine = true,
                         shape = RoundedCornerShape(28.dp),
                         colors = TextFieldDefaults.colors(
-                            focusedTextColor = Color.Black,
-                            unfocusedTextColor = Color.Black,
-                            focusedContainerColor = Color(0xFFE8DFE4),
-                            unfocusedContainerColor = Color(0xFFE8DFE4),
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             disabledIndicatorColor = Color.Transparent
@@ -434,7 +464,7 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
                         lastName.isBlank() -> Text(
                             "Required (1-100 characters)",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF757575),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 8.dp)
                         )
 
@@ -470,7 +500,7 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.Medium
                         ),
-                        color = DarkNavyBlue,
+                        color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.padding(horizontal = 8.dp)
                     )
                     OutlinedTextField(
@@ -523,10 +553,10 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
                             }
                         },
                         colors = TextFieldDefaults.colors(
-                            focusedTextColor = Color.Black,
-                            unfocusedTextColor = Color.Black,
-                            focusedContainerColor = Color(0xFFE8DFE4),
-                            unfocusedContainerColor = Color(0xFFE8DFE4),
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             disabledIndicatorColor = Color.Transparent
@@ -536,7 +566,7 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
                         email.isBlank() -> Text(
                             "Required (max 255 characters)",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF757575),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 8.dp)
                         )
 
@@ -557,7 +587,7 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
                         isCheckingEmail -> Text(
                             "Checking availability...",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF757575),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 8.dp)
                         )
 
@@ -595,7 +625,7 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.Medium
                         ),
-                        color = DarkNavyBlue,
+                        color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.padding(horizontal = 8.dp)
                     )
                     OutlinedTextField(
@@ -647,10 +677,10 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
                             }
                         },
                         colors = TextFieldDefaults.colors(
-                            focusedTextColor = Color.Black,
-                            unfocusedTextColor = Color.Black,
-                            focusedContainerColor = Color(0xFFE8DFE4),
-                            unfocusedContainerColor = Color(0xFFE8DFE4),
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             disabledIndicatorColor = Color.Transparent
@@ -660,7 +690,7 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
                         is UsernameStatus.Idle -> Text(
                             "3-50 characters, letters, numbers, _, ., -",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF757575),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 8.dp)
                         )
 
@@ -690,7 +720,7 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
                                 isCheckingUsername -> Text(
                                     "Checking availability...",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color(0xFF757575),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(horizontal = 8.dp)
                                 )
 
@@ -728,7 +758,7 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.Medium
                         ),
-                        color = DarkNavyBlue,
+                        color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.padding(horizontal = 8.dp)
                     )
                     OutlinedTextField(
@@ -755,10 +785,10 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
                         singleLine = true,
                         shape = RoundedCornerShape(28.dp),
                         colors = TextFieldDefaults.colors(
-                            focusedTextColor = Color.Black,
-                            unfocusedTextColor = Color.Black,
-                            focusedContainerColor = Color(0xFFE8DFE4),
-                            unfocusedContainerColor = Color(0xFFE8DFE4),
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             disabledIndicatorColor = Color.Transparent
@@ -807,7 +837,7 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
                         Text(
                             "Required (8-128 characters)",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF757575),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 8.dp)
                         )
                     }
@@ -822,7 +852,7 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.Medium
                         ),
-                        color = DarkNavyBlue,
+                        color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.padding(horizontal = 8.dp)
                     )
                     OutlinedTextField(
@@ -851,10 +881,10 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
                         singleLine = true,
                         shape = RoundedCornerShape(28.dp),
                         colors = TextFieldDefaults.colors(
-                            focusedTextColor = Color.Black,
-                            unfocusedTextColor = Color.Black,
-                            focusedContainerColor = Color(0xFFE8DFE4),
-                            unfocusedContainerColor = Color(0xFFE8DFE4),
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             disabledIndicatorColor = Color.Transparent
@@ -887,7 +917,7 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.Medium
                         ),
-                        color = DarkNavyBlue,
+                        color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.padding(horizontal = 8.dp)
                     )
                     OutlinedTextField(
@@ -913,10 +943,10 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
                             }
                         },
                         colors = TextFieldDefaults.colors(
-                            focusedTextColor = Color.Black,
-                            unfocusedTextColor = Color.Black,
-                            focusedContainerColor = Color(0xFFE8DFE4),
-                            unfocusedContainerColor = Color(0xFFE8DFE4),
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             disabledIndicatorColor = Color.Transparent
@@ -930,24 +960,32 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
                             modifier = Modifier.padding(horizontal = 8.dp)
                         )
 
-                        birthDate != null && !isBirthDateValid -> Text(
-                            "Invalid date format",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
+                        birthDate != null && !isBirthDateValid -> {
+                            val datePattern = Regex("^\\d{4}-\\d{2}-\\d{2}$")
+                            val errorText = if (datePattern.matches(birthDate ?: "")) {
+                                "You must be at least 10 years old"
+                            } else {
+                                "Invalid date format (YYYY-MM-DD)"
+                            }
+                            Text(
+                                errorText,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            )
+                        }
 
                         isBirthDateValid -> Text(
-                            "✓ Format: YYYY-MM-DD",
+                            "✓ Valid birth date",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(horizontal = 8.dp)
                         )
 
                         else -> Text(
-                            "Select your birth date (YYYY-MM-DD)",
+                            "Select your birth date (YYYY-MM-DD, must be at least 10 years old)",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF757575),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 8.dp)
                         )
                     }
@@ -972,7 +1010,7 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
                     enabled = isFormValid,
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = DarkNavyBlue,
+                        containerColor = MaterialTheme.colorScheme.primary,
                         disabledContainerColor = Color(0xFFE0E0E0)
                     )
                 ) {

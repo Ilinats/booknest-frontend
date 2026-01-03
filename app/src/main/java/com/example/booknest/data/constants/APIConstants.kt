@@ -28,6 +28,7 @@ object Users {
     const val SEARCH = "$USERS/search"
     const val UPLOAD_AVATAR = "$USERS/me/avatar"
     const val DELETE_AVATAR = "$USERS/me/avatar"
+    const val DELETE_ACCOUNT = "$USERS/me"
 }
 
 object Profiles {
@@ -97,6 +98,7 @@ object Applications {
     const val APPROVE = "$APPLICATIONS/{applicationId}/approve"
     const val REJECT = "$APPLICATIONS/{applicationId}/reject"
     const val BULK_ACTION = "$APPLICATIONS/books/{bookId}/bulk-action"
+    const val RUN_LOTTERY = "$APPLICATIONS/books/{bookId}/run-lottery"
     const val MARK_SENT = "$APPLICATIONS/{applicationId}/mark-sent"
     const val MARK_RECEIVED = "$APPLICATIONS/{applicationId}/mark-received"
     const val READING_STATUS = "$APPLICATIONS/{applicationId}/reading-status"

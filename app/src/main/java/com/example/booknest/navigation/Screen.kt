@@ -6,7 +6,12 @@ sealed class Screen(val route: String) {
     object Login : Screen("login")
     object EmailVerification : Screen("email_verification") {
         fun createRoute(email: String? = null) =
-            if (email != null) "email_verification?email=$email" else "email_verification"
+            if (email != null) {
+                val encodedEmail = android.net.Uri.encode(email)
+                "email_verification?email=$encodedEmail"
+            } else {
+                "email_verification"
+            }
     }
 
     object PasswordReset : Screen("password_reset/{email}") {

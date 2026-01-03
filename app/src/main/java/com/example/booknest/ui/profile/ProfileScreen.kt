@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.offset
-import com.example.booknest.ui.theme.SkyBluePeriwinkle
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -72,15 +71,14 @@ fun ProfileScreen(
 
     val profileState by profileViewModel.profileState.collectAsState()
     val myProfile by profileViewModel.myProfile.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(Unit) {
-        profileViewModel.snackbarEvent.collectLatest { message ->
-            snackbarHostState.showSnackbar(message)
+    val isLoggedIn by sessionManager.isLoggedIn.collectAsState()
+
+    LaunchedEffect(userId, username, isLoggedIn) {
+        if (isLoggedIn != true) {
+            return@LaunchedEffect
         }
-    }
 
-    LaunchedEffect(userId, username) {
         when {
             username != null -> {
                 if (username == currentUser?.username) {
@@ -114,9 +112,7 @@ fun ProfileScreen(
                 TopAppBar(
                     title = { Text("Profile") },
                     navigationIcon = {
-                        if (!isFromBottomNav) {
-                            @Composable { BackButton(onClick = { navController.popBackStack() }) }
-                        } else null
+                        BackButton(onClick = { navController.popBackStack() })
                     },
                     actions = {
                         if (isOwnProfile) {
@@ -129,8 +125,7 @@ fun ProfileScreen(
                     }
                 )
             }
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        }
     ) { paddingValues ->
         val currentState = profileState
         LaunchedEffect(currentState) {
@@ -270,7 +265,6 @@ fun ProfileContent(
     val authorFollowLoading by authorFollowViewModel.isLoading.collectAsState()
     val loadingAuthors by authorFollowViewModel.loadingAuthors.collectAsState()
     val scope = rememberCoroutineScope()
-    val profileSnackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(profile.id, profile.userId, profile.userType, isOwnProfile) {
         if (profile.userType == "author") {
@@ -354,7 +348,7 @@ fun ProfileContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF1E9EE))
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Box(
             modifier = Modifier
@@ -362,7 +356,7 @@ fun ProfileContent(
                 .offset(x = (-175).dp, y = (-175).dp)
                 .size(350.dp)
                 .clip(CircleShape)
-                .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
         )
         Box(
             modifier = Modifier
@@ -370,7 +364,7 @@ fun ProfileContent(
                 .offset(x = (-135).dp, y = (-135).dp)
                 .size(270.dp)
                 .clip(CircleShape)
-                .background(SkyBluePeriwinkle)
+                .background(MaterialTheme.colorScheme.secondary)
         )
         Box(
             modifier = Modifier
@@ -378,7 +372,7 @@ fun ProfileContent(
                 .offset(x = 175.dp, y = 175.dp)
                 .size(350.dp)
                 .clip(CircleShape)
-                .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
         )
         Box(
             modifier = Modifier
@@ -386,7 +380,7 @@ fun ProfileContent(
                 .offset(x = 135.dp, y = 135.dp)
                 .size(270.dp)
                 .clip(CircleShape)
-                .background(SkyBluePeriwinkle)
+                .background(MaterialTheme.colorScheme.secondary)
         )
 
         Column(
@@ -422,7 +416,7 @@ fun ProfileContent(
                                 friendViewModel.getFriendshipStatus(targetUserId) { status ->
                                     friendshipStatus = status
                                 }
-                                profileSnackbarHostState.showSnackbar("User unfriended successfully")
+                                com.example.booknest.ui.toast.GlobalToastHandler.showSuccess("User unfriended successfully")
                             }
                         }
                     }
@@ -502,10 +496,6 @@ fun ProfileContent(
             }
         }
 
-        SnackbarHost(
-            hostState = profileSnackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter)
-        )
     }
 }
 
@@ -545,7 +535,7 @@ fun EnhancedProfileHeader(
                         modifier = Modifier
                             .size(120.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFFF5EDE8)),
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentAlignment = Alignment.Center
                     ) {
                         val initial =
@@ -1236,8 +1226,8 @@ fun StatCard(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        tonalElevation = 1.dp
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp
     ) {
         Column(
             modifier = Modifier
@@ -1431,9 +1421,6 @@ fun RecentActivitySection(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                TextButton(onClick = onViewAll) {
-                    Text("View All")
-                }
             }
 
             activities.forEach { activity ->
@@ -1488,11 +1475,13 @@ fun ReviewsWrittenSection(
 fun ReviewItem(
     review: com.example.booknest.domain.model.response.ReviewResponse
 ) {
-    Surface(
+    Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        tonalElevation = 1.dp
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
         Column(
             modifier = Modifier.padding(12.dp),

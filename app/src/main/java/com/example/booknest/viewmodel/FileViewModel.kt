@@ -7,6 +7,7 @@ import com.example.booknest.data.datasource.extractErrorMessage
 import com.example.booknest.data.error.BNError
 import com.example.booknest.domain.usecase.files.GetBookDownloadUrlUseCase
 import com.example.booknest.domain.usecase.files.UploadBookFileUseCase
+import com.example.booknest.ui.download.GlobalDownloadHandler
 import com.example.booknest.utils.FileDownloadManager
 import com.example.booknest.utils.FileUploadManager
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -90,6 +91,8 @@ class FileViewModel(
 
                 downloadResult
                     .onSuccess { downloadData ->
+                        GlobalDownloadHandler.showDownloadStarted(downloadData.fileName)
+
                         val fileType = downloadData.fileType ?: run {
                             val url = downloadData.downloadUrl
                             val fileName = downloadData.fileName
@@ -113,6 +116,7 @@ class FileViewModel(
 
                         result.fold(
                             onSuccess = { _ ->
+                                GlobalDownloadHandler.showDownloadCompleted(downloadData.fileName)
                                 _uiState.value = _uiState.value.copy(
                                     isLoading = false,
                                     downloadingMessage = null,
@@ -139,6 +143,7 @@ class FileViewModel(
                                         }
                                     }
                                 }
+                                GlobalDownloadHandler.showDownloadError(friendlyMessage)
                                 _uiState.value = _uiState.value.copy(
                                     isLoading = false,
                                     downloadingMessage = null,
@@ -166,6 +171,7 @@ class FileViewModel(
                                 }
                             }
                         }
+                        GlobalDownloadHandler.showDownloadError(friendlyMessage)
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
                             downloadingMessage = null,
@@ -191,6 +197,7 @@ class FileViewModel(
                         }
                     }
                 }
+                GlobalDownloadHandler.showDownloadError(friendlyMessage)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     downloadingMessage = null,

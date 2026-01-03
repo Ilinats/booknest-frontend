@@ -41,14 +41,10 @@ fun BookReviewsScreen(
 ) {
     val bookReviews by reviewViewModel.bookReviews.collectAsState()
     val isLoading by reviewViewModel.isLoading.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
     val currentUser by sessionManager.currentUser.collectAsState()
 
     LaunchedEffect(bookId) {
         reviewViewModel.loadBookReviews(bookId)
-        reviewViewModel.snackbarEvent.collectLatest { message ->
-            snackbarHostState.showSnackbar(message)
-        }
     }
 
     val myReview = remember(bookReviews, currentUser?.id) {
@@ -62,7 +58,6 @@ fun BookReviewsScreen(
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Book Reviews", fontWeight = FontWeight.Bold) },
@@ -287,7 +282,7 @@ fun ReviewCard(
         elevation = CardDefaults.cardElevation(if (isFeatured) 4.dp else 2.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (isFeatured)
-                MaterialTheme.colorScheme.secondaryContainer
+                MaterialTheme.colorScheme.primaryContainer
             else
                 MaterialTheme.colorScheme.surfaceVariant
         )
@@ -337,7 +332,7 @@ fun ReviewCard(
                             Text(
                                 text = "Featured",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onPrimary,
                                 fontWeight = FontWeight.Bold
                             )
                         }

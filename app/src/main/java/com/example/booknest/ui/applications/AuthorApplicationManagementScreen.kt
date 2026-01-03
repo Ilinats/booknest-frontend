@@ -45,7 +45,6 @@ fun AuthorApplicationManagementScreen(
 ) {
     val bookApplications by applicationViewModel.bookApplications.collectAsState()
     val isLoading by applicationViewModel.isLoading.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
     val bookDetails by bookViewModel.bookDetails.collectAsState()
 
     var showBulkActionDialog by remember { mutableStateOf(false) }
@@ -57,11 +56,10 @@ fun AuthorApplicationManagementScreen(
 
     val book = bookFromApplications ?: bookDetails
 
-    // Don't use remember - this needs to recalculate when book data loads
     val selectionMethod = book?.selectionMethod
         ?: bookApplications.firstOrNull { it.book != null }?.book?.selectionMethod
         ?: bookApplications.firstOrNull()?.book?.selectionMethod
-    
+
     val isLotteryBook = selectionMethod?.let { method ->
         val methodLower = method.lowercase().trim()
         methodLower == "lottery" || methodLower == "random_selection"
@@ -96,9 +94,6 @@ fun AuthorApplicationManagementScreen(
         if (bookApplications.isEmpty() || bookApplications.all { it.book == null }) {
             bookViewModel.getBookDetails(bookId)
         }
-        applicationViewModel.snackbarEvent.collectLatest { message ->
-            snackbarHostState.showSnackbar(message)
-        }
     }
 
     LaunchedEffect(bookApplications) {
@@ -108,7 +103,6 @@ fun AuthorApplicationManagementScreen(
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Book Applications", fontWeight = FontWeight.Bold) },
@@ -184,9 +178,10 @@ fun AuthorApplicationManagementScreen(
                         false
                     }
                 } ?: false
-                
+
                 val lotteryHasPending = bookApplications.any { it.status == "pending" }
-                val lotteryHasProcessed = bookApplications.any { it.status in listOf("approved", "rejected") }
+                val lotteryHasProcessed =
+                    bookApplications.any { it.status in listOf("approved", "rejected") }
 
                 if (isLotteryBook) {
                     Spacer(modifier = Modifier.height(8.dp))
@@ -463,6 +458,7 @@ fun RunLotteryDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
         title = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -604,6 +600,7 @@ fun ApplicationActionDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
         text = {
             Column {
                 Text(message)
@@ -646,6 +643,7 @@ fun BulkActionDialog(
         AlertDialog(
             onDismissRequest = { action = null },
             title = { Text("Bulk ${action!!.displayName}") },
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
             text = {
                 Column {
                     Text("You are about to ${action!!.displayName.lowercase()} $selectedCount applications.")
@@ -729,7 +727,7 @@ fun LotterySection(
     onRunLottery: () -> Unit
 ) {
     val canRunLottery = deadlinePassed && hasPendingApplications && !hasProcessedApplications
-    
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -747,7 +745,6 @@ fun LotterySection(
             modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Header with icon and title
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -796,13 +793,12 @@ fun LotterySection(
                     )
                 }
             }
-            
+
             Divider(
                 color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
                 thickness = 0.5.dp
             )
-            
-            // Content based on state
+
             when {
                 hasProcessedApplications -> {
                     Row(
@@ -822,6 +818,7 @@ fun LotterySection(
                         )
                     }
                 }
+
                 !deadlinePassed -> {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(
@@ -847,7 +844,9 @@ fun LotterySection(
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.secondary,
                                 disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                    alpha = 0.6f
+                                )
                             )
                         ) {
                             Icon(
@@ -856,10 +855,14 @@ fun LotterySection(
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Run Lottery Selection", style = MaterialTheme.typography.bodySmall)
+                            Text(
+                                "Run Lottery Selection",
+                                style = MaterialTheme.typography.bodySmall
+                            )
                         }
                     }
                 }
+
                 !hasPendingApplications -> {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -878,9 +881,9 @@ fun LotterySection(
                         )
                     }
                 }
+
                 else -> {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        // Stats row
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
@@ -914,13 +917,13 @@ fun LotterySection(
                                 )
                             }
                         }
-                        
+
                         Text(
                             "Ready to randomly select winners from pending applications.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        
+
                         Button(
                             onClick = onRunLottery,
                             modifier = Modifier.fillMaxWidth(),

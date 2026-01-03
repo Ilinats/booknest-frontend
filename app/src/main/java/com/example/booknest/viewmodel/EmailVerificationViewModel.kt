@@ -8,12 +8,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.example.booknest.ui.toast.GlobalToastHandler
 
 data class EmailVerificationUiState(
     val isLoading: Boolean = false,
     val isVerificationSuccessful: Boolean = false,
-    val error: String? = null,
-    val snackbarMessage: String? = null
+    val error: String? = null
 )
 
 class EmailVerificationViewModel(
@@ -46,18 +46,14 @@ class EmailVerificationViewModel(
                         isLoading = false,
                         error = exception.message ?: "Verification failed"
                     )
-                    _uiState.value = _uiState.value.copy(
-                        snackbarMessage = getErrorMessage(exception.message)
-                    )
+                    GlobalToastHandler.showError(getErrorMessage(exception.message))
                 }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = e.message ?: "Verification failed"
                 )
-                _uiState.value = _uiState.value.copy(
-                    snackbarMessage = getErrorMessage(e.message)
-                )
+                GlobalToastHandler.showError(getErrorMessage(e.message))
             }
         }
     }
@@ -70,9 +66,9 @@ class EmailVerificationViewModel(
             if (email.isNullOrBlank()) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = "Email is required",
-                    snackbarMessage = "Email is required"
+                    error = "Email is required"
                 )
+                GlobalToastHandler.showError("Email is required")
                 return@launch
             }
 
@@ -82,33 +78,24 @@ class EmailVerificationViewModel(
                     _uiState.value = _uiState.value.copy(
                         isLoading = false
                     )
-                    _uiState.value = _uiState.value.copy(
-                        snackbarMessage = "Verification code sent to your email"
-                    )
+                    GlobalToastHandler.showSuccess("Verification code sent to your email")
                 }.onFailure { exception ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         error = exception.message ?: "Failed to resend code"
                     )
-                    _uiState.value = _uiState.value.copy(
-                        snackbarMessage = getErrorMessage(exception.message)
-                    )
+                    GlobalToastHandler.showError(getErrorMessage(exception.message))
                 }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = e.message ?: "Failed to resend code"
                 )
-                _uiState.value = _uiState.value.copy(
-                    snackbarMessage = getErrorMessage(e.message)
-                )
+                GlobalToastHandler.showError(getErrorMessage(e.message))
             }
         }
     }
 
-    fun clearSnackbarMessage() {
-        _uiState.value = _uiState.value.copy(snackbarMessage = null)
-    }
 
     private fun getErrorMessage(error: String?): String {
         return when {

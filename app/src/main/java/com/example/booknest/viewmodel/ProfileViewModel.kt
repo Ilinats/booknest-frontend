@@ -47,6 +47,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.koin.core.context.GlobalContext
+import com.example.booknest.ui.toast.GlobalToastHandler
 import com.example.booknest.data.service.ProfilesService
 
 class ProfileViewModel(
@@ -108,8 +109,6 @@ class ProfileViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
-    private val _snackbarEvent = MutableSharedFlow<String>()
-    val snackbarEvent: SharedFlow<String> = _snackbarEvent.asSharedFlow()
 
     private val _authorBooks = MutableStateFlow<List<RecommendedBookResponse>>(emptyList())
     val authorBooks: StateFlow<List<RecommendedBookResponse>> = _authorBooks.asStateFlow()
@@ -119,6 +118,12 @@ class ProfileViewModel(
 
     fun loadMyProfile() {
         viewModelScope.launch {
+            val token = sessionManager.getToken()
+            if (token.isEmpty()) {
+                println("DEBUG: Cannot load profile - token is empty")
+                return@launch
+            }
+
             _profileState.value = ProfileUiState.Loading
             try {
                 _isLoading.value = true
@@ -377,7 +382,7 @@ class ProfileViewModel(
                     .onSuccess { profile ->
                         onProfileLoaded(profile)
                         _profileEditState.value = ProfileEditUiState.Success
-                        _snackbarEvent.emit("Profile updated successfully")
+                        GlobalToastHandler.showSuccess("Profile updated successfully")
                     }
                     .onFailure { e ->
                         handleProfileEditError(e.message ?: "Failed to update profile")
@@ -407,7 +412,7 @@ class ProfileViewModel(
                     .onSuccess { profile ->
                         onProfileLoaded(profile)
                         loadMyProfile()
-                        _snackbarEvent.emit("Social media updated successfully")
+                        GlobalToastHandler.showSuccess("Social media updated successfully")
                     }
                     .onFailure { e ->
                         emitErrorMessage(e.message ?: "Failed to update social media")
@@ -441,7 +446,7 @@ class ProfileViewModel(
                 result
                     .onSuccess { profile ->
                         onProfileLoaded(profile)
-                        _snackbarEvent.emit("Privacy settings updated")
+                        GlobalToastHandler.showSuccess("Privacy settings updated")
                     }
                     .onFailure { e ->
                         emitErrorMessage(e.message ?: "Failed to update privacy settings")
@@ -483,7 +488,7 @@ class ProfileViewModel(
                 result
                     .onSuccess { profile ->
                         onProfileLoaded(profile)
-                        _snackbarEvent.emit("Notification settings updated")
+                        GlobalToastHandler.showSuccess("Notification settings updated")
                     }
                     .onFailure { e ->
                         emitErrorMessage(e.message ?: "Failed to update notification settings")
@@ -518,7 +523,7 @@ class ProfileViewModel(
                     .onSuccess {
                         loadMyProfile()
                         _profileEditState.value = ProfileEditUiState.Success
-                        _snackbarEvent.emit("Account settings updated successfully")
+                        GlobalToastHandler.showSuccess("Account settings updated successfully")
                     }
                     .onFailure { e ->
                         handleProfileEditError(e.message ?: "Failed to update account settings")
@@ -577,7 +582,7 @@ class ProfileViewModel(
                 result
                     .onSuccess {
                         loadAddresses()
-                        _snackbarEvent.emit("Address added successfully")
+                        GlobalToastHandler.showSuccess("Address added successfully")
                     }
                     .onFailure { e ->
                         emitErrorMessage(e.message ?: "Failed to add address")
@@ -614,7 +619,7 @@ class ProfileViewModel(
                 result
                     .onSuccess {
                         loadAddresses()
-                        _snackbarEvent.emit("Address updated successfully")
+                        GlobalToastHandler.showSuccess("Address updated successfully")
                     }
                     .onFailure { e ->
                         emitErrorMessage(e.message ?: "Failed to update address")
@@ -637,7 +642,7 @@ class ProfileViewModel(
                 result
                     .onSuccess {
                         loadAddresses()
-                        _snackbarEvent.emit("Address deleted successfully")
+                        GlobalToastHandler.showSuccess("Address deleted successfully")
                     }
                     .onFailure { e ->
                         emitErrorMessage(e.message ?: "Failed to delete address")
@@ -690,7 +695,7 @@ class ProfileViewModel(
                     result
                         .onSuccess { avatarUrl ->
                             onSuccess(avatarUrl)
-                            _snackbarEvent.emit("Image uploaded successfully")
+                            GlobalToastHandler.showSuccess("Image uploaded successfully")
                             loadMyProfile()
                             try {
                                 val profilesService = org.koin.core.context.GlobalContext.get()
@@ -736,7 +741,7 @@ class ProfileViewModel(
                     .onSuccess { user ->
                         sessionManager.updateUser(user)
                         loadMyProfile()
-                        _snackbarEvent.emit("Avatar removed successfully")
+                        GlobalToastHandler.showSuccess("Avatar removed successfully")
                         onSuccess()
                     }
                     .onFailure { e ->
@@ -745,6 +750,39 @@ class ProfileViewModel(
                         onError(errorMsg)
                     }
             } catch (e: Exception) {
+                val errorMsg = e.message ?: "Unknown error occurred"
+                emitErrorMessage(errorMsg)
+                onError(errorMsg)
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun deleteAccount(onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+                _error.value = null
+
+                val result = profileRepository.deleteAccount()
+                result
+                    .onSuccess {
+                        android.util.Log.d("ProfileViewModel", "Delete account success")
+                        GlobalToastHandler.showSuccess("Account deleted successfully")
+                        android.util.Log.d("ProfileViewModel", "Calling logout from viewModelScope")
+                        sessionManager.logout()
+                        android.util.Log.d("ProfileViewModel", "Logout completed, calling onSuccess callback")
+                        onSuccess()
+                    }
+                    .onFailure { e ->
+                        android.util.Log.e("ProfileViewModel", "Delete account failure: ${e.message}", e)
+                        val errorMsg = e.message ?: "Failed to delete account"
+                        emitErrorMessage(errorMsg)
+                        onError(errorMsg)
+                    }
+            } catch (e: Exception) {
+                android.util.Log.e("ProfileViewModel", "Delete account exception", e)
                 val errorMsg = e.message ?: "Unknown error occurred"
                 emitErrorMessage(errorMsg)
                 onError(errorMsg)
@@ -865,7 +903,7 @@ class ProfileViewModel(
 
     private suspend fun emitErrorMessage(message: String) {
         _error.value = message
-        _snackbarEvent.emit(message)
+        GlobalToastHandler.showError(message)
     }
 }
 

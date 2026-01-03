@@ -122,14 +122,25 @@ class GoogleAuthViewModel(
     }
 
     companion object {
-        private const val WEB_CLIENT_ID = "YOUR_WEB_CLIENT_ID.apps.googleusercontent.com"
-
         fun getGoogleSignInClient(context: Context): GoogleSignInClient {
-            val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(WEB_CLIENT_ID)
-                .requestEmail()
-                .requestProfile()
-                .build()
+            val webClientId = try {
+                com.example.booknest.BuildConfig.GOOGLE_WEB_CLIENT_ID
+            } catch (e: Exception) {
+                null
+            }
+            
+            val gso = if (webClientId != null && webClientId.isNotBlank() && !webClientId.contains("YOUR_")) {
+                GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                    .requestIdToken(webClientId)
+                    .requestEmail()
+                    .requestProfile()
+                    .build()
+            } else {
+                GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                    .requestEmail()
+                    .requestProfile()
+                    .build()
+            }
 
             return GoogleSignIn.getClient(context, gso)
         }

@@ -57,8 +57,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.booknest.ui.theme.SkyBluePeriwinkle
-import com.example.booknest.ui.theme.DarkNavyBlue
 import androidx.navigation.NavController
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.navigation.BottomBarScreen
@@ -73,7 +71,6 @@ import com.example.booknest.viewmodel.AuthorFollowViewModel
 import com.example.booknest.viewmodel.ApplicationViewModel
 import com.example.booknest.viewmodel.NotificationViewModel
 import com.example.booknest.ui.components.ActivityItem
-import com.example.booknest.ui.theme.BackgroundWhite
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -145,12 +142,12 @@ fun HomeScreen(
     }
 
     Scaffold(
-        containerColor = BackgroundWhite
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(BackgroundWhite)
+                .background(MaterialTheme.colorScheme.background)
         ) {
             Box(
                 modifier = Modifier
@@ -158,7 +155,7 @@ fun HomeScreen(
                     .offset(x = (-175).dp, y = (-175).dp)
                     .size(350.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
             )
             Box(
                 modifier = Modifier
@@ -166,7 +163,7 @@ fun HomeScreen(
                     .offset(x = (-135).dp, y = (-135).dp)
                     .size(270.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle)
+                    .background(MaterialTheme.colorScheme.secondary)
             )
             Box(
                 modifier = Modifier
@@ -174,7 +171,7 @@ fun HomeScreen(
                     .offset(x = 175.dp, y = 175.dp)
                     .size(350.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
             )
             Box(
                 modifier = Modifier
@@ -182,7 +179,7 @@ fun HomeScreen(
                     .offset(x = 135.dp, y = 135.dp)
                     .size(270.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle)
+                    .background(MaterialTheme.colorScheme.secondary)
             )
 
             LazyColumn(
@@ -201,14 +198,14 @@ fun HomeScreen(
                         placeholder = {
                             Text(
                                 "Search books, authors, series...",
-                                color = Color(0xFF757575)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         },
                         leadingIcon = {
                             Icon(
                                 Icons.Filled.Search,
                                 contentDescription = "Search",
-                                tint = DarkNavyBlue
+                                tint = MaterialTheme.colorScheme.primary
                             )
                         },
                         modifier = Modifier
@@ -220,10 +217,10 @@ fun HomeScreen(
                         singleLine = true,
                         shape = RoundedCornerShape(28.dp),
                         colors = TextFieldDefaults.colors(
-                            focusedTextColor = Color.Black,
-                            unfocusedTextColor = Color.Black,
-                            focusedContainerColor = Color(0xFFE8DFE4),
-                            unfocusedContainerColor = Color(0xFFE8DFE4),
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             disabledIndicatorColor = Color.Transparent
@@ -243,7 +240,7 @@ fun HomeScreen(
                                     text = "Search Results",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
-                                    color = DarkNavyBlue
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                                 TextButton(
                                     onClick = {
@@ -254,7 +251,7 @@ fun HomeScreen(
                                         )
                                     }
                                 ) {
-                                    Text("View All", color = DarkNavyBlue)
+                                    Text("View All", color = MaterialTheme.colorScheme.primary)
                                 }
                             }
 
@@ -267,7 +264,7 @@ fun HomeScreen(
                                         .height(200.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    CircularProgressIndicator(color = DarkNavyBlue)
+                                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                                 }
                             } else if (searchResults.isNotEmpty()) {
                                 LazyRow(
@@ -288,7 +285,7 @@ fun HomeScreen(
                                     ) {
                                         Text(
                                             "See all ${searchResults.size} results",
-                                            color = DarkNavyBlue
+                                            color = MaterialTheme.colorScheme.primary
                                         )
                                     }
                                 }
@@ -299,16 +296,14 @@ fun HomeScreen(
                                         .shadow(2.dp, RoundedCornerShape(12.dp)),
                                     shape = RoundedCornerShape(12.dp),
                                     colors = CardDefaults.cardColors(
-                                        containerColor = Color(
-                                            0xFFE8DFE4
-                                        )
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant
                                     ),
                                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                                 ) {
                                     Text(
                                         text = "No books found for \"$searchQuery\"",
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = Color(0xFF757575),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.padding(16.dp)
                                     )
                                 }
@@ -332,12 +327,12 @@ fun HomeScreen(
                             text = greeting,
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
-                            color = DarkNavyBlue
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
                             text = "What would you like to read today?",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = Color(0xFF757575),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 4.dp)
                         )
                     }
@@ -435,7 +430,7 @@ fun HomeScreen(
                                 Icon(
                                     Icons.Filled.LocalFireDepartment,
                                     contentDescription = null,
-                                    tint = Color(0xFFFF6B35),
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(24.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -443,12 +438,12 @@ fun HomeScreen(
                                     text = "Trending This Week",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
-                                    color = DarkNavyBlue
+                                    color = MaterialTheme.colorScheme.onBackground
                                 )
                             }
                             if (trendingBooks.isNotEmpty()) {
                                 TextButton(onClick = { navController.navigate("books/trending") }) {
-                                    Text("View All", color = DarkNavyBlue)
+                                    Text("View All", color = MaterialTheme.colorScheme.primary)
                                 }
                             }
                         }
@@ -462,7 +457,7 @@ fun HomeScreen(
                                     .height(200.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                CircularProgressIndicator(color = DarkNavyBlue)
+                                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                             }
                         } else if (trendingBooks.isNotEmpty()) {
                             LazyRow(
@@ -479,7 +474,7 @@ fun HomeScreen(
                             Text(
                                 text = "No trending books this week",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color(0xFF757575)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -491,7 +486,7 @@ fun HomeScreen(
                             text = "Friends Activity",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
-                            color = DarkNavyBlue
+                            color = MaterialTheme.colorScheme.onBackground
                         )
 
                         Spacer(modifier = Modifier.height(12.dp))
@@ -503,7 +498,7 @@ fun HomeScreen(
                                     .height(150.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                CircularProgressIndicator(color = DarkNavyBlue)
+                                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                             }
                         } else if (friendsActivity.isNotEmpty()) {
                             Column(
@@ -517,7 +512,7 @@ fun HomeScreen(
                             Text(
                                 text = "Add some friends to see their activity here!",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color(0xFF757575)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -548,7 +543,7 @@ private fun QuickActionCard(
             ),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFE8DFE4)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -561,7 +556,7 @@ private fun QuickActionCard(
             Icon(
                 icon,
                 contentDescription = title,
-                tint = DarkNavyBlue,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.height(6.dp))
@@ -569,14 +564,14 @@ private fun QuickActionCard(
                 text = title,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
-                color = DarkNavyBlue,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.labelSmall,
-                color = Color(0xFF757575),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -604,11 +599,11 @@ private fun BookSection(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = DarkNavyBlue
+                color = MaterialTheme.colorScheme.onBackground
             )
             if (books.isNotEmpty()) {
                 TextButton(onClick = onViewAllClick) {
-                    Text("View All", color = DarkNavyBlue)
+                    Text("View All", color = MaterialTheme.colorScheme.primary)
                 }
             }
         }
@@ -622,7 +617,7 @@ private fun BookSection(
                     .height(200.dp),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = DarkNavyBlue)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         } else if (books.isNotEmpty()) {
             LazyRow(
@@ -640,7 +635,7 @@ private fun BookSection(
             Text(
                 text = emptyMessage,
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF757575)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

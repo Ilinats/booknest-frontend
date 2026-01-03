@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.example.booknest.ui.toast.GlobalToastHandler
 
 class NotificationViewModel(
     private val notificationsRepository: NotificationsRepository,
@@ -68,10 +69,14 @@ class NotificationViewModel(
                         hasMore = false
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to load notifications"
+                        val errorMsg = e.message ?: "Failed to load notifications"
+                        _error.value = errorMsg
+                        GlobalToastHandler.showError(errorMsg)
                     }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
+                val errorMsg = e.message ?: "Unknown error occurred"
+                _error.value = errorMsg
+                GlobalToastHandler.showError(errorMsg)
             } finally {
                 _isLoading.value = false
             }

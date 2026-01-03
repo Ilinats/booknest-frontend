@@ -7,11 +7,10 @@ import com.example.booknest.domain.model.request.UpdateReviewRequest
 import com.example.booknest.domain.model.response.ApplicationResponse
 import com.example.booknest.domain.model.response.ReviewResponse
 import com.example.booknest.domain.repository.ReviewsRepository
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import com.example.booknest.ui.toast.GlobalToastHandler
 
 enum class ReviewType(val value: String) {
     TEXT("text"),
@@ -38,8 +37,6 @@ class ReviewViewModel(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    private val _snackbarEvent = MutableSharedFlow<String>()
-    val snackbarEvent: SharedFlow<String> = _snackbarEvent
 
     fun loadBookReviews(bookId: String) {
         viewModelScope.launch {
@@ -51,12 +48,12 @@ class ReviewViewModel(
                         _bookReviews.value = reviews
                     }
                     .onFailure { e ->
-                        _snackbarEvent.emit(e.message ?: "Failed to load book reviews")
+                        GlobalToastHandler.showError(e.message ?: "Failed to load book reviews")
                     }
             } catch (e: Exception) {
                 println("DEBUG: Exception loading book reviews: ${e.message}")
                 e.printStackTrace()
-                _snackbarEvent.emit("Error loading book reviews: ${e.message}")
+                GlobalToastHandler.showError("Error loading book reviews: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -73,10 +70,10 @@ class ReviewViewModel(
                         _userReviews.value = reviews
                     }
                     .onFailure { e ->
-                        _snackbarEvent.emit(e.message ?: "Failed to load user reviews")
+                        GlobalToastHandler.showError(e.message ?: "Failed to load user reviews")
                     }
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error loading user reviews: ${e.message}")
+                GlobalToastHandler.showError("Error loading user reviews: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -93,10 +90,10 @@ class ReviewViewModel(
                         _featuredReviews.value = reviews
                     }
                     .onFailure { e ->
-                        _snackbarEvent.emit(e.message ?: "Failed to load featured reviews")
+                        GlobalToastHandler.showError(e.message ?: "Failed to load featured reviews")
                     }
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error loading featured reviews: ${e.message}")
+                GlobalToastHandler.showError("Error loading featured reviews: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -113,10 +110,10 @@ class ReviewViewModel(
                         _currentReview.value = review
                     }
                     .onFailure { e ->
-                        _snackbarEvent.emit(e.message ?: "Failed to load review")
+                        GlobalToastHandler.showError(e.message ?: "Failed to load review")
                     }
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error loading review: ${e.message}")
+                GlobalToastHandler.showError("Error loading review: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -145,16 +142,16 @@ class ReviewViewModel(
                 val result = reviewsRepository.createReview(request)
                 result
                     .onSuccess { review ->
-                        _snackbarEvent.emit("Review submitted successfully!")
+                        GlobalToastHandler.showSuccess("Review submitted successfully!")
                         if (review.application?.bookId != null) {
                             loadBookReviews(review.application.bookId)
                         }
                     }
                     .onFailure { e ->
-                        _snackbarEvent.emit(e.message ?: "Failed to submit review")
+                        GlobalToastHandler.showError(e.message ?: "Failed to submit review")
                     }
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error submitting review: ${e.message}")
+                GlobalToastHandler.showError("Error submitting review: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -182,17 +179,17 @@ class ReviewViewModel(
                 val result = reviewsRepository.updateReview(reviewId, request)
                 result
                     .onSuccess { review ->
-                        _snackbarEvent.emit("Review updated successfully!")
+                        GlobalToastHandler.showSuccess("Review updated successfully!")
                         _currentReview.value = review
                         if (review.application?.bookId != null) {
                             loadBookReviews(review.application.bookId)
                         }
                     }
                     .onFailure { e ->
-                        _snackbarEvent.emit(e.message ?: "Failed to update review")
+                        GlobalToastHandler.showError(e.message ?: "Failed to update review")
                     }
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error updating review: ${e.message}")
+                GlobalToastHandler.showError("Error updating review: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -206,7 +203,7 @@ class ReviewViewModel(
                 val result = reviewsRepository.deleteReview(reviewId)
                 result
                     .onSuccess {
-                        _snackbarEvent.emit("Review deleted successfully!")
+                        GlobalToastHandler.showSuccess("Review deleted successfully!")
                         val currentReview = _currentReview.value
                         _currentReview.value = null
                         if (currentReview?.application?.bookId != null) {
@@ -214,10 +211,10 @@ class ReviewViewModel(
                         }
                     }
                     .onFailure { e ->
-                        _snackbarEvent.emit(e.message ?: "Failed to delete review")
+                        GlobalToastHandler.showError(e.message ?: "Failed to delete review")
                     }
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error deleting review: ${e.message}")
+                GlobalToastHandler.showError("Error deleting review: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -231,7 +228,7 @@ class ReviewViewModel(
                 val result = reviewsRepository.featureReview(reviewId)
                 result
                     .onSuccess { review ->
-                        _snackbarEvent.emit("Review featured!")
+                        GlobalToastHandler.showSuccess("Review featured!")
                         _currentReview.value = review
                         if (review.application?.bookId != null) {
                             loadBookReviews(review.application.bookId)
@@ -239,10 +236,10 @@ class ReviewViewModel(
                         loadFeaturedReviews()
                     }
                     .onFailure { e ->
-                        _snackbarEvent.emit(e.message ?: "Failed to feature review")
+                        GlobalToastHandler.showError(e.message ?: "Failed to feature review")
                     }
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error featuring review: ${e.message}")
+                GlobalToastHandler.showError("Error featuring review: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -256,7 +253,7 @@ class ReviewViewModel(
                 val result = reviewsRepository.unfeatureReview(reviewId)
                 result
                     .onSuccess { review ->
-                        _snackbarEvent.emit("Review unfeatured!")
+                        GlobalToastHandler.showSuccess("Review unfeatured!")
                         _currentReview.value = review
                         if (review.application?.bookId != null) {
                             loadBookReviews(review.application.bookId)
@@ -264,10 +261,10 @@ class ReviewViewModel(
                         loadFeaturedReviews()
                     }
                     .onFailure { e ->
-                        _snackbarEvent.emit(e.message ?: "Failed to unfeature review")
+                        GlobalToastHandler.showError(e.message ?: "Failed to unfeature review")
                     }
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error unfeaturing review: ${e.message}")
+                GlobalToastHandler.showError("Error unfeaturing review: ${e.message}")
             } finally {
                 _isLoading.value = false
             }

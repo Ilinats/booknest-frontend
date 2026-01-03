@@ -9,6 +9,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.ui.draw.shadow
@@ -58,8 +59,24 @@ fun AuthorMainScreen(sessionManager: SessionManager) {
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    val arguments = navBackStackEntry?.arguments
+
+    val viewingOtherProfile = when {
+        currentRoute?.startsWith("profile/") == true -> {
+            arguments?.getString("userId")?.let { userId ->
+                userId != currentUser?.id && userId != currentUser?.username
+            } ?: false
+        }
+
+        currentRoute == "profile" -> false
+        else -> false
+    }
+
     val shouldShowBottomBar =
-        currentRoute != "profile_edit" && currentRoute != "social_media_management"
+        currentRoute != "profile_edit" &&
+                currentRoute != "social_media_management" &&
+                currentRoute?.startsWith(Screen.BookEdit.route.substringBefore("/")) != true &&
+                !viewingOtherProfile
 
     androidx.compose.runtime.LaunchedEffect(isLoggedIn) {
         if (isLoggedIn == true && currentUser == null) {
@@ -108,7 +125,9 @@ fun AuthorBottomBar(navController: NavHostController) {
         tonalElevation = 4.dp,
         color = MaterialTheme.colorScheme.surface
     ) {
-        NavigationBar {
+        NavigationBar(
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
             screens.forEach { screen ->
                 AddItem(
                     screen = screen,
@@ -126,18 +145,25 @@ fun RowScope.AddItem(
     currentDestination: NavDestination?,
     navController: NavHostController
 ) {
+    val isSelected = currentDestination?.hierarchy?.any {
+        it.route == screen.route
+    } == true
+
     NavigationBarItem(
         label = { Text(text = screen.title) },
         icon = { Icon(imageVector = screen.icon, contentDescription = "Navigation Icon") },
-        selected = currentDestination?.hierarchy?.any {
-            it.route == screen.route
-        } == true,
+        selected = isSelected,
         onClick = {
             navController.navigate(screen.route) {
                 popUpTo(navController.graph.findStartDestination().id)
                 launchSingleTop = true
             }
-        }
+        },
+        colors = NavigationBarItemDefaults.colors(
+            selectedIconColor = MaterialTheme.colorScheme.primary,
+            selectedTextColor = MaterialTheme.colorScheme.primary,
+            indicatorColor = MaterialTheme.colorScheme.primaryContainer
+        )
     )
 }
 
@@ -258,6 +284,29 @@ fun AuthorNavGraph(
 
         composable(Screen.SocialMediaManagement.route) {
             SocialMediaManagementScreen(navController, sessionManager)
+        }
+
+        composable(
+            route = "user_reviews/{userId}?userName={userName}",
+            arguments = listOf(
+                navArgument("userId") { type = NavType.StringType },
+                navArgument("userName") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId") ?: ""
+            val encodedUserName = backStackEntry.arguments?.getString("userName")
+            val userName = encodedUserName?.let {
+                try {
+                    android.net.Uri.decode(it)
+                } catch (e: Exception) {
+                    it
+                }
+            }
+            com.example.booknest.ui.reviews.UserReviewsScreen(navController, userId, userName)
         }
 
         composable(

@@ -3,6 +3,7 @@ package com.example.booknest.ui.notifications
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,7 +22,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import com.example.booknest.ui.theme.SkyBluePeriwinkle
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.filled.*
@@ -30,8 +30,6 @@ import androidx.compose.material3.Badge
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -99,7 +97,6 @@ fun NotificationsScreen(
 
     var showUnreadOnly by remember { mutableStateOf(false) }
     var showClearAllDialog by remember { mutableStateOf(false) }
-    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(isLoggedIn) {
         if (isLoggedIn == true) {
@@ -111,14 +108,6 @@ fun NotificationsScreen(
     LaunchedEffect(showUnreadOnly, isLoggedIn) {
         if (isLoggedIn == true) {
             notificationViewModel.loadNotifications(unreadOnly = showUnreadOnly, refresh = true)
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        notificationViewModel.error.collectLatest { errorMessage ->
-            errorMessage?.let {
-                snackbarHostState.showSnackbar(it)
-            }
         }
     }
 
@@ -164,13 +153,12 @@ fun NotificationsScreen(
                     }
                 )
             }
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        }
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF1E9EE))
+                .background(MaterialTheme.colorScheme.background)
         ) {
             Box(
                 modifier = Modifier
@@ -178,7 +166,7 @@ fun NotificationsScreen(
                     .offset(x = (-175).dp, y = (-175).dp)
                     .size(350.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
             )
             Box(
                 modifier = Modifier
@@ -186,7 +174,7 @@ fun NotificationsScreen(
                     .offset(x = (-135).dp, y = (-135).dp)
                     .size(270.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle)
+                    .background(MaterialTheme.colorScheme.secondary)
             )
             Box(
                 modifier = Modifier
@@ -194,7 +182,7 @@ fun NotificationsScreen(
                     .offset(x = 175.dp, y = 175.dp)
                     .size(350.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
             )
             Box(
                 modifier = Modifier
@@ -202,7 +190,7 @@ fun NotificationsScreen(
                     .offset(x = 135.dp, y = 135.dp)
                     .size(270.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle)
+                    .background(MaterialTheme.colorScheme.secondary)
             )
 
             Column(
@@ -412,9 +400,21 @@ fun NotificationItem(
     isProcessing: Boolean = false
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        tonalElevation = if (notification.isRead) 1.dp else 2.dp,
-        shadowElevation = if (notification.isRead) 2.dp else 4.dp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                if (!notification.isRead) {
+                    Modifier.border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+                        shape = RoundedCornerShape(16.dp)
+                    )
+                } else {
+                    Modifier
+                }
+            ),
+        tonalElevation = if (notification.isRead) 1.dp else 0.dp,
+        shadowElevation = if (notification.isRead) 2.dp else 0.dp,
         color = if (notification.isRead) {
             MaterialTheme.colorScheme.surface
         } else {
@@ -443,10 +443,6 @@ fun NotificationItem(
                     Column(
                         modifier = Modifier.weight(1f)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
                             Text(
                                 text = notification.title,
                                 style = MaterialTheme.typography.titleMedium,
@@ -454,14 +450,6 @@ fun NotificationItem(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            if (!notification.isRead) {
-                                Badge(
-                                    containerColor = MaterialTheme.colorScheme.error
-                                ) {
-                                    Text("")
-                                }
-                            }
-                        }
 
                         Spacer(modifier = Modifier.height(6.dp))
 

@@ -2,8 +2,8 @@ package com.example.booknest.ui.analytics
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -23,8 +23,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.booknest.ui.theme.DarkNavyBlue
-import com.example.booknest.ui.theme.SkyBluePeriwinkle
 import androidx.navigation.NavController
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.model.response.*
@@ -44,95 +42,126 @@ fun BookAnalyticsScreen(
 ) {
     val analyticsState by analyticsViewModel.bookAnalyticsState.collectAsState()
     val currentAnalytics by analyticsViewModel.currentBookAnalytics.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    LaunchedEffect(Unit) {
-        analyticsViewModel.snackbarEvent.collectLatest { message ->
-            snackbarHostState.showSnackbar(message)
-        }
-    }
 
     LaunchedEffect(bookId) {
         analyticsViewModel.loadDetailedBookAnalytics(bookId)
     }
 
-    Scaffold(
-        topBar = {
-            Surface(
-                shadowElevation = 4.dp,
-                tonalElevation = 2.dp,
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                TopAppBar(
-                    title = {
-                        Text(
-                            "Book Analytics",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp,
-                            color = DarkNavyBlue
-                        )
-                    },
-                    navigationIcon = {
-                        BackButton(onClick = { navController.popBackStack() })
-                    }
-                )
-            }
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { paddingValues ->
-        val currentState = analyticsState
-        when (currentState) {
-            is BookAnalyticsUiState.Loading -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    contentAlignment = Alignment.Center
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .offset(x = (-175).dp, y = (-175).dp)
+                .size(350.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .offset(x = (-135).dp, y = (-135).dp)
+                .size(270.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.secondary)
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .offset(x = 175.dp, y = 175.dp)
+                .size(350.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .offset(x = 135.dp, y = 135.dp)
+                .size(270.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.secondary)
+        )
+
+        Scaffold(
+            topBar = {
+                Surface(
+                    shadowElevation = 4.dp,
+                    tonalElevation = 2.dp,
+                    color = MaterialTheme.colorScheme.surface
                 ) {
-                    CircularProgressIndicator()
+                    TopAppBar(
+                        title = {
+                            Text(
+                                "Book Analytics",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 20.sp,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                        },
+                        navigationIcon = {
+                            BackButton(onClick = { navController.popBackStack() })
+                        }
+                    )
                 }
             }
-
-            is BookAnalyticsUiState.Error -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) { paddingValues ->
+            val currentState = analyticsState
+            when (currentState) {
+                is BookAnalyticsUiState.Loading -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            Icons.Default.Close,
-                            contentDescription = "Error",
-                            modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                        Text(
-                            text = currentState.message,
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                        Button(onClick = {
-                            analyticsViewModel.loadDetailedBookAnalytics(bookId)
-                        }) {
-                            Text("Retry")
+                        CircularProgressIndicator()
+                    }
+                }
+
+                is BookAnalyticsUiState.Error -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Error",
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                            Text(
+                                text = currentState.message,
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                            Button(onClick = {
+                                analyticsViewModel.loadDetailedBookAnalytics(bookId)
+                            }) {
+                                Text("Retry")
+                            }
                         }
                     }
                 }
-            }
 
-            is BookAnalyticsUiState.Success -> {
-                BookAnalyticsContent(
-                    analytics = currentState.analytics,
-                    analyticsViewModel = analyticsViewModel,
-                    modifier = Modifier.padding(paddingValues)
-                )
-            }
+                is BookAnalyticsUiState.Success -> {
+                    BookAnalyticsContent(
+                        analytics = currentState.analytics,
+                        analyticsViewModel = analyticsViewModel,
+                        modifier = Modifier.padding(paddingValues)
+                    )
+                }
 
-            else -> {}
+                else -> {}
+            }
         }
     }
 }
@@ -229,7 +258,7 @@ fun StatCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFF5EDE8)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -388,11 +417,11 @@ fun RatingBreakdownChart(ratingBreakdown: List<RatingBreakdownItemResponse>) {
                             .clip(RoundedCornerShape(4.dp))
                             .background(
                                 when (item.rating) {
-                                    5 -> Color(0xFF4CAF50)
-                                    4 -> Color(0xFF8BC34A)
-                                    3 -> Color(0xFFFFC107)
-                                    2 -> Color(0xFFFF9800)
-                                    else -> Color(0xFFF44336)
+                                    5 -> MaterialTheme.colorScheme.primary
+                                    4 -> MaterialTheme.colorScheme.secondary
+                                    3 -> MaterialTheme.colorScheme.tertiary
+                                    2 -> MaterialTheme.colorScheme.error
+                                    else -> MaterialTheme.colorScheme.error
                                 }
                             )
                     )
@@ -412,7 +441,7 @@ fun RatingBreakdownChart(ratingBreakdown: List<RatingBreakdownItemResponse>) {
                             Icons.Default.Star,
                             contentDescription = null,
                             modifier = Modifier.size(14.dp),
-                            tint = Color(0xFFFFC107)
+                            tint = MaterialTheme.colorScheme.primary
                         )
                         Text(
                             text = item.rating.toString(),
@@ -466,11 +495,11 @@ fun RatingDistributionChart(
                             .clip(RoundedCornerShape(4.dp))
                             .background(
                                 when (rating) {
-                                    5 -> Color(0xFF4CAF50)
-                                    4 -> Color(0xFF8BC34A)
-                                    3 -> Color(0xFFFFC107)
-                                    2 -> Color(0xFFFF9800)
-                                    else -> Color(0xFFF44336)
+                                    5 -> MaterialTheme.colorScheme.primary
+                                    4 -> MaterialTheme.colorScheme.secondary
+                                    3 -> MaterialTheme.colorScheme.tertiary
+                                    2 -> MaterialTheme.colorScheme.error
+                                    else -> MaterialTheme.colorScheme.error
                                 }
                             )
                     )
@@ -490,7 +519,7 @@ fun RatingDistributionChart(
                             Icons.Default.Star,
                             contentDescription = null,
                             modifier = Modifier.size(14.dp),
-                            tint = Color(0xFFFFC107)
+                            tint = MaterialTheme.colorScheme.primary
                         )
                         Text(
                             text = rating.toString(),
@@ -560,37 +589,34 @@ fun ApplicationStatisticsSection(applicationStatistics: ApplicationAnalyticsResp
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                LazyRow(
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    item {
-                        ApplicationStatCard(
-                            title = "Total Applications",
-                            value = applicationStatistics.totalApplications.toString(),
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    item {
-                        ApplicationStatCard(
-                            title = "Approved",
-                            value = applicationStatistics.approvedApplications.toString(),
-                            color = Color(0xFF4CAF50)
-                        )
-                    }
-                    item {
-                        ApplicationStatCard(
-                            title = "Pending",
-                            value = applicationStatistics.pendingApplications.toString(),
-                            color = Color(0xFFFF9800)
-                        )
-                    }
-                    item {
-                        ApplicationStatCard(
-                            title = "Rejected",
-                            value = applicationStatistics.rejectedApplications.toString(),
-                            color = Color(0xFFF44336)
-                        )
-                    }
+                    ApplicationStatCard(
+                        title = "Total Applications",
+                        value = applicationStatistics.totalApplications.toString(),
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.weight(1f)
+                    )
+                    ApplicationStatCard(
+                        title = "Approved",
+                        value = applicationStatistics.approvedApplications.toString(),
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.weight(1f)
+                    )
+                    ApplicationStatCard(
+                        title = "Pending",
+                        value = applicationStatistics.pendingApplications.toString(),
+                        color = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.weight(1f)
+                    )
+                    ApplicationStatCard(
+                        title = "Rejected",
+                        value = applicationStatistics.rejectedApplications.toString(),
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
 
                 if (applicationStatistics.applicationsThisMonth != null ||
@@ -754,13 +780,14 @@ fun ReviewPerformanceSection(reviewPerformance: ReviewPerformanceResponse) {
 fun ApplicationStatCard(
     title: String,
     value: String,
-    color: Color
+    color: Color,
+    modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = Modifier.width(120.dp),
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFF5EDE8)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -837,7 +864,7 @@ fun RecentReviewItem(review: RecentReviewResponse) {
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFF5EDE8)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -866,7 +893,7 @@ fun RecentReviewItem(review: RecentReviewResponse) {
                             Icons.Default.Star,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
-                            tint = Color(0xFFFFC107)
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
                 }

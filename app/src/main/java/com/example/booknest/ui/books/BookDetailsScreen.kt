@@ -3,6 +3,10 @@ package com.example.booknest.ui.books
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.rememberScrollState
@@ -22,8 +26,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.booknest.ui.theme.DarkNavyBlue
-import com.example.booknest.ui.theme.SkyBluePeriwinkle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
@@ -65,7 +67,6 @@ fun BookDetailsScreen(
     var showWithdrawDialog by remember { mutableStateOf(false) }
     var userApplication by remember { mutableStateOf<ApplicationCheckApplicationResponse?>(null) }
     var isApplying by remember { mutableStateOf(false) }
-    val snackbarHostState = remember { SnackbarHostState() }
     val isApplicationLoading by applicationViewModel.isLoading.collectAsState()
 
     if (bookId.isBlank()) {
@@ -119,41 +120,6 @@ fun BookDetailsScreen(
         }
 
         reviewViewModel.loadBookReviews(bookId)
-
-        applicationViewModel.snackbarEvent.collectLatest { message ->
-            val friendlyMessage = when {
-                message.contains("already applied", ignoreCase = true) ||
-                        message.contains("APPLICATION_ALREADY_EXISTS", ignoreCase = true) -> {
-                    "You have already applied for this book"
-                }
-
-                message.contains("\"message\"") && message.contains(
-                    "already applied",
-                    ignoreCase = true
-                ) -> {
-                    "You have already applied for this book"
-                }
-
-                message.contains("email verification", ignoreCase = true) -> {
-                    "Please verify your email address before applying"
-                }
-
-                message.contains("address", ignoreCase = true) && message.contains(
-                    "physical",
-                    ignoreCase = true
-                ) -> {
-                    "Please add your address in your profile to apply for physical copies"
-                }
-
-                else -> message
-            }
-            snackbarHostState.showSnackbar(friendlyMessage)
-            if (friendlyMessage.contains("successfully", ignoreCase = true)) {
-                applicationViewModel.checkApplication(bookId)
-            } else if (isApplying) {
-                isApplying = false
-            }
-        }
     }
 
     LaunchedEffect(book, currentUser?.id) {
@@ -226,6 +192,9 @@ fun BookDetailsScreen(
     LaunchedEffect(applicationCheck) {
         val check = applicationCheck
         if (check != null) {
+            if (check.hasApplied == true && isApplying) {
+                isApplying = false
+            }
             val previousApplication = userApplication
             userApplication = check.application
 
@@ -256,7 +225,6 @@ fun BookDetailsScreen(
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         if (isLoading) {
             Box(
@@ -354,54 +322,174 @@ fun BookDetailsContent(
         }
     }
 
-    val coverWidth = 140.dp
-    val coverHeight = 210.dp
-    val halfCover = 105.dp
+    val coverWidth = 130.dp
+    val coverHeight = 195.dp
+    val halfCover = coverHeight / 2
 
-    Column(
+    Box(
         modifier = modifier
-
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .background(MaterialTheme.colorScheme.secondary)
     ) {
-        Box(
-            modifier = Modifier.fillMaxWidth()
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(SkyBluePeriwinkle.copy(alpha = 0.4f))
-                    .height(halfCover + 120.dp)
-            )
+                    .windowInsetsPadding(WindowInsets.statusBars)
+            ) {
+                BackButton(
+                    onClick = { navController.popBackStack() },
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+            }
 
-            Surface(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = halfCover + 60.dp),
-                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-                color = Color.White,
-                shadowElevation = 4.dp
+                    .padding(top = 8.dp)
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = halfCover),
+                    shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                    color = MaterialTheme.colorScheme.background,
+                    shadowElevation = 8.dp
+                ) {
+                    Box(modifier = Modifier.height(halfCover + 32.dp))
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 24.dp, end = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(28.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(coverWidth)
+                            .height(coverHeight)
+                            .shadow(
+                                elevation = 12.dp,
+                                shape = RoundedCornerShape(12.dp),
+                                clip = false
+                            )
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (book.coverImageUrl != null) {
+                            AsyncImage(
+                                model = book.coverImageUrl,
+                                contentDescription = "Book Cover",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Icon(
+                                Icons.Filled.Book,
+                                contentDescription = "No cover",
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(coverHeight),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = book.title,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSecondary,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                softWrap = true
+                            )
+
+                            (book.author?.displayName
+                                ?: book.authorName)?.takeIf { it.isNotBlank() && it != "Unknown Author" }
+                                ?.let { authorName ->
+                                    Text(
+                                        text = "by $authorName",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.8f),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+
+                            if (book.seriesId != null) {
+                                val seriesName = book.seriesName ?: book.series?.name
+                                Text(
+                                    text = if (seriesName != null) {
+                                        "Book ${book.seriesOrder ?: 1} of $seriesName"
+                                    } else {
+                                        "Book ${book.seriesOrder ?: 1} of Series"
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.7f),
+                                    modifier = Modifier.clickable {
+                                        navController.navigate(
+                                            Screen.SeriesBooks.createRoute(
+                                                book.seriesId,
+                                                seriesName
+                                            )
+                                        )
+                                    }
+                                )
+                            }
+
+                            book.publishedAt?.let { published ->
+                                Text(
+                                    text = formatDateDMY(published),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.6f)
+                                )
+                            }
+                        }
+
+                        BookStatsRow(
+                            book = book,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .offset(y = (-16).dp)
+                                .padding(start = 8.dp)
+                                .padding(end = 8.dp)
+                        )
+                    }
+                }
+            }
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.background
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
-                        .padding(top = halfCover + 16.dp, bottom = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                        .windowInsetsPadding(WindowInsets.navigationBars)
+                        .padding(bottom = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(start = coverWidth + 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(20.dp)
-                    ) {
-                        BookStatsRow(book = book)
-                    }
-
                     GenreTagsSection(book = book)
 
                     BookDescriptionSection(book = book)
 
                     if (!isAuthor) {
-                        Spacer(modifier = Modifier.height(8.dp))
                         ApplicationInfoSection(
                             book = book,
                             userApplication = userApplication,
@@ -415,7 +503,6 @@ fun BookDetailsContent(
                     }
 
                     if (!isAuthor) {
-                        Spacer(modifier = Modifier.height(8.dp))
                         AboutAuthorSection(
                             book = book,
                             navController = navController,
@@ -423,112 +510,11 @@ fun BookDetailsContent(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
                     ReviewsSection(
                         reviews = bookReviews,
                         isLoading = isLoadingReviews,
                         bookId = book.id
                     )
-                }
-            }
-
-            BackButton(
-                onClick = { navController.popBackStack() },
-                modifier = Modifier
-                    .windowInsetsPadding(WindowInsets.statusBars)
-                    .padding(start = 8.dp, top = 4.dp)
-            )
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets.statusBars)
-                    .padding(top = 32.dp)
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.Top
-            ) {
-                Box(
-                    modifier = Modifier
-                        .width(coverWidth)
-                        .height(coverHeight)
-                        .shadow(
-                            elevation = 8.dp,
-                            shape = RoundedCornerShape(12.dp),
-                            clip = false
-                        )
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFFF5EDE8)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (book.coverImageUrl != null) {
-                        AsyncImage(
-                            model = book.coverImageUrl,
-                            contentDescription = "Book Cover",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Icon(
-                            Icons.Filled.Book,
-                            contentDescription = "No cover",
-                            modifier = Modifier.size(48.dp),
-                            tint = DarkNavyBlue
-                        )
-                    }
-                }
-
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(halfCover),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-
-                    Text(
-                        text = book.title,
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = DarkNavyBlue,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    (book.author?.displayName
-                        ?: book.authorName)?.takeIf { it.isNotBlank() && it != "Unknown Author" }
-                        ?.let { authorName ->
-                            Text(
-                                text = authorName,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = DarkNavyBlue.copy(alpha = 0.7f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-
-                    if (book.seriesId != null) {
-                        Text(
-                            text = "Book ${book.seriesOrder ?: 1} of ${book.seriesName ?: "Series"}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.clickable {
-                                navController.navigate(
-                                    Screen.SeriesBooks.createRoute(
-                                        book.seriesId,
-                                        book.seriesName
-                                    )
-                                )
-                            }
-                        )
-                    }
-
-                    book.publishedAt?.let { published ->
-                        Text(
-                            text = formatDateDMY(published),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = DarkNavyBlue.copy(alpha = 0.6f)
-                        )
-                    }
                 }
             }
         }
@@ -540,7 +526,7 @@ fun BookDetailsContent(
 fun BookStatsRow(book: BookResponse, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(24.dp)
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -549,19 +535,19 @@ fun BookStatsRow(book: BookResponse, modifier: Modifier = Modifier) {
             Icon(
                 imageVector = Icons.Filled.Star,
                 contentDescription = "Rating",
-                tint = Color(0xFFB8860B),
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(24.dp)
             )
             Text(
                 text = String.format("%.1f", book.rating ?: 0.0),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = DarkNavyBlue
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = "Rating",
                 style = MaterialTheme.typography.labelSmall,
-                color = Color(0xFF757575)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
@@ -579,12 +565,12 @@ fun BookStatsRow(book: BookResponse, modifier: Modifier = Modifier) {
                 text = "${book.pageCount ?: 0}",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = DarkNavyBlue
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = "Pages",
                 style = MaterialTheme.typography.labelSmall,
-                color = Color(0xFF757575)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
@@ -595,19 +581,19 @@ fun BookStatsRow(book: BookResponse, modifier: Modifier = Modifier) {
             Icon(
                 imageVector = Icons.Filled.Info,
                 contentDescription = "Age Rating",
-                tint = DarkNavyBlue,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(24.dp)
             )
             Text(
                 text = book.ageRating?.uppercase() ?: "N/A",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = DarkNavyBlue
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = "Age",
                 style = MaterialTheme.typography.labelSmall,
-                color = Color(0xFF757575)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -669,13 +655,13 @@ fun BookDescriptionSection(book: BookResponse) {
             text = "Description",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = DarkNavyBlue
+            color = MaterialTheme.colorScheme.onSurface
         )
 
         Text(
             text = book.fullDescription ?: book.shortDescription ?: "No description available.",
             style = MaterialTheme.typography.bodyMedium,
-            color = Color(0xFF333333),
+            color = MaterialTheme.colorScheme.onSurface,
             lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.2
         )
     }
@@ -753,7 +739,7 @@ fun ApplicationInfoSection(
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
             )
         ) {
             Column(
@@ -764,13 +750,13 @@ fun ApplicationInfoSection(
                     text = "Slots Filled: ${(book.totalCopies ?: 0) - (book.availableCopies ?: 0)}/${book.totalCopies ?: 0}",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Text(
                     text = "Application Deadline: ${book.applicationDeadline?.let { formatDate(it) } ?: "Not specified"}",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Text(
@@ -780,13 +766,13 @@ fun ApplicationInfoSection(
                         "Review Deadline: Not specified"
                     },
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 if (book.distributionType != null || book.selectionMethod != null || book.status != null) {
                     Divider(
                         modifier = Modifier.padding(vertical = 4.dp),
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.3f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                     )
 
                     book.distributionType?.let {
@@ -797,13 +783,13 @@ fun ApplicationInfoSection(
                             Text(
                                 text = "Distribution",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 text = it.replaceFirstChar { char -> char.uppercase() },
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -816,13 +802,13 @@ fun ApplicationInfoSection(
                             Text(
                                 text = "Selection Method",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 text = it.replaceFirstChar { char -> char.uppercase() },
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -835,13 +821,13 @@ fun ApplicationInfoSection(
                             Text(
                                 text = "Status",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 text = it.replaceFirstChar { char -> char.uppercase() },
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -1092,7 +1078,7 @@ fun AboutAuthorSection(
                     )
                 } ?: Text(
                     text = book.author?.displayName?.firstOrNull()?.uppercase() ?: "?",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onPrimary,
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
@@ -1214,7 +1200,11 @@ fun ReviewsSection(
 fun ReviewCard(review: ReviewResponse) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(1.dp)
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        elevation = CardDefaults.cardElevation(2.dp),
+        shape = RoundedCornerShape(12.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -1251,7 +1241,7 @@ fun ReviewCard(review: ReviewResponse) {
                             )
                         } ?: Text(
                             text = reviewerInitial,
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onPrimary,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold
                         )

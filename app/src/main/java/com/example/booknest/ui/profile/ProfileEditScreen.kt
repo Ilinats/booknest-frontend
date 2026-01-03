@@ -56,8 +56,6 @@ fun ProfileEditScreen(
     val currentUser by sessionManager.currentUser.collectAsState()
     val editState by profileViewModel.profileEditState.collectAsState()
     val isLoading by profileViewModel.isLoading.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-
     var firstName by remember { mutableStateOf(currentUser?.firstName ?: "") }
     var lastName by remember { mutableStateOf(currentUser?.lastName ?: "") }
     var username by remember { mutableStateOf(currentUser?.username ?: "") }
@@ -245,11 +243,6 @@ fun ProfileEditScreen(
                     (username == (initialUsername ?: "") || usernameAvailable == true)
         }
 
-    LaunchedEffect(Unit) {
-        profileViewModel.snackbarEvent.collectLatest { message ->
-            snackbarHostState.showSnackbar(message)
-        }
-    }
 
     LaunchedEffect(editState) {
         when (editState) {
@@ -386,8 +379,7 @@ fun ProfileEditScreen(
                     }
                 }
             )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -399,7 +391,10 @@ fun ProfileEditScreen(
         ) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -522,7 +517,10 @@ fun ProfileEditScreen(
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -718,8 +716,12 @@ fun ProfileEditScreen(
             }
 
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                modifier = Modifier
+                    .fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -768,8 +770,12 @@ fun ProfileEditScreen(
             }
 
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                modifier = Modifier
+                    .fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -803,8 +809,12 @@ fun ProfileEditScreen(
             }
 
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                modifier = Modifier
+                    .fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -942,7 +952,7 @@ fun ProfileEditScreen(
                     .shadow(elevation = 2.dp, shape = RoundedCornerShape(16.dp)),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFFE8DFE4)
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
                 ),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
@@ -981,6 +991,7 @@ fun ProfileEditScreen(
                 AlertDialog(
                     onDismissRequest = { showDeleteAccountDialog = false },
                     title = { Text("Delete Account", color = MaterialTheme.colorScheme.error) },
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
                     text = {
                         Text(
                             "Are you sure you want to delete your account? This action cannot be undone. All your data, applications, and reviews will be permanently deleted."
@@ -988,18 +999,39 @@ fun ProfileEditScreen(
                     },
                     confirmButton = {
                         val scope = rememberCoroutineScope()
+                        var isDeleting by remember { mutableStateOf(false) }
                         TextButton(
                             onClick = {
-                                showDeleteAccountDialog = false
-                                scope.launch {
-                                    snackbarHostState.showSnackbar("Account deletion is not yet implemented")
+                                if (!isDeleting) {
+                                    isDeleting = true
+                                    scope.launch {
+                                        profileViewModel.deleteAccount(
+                                            onSuccess = {
+                                                android.util.Log.d("ProfileEditScreen", "onSuccess callback called - logout already handled in ViewModel")
+                                                showDeleteAccountDialog = false
+                                            },
+                                            onError = { error ->
+                                                isDeleting = false
+                                                showDeleteAccountDialog = false
+                                            }
+                                        )
+                                    }
                                 }
                             },
+                            enabled = !isDeleting,
                             colors = ButtonDefaults.textButtonColors(
                                 contentColor = MaterialTheme.colorScheme.error
                             )
                         ) {
+                            if (isDeleting) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    color = MaterialTheme.colorScheme.error,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
                             Text("Delete")
+                            }
                         }
                     },
                     dismissButton = {

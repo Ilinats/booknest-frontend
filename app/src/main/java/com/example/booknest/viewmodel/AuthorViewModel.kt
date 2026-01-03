@@ -29,6 +29,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
+import com.example.booknest.ui.toast.GlobalToastHandler
 
 class AuthorViewModel(
     private val booksRepository: BooksRepository,
@@ -200,18 +201,21 @@ class AuthorViewModel(
                                 uri,
                                 context!!,
                                 onSuccess = { coverUrl ->
+                                    GlobalToastHandler.showSuccess("Book created successfully!")
                                     _bookCreationState.value =
                                         BookCreationState.Success(createdBook.copy(coverImageUrl = coverUrl))
                                     reloadHomeScreenData()
                                 },
                                 onError = { errorMsg ->
-                                    com.example.booknest.ui.error.GlobalErrorHandler.showError("Book created but cover upload failed: $errorMsg")
+                                    GlobalToastHandler.showSuccess("Book created successfully!")
+                                    com.example.booknest.ui.error.GlobalErrorHandler.showError("Cover upload failed: $errorMsg")
                                     _bookCreationState.value =
                                         BookCreationState.Success(createdBook)
                                     reloadHomeScreenData()
                                 }
                             )
                         } ?: run {
+                            GlobalToastHandler.showSuccess("Book created successfully!")
                             _bookCreationState.value = BookCreationState.Success(createdBook)
                             reloadHomeScreenData()
                         }
@@ -524,6 +528,7 @@ class AuthorViewModel(
                 val result = booksRepository.updateBook(bookId, book)
                 result
                     .onSuccess {
+                        GlobalToastHandler.showSuccess("Book updated successfully!")
                         reloadHomeScreenData()
                     }
                     .onFailure { e ->
@@ -541,6 +546,7 @@ class AuthorViewModel(
                 val result = booksRepository.deleteBook(bookId)
                 result
                     .onSuccess {
+                        GlobalToastHandler.showSuccess("Book deleted successfully!")
                         reloadHomeScreenData()
                     }
                     .onFailure { e ->

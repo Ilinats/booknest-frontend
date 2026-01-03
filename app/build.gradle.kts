@@ -96,6 +96,8 @@ dependencies {
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-messaging")
     implementation(libs.androidx.ui)
+    implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.compose.testing)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
