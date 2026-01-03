@@ -42,30 +42,32 @@ fun EmailVerificationScreen(
     viewModel: EmailVerificationViewModel = getViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
 
     val currentUser by sessionManager.currentUser.collectAsState()
+    val isLoggedIn by sessionManager.isLoggedIn.collectAsState()
     val displayEmail = userEmail ?: currentUser?.email ?: "your email"
 
     LaunchedEffect(uiState.isVerificationSuccessful) {
         if (uiState.isVerificationSuccessful) {
-            val userType = currentUser?.userType?.lowercase()
-            if (userType == "reader") {
-                navController.navigate(Screen.Genres.route) {
-                    popUpTo("email_verification") { inclusive = true }
+            val previousRoute = navController.previousBackStackEntry?.destination?.route
+            val isSignupFlow = previousRoute == Screen.ProfileDetails.route ||
+                    previousRoute == Screen.PersonalInfo.route ||
+                    previousRoute == Screen.AccountType.route
+
+            if (isSignupFlow) {
+                val userType = currentUser?.userType?.lowercase()
+                if (userType == "reader") {
+                    navController.navigate(Screen.Genres.route) {
+                        popUpTo("email_verification") { inclusive = true }
+                    }
+                } else {
+                    navController.navigate(Screen.Main.route) {
+                        popUpTo("email_verification") { inclusive = true }
+                    }
                 }
             } else {
-                navController.navigate(Screen.Main.route) {
-                    popUpTo("email_verification") { inclusive = true }
-                }
+                navController.popBackStack()
             }
-        }
-    }
-
-    LaunchedEffect(uiState.snackbarMessage) {
-        uiState.snackbarMessage?.let { message ->
-            snackbarHostState.showSnackbar(message)
-            viewModel.clearSnackbarMessage()
         }
     }
 
@@ -241,15 +243,24 @@ fun EmailVerificationScreen(
 
             TextButton(
                 onClick = {
-                    val userType = currentUser?.userType?.lowercase()
-                    if (userType == "reader") {
-                        navController.navigate(Screen.Genres.route) {
-                            popUpTo("email_verification") { inclusive = true }
+                    val previousRoute = navController.previousBackStackEntry?.destination?.route
+                    val isSignupFlow = previousRoute == Screen.ProfileDetails.route ||
+                            previousRoute == Screen.PersonalInfo.route ||
+                            previousRoute == Screen.AccountType.route
+
+                    if (isSignupFlow) {
+                        val userType = currentUser?.userType?.lowercase()
+                        if (userType == "reader") {
+                            navController.navigate(Screen.Genres.route) {
+                                popUpTo("email_verification") { inclusive = true }
+                            }
+                        } else {
+                            navController.navigate(Screen.Main.route) {
+                                popUpTo("email_verification") { inclusive = true }
+                            }
                         }
                     } else {
-                        navController.navigate(Screen.Main.route) {
-                            popUpTo("email_verification") { inclusive = true }
-                        }
+                        navController.popBackStack()
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
@@ -266,12 +277,5 @@ fun EmailVerificationScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
         }
-    }
-
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.BottomCenter
-    ) {
-        SnackbarHost(snackbarHostState)
     }
 }
