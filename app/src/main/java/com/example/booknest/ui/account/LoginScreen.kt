@@ -35,15 +35,14 @@ import com.example.booknest.navigation.Screen
 import com.example.booknest.ui.auth.GoogleSignInButton
 import com.example.booknest.ui.auth.UserTypeSelectionDialog
 import com.example.booknest.ui.components.ErrorToast
-import com.example.booknest.ui.theme.BackgroundWhite
-import com.example.booknest.ui.theme.DarkNavyBlue
-import com.example.booknest.ui.theme.SkyBluePeriwinkle
 import com.example.booknest.viewmodel.GoogleAuthViewModel
 import com.example.booknest.viewmodel.LoginUiState
 import com.example.booknest.viewmodel.LoginViewModel
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
+import com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes
 import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.CommonStatusCodes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,10 +61,31 @@ fun LoginScreen(
 
     val loginState by viewModel.loginState.collectAsState()
 
+    val isIdentifierValid = remember(identifier) {
+        identifier.isNotBlank() && identifier.length >= 1
+    }
+    val isPasswordValid = remember(password) {
+        password.isNotBlank() && password.length >= 8
+    }
+    val isFormValid = isIdentifierValid && isPasswordValid
+
+    var hasInteracted by remember { mutableStateOf(false) }
+
     LaunchedEffect(loginState) {
-        if (loginState is LoginUiState.Error) {
-            val error = (loginState as LoginUiState.Error).error
-            errorMessage = getErrorMessage(error)
+        when (loginState) {
+            is LoginUiState.Error -> {
+                if (hasInteracted) {
+                    val error = (loginState as LoginUiState.Error).error
+                    errorMessage = getErrorMessage(error)
+                }
+            }
+
+            is LoginUiState.Success -> {
+                errorMessage = null
+            }
+
+            else -> {
+            }
         }
     }
     val googleAuthViewModel: GoogleAuthViewModel = org.koin.androidx.compose.getViewModel()
@@ -86,16 +106,26 @@ fun LoginScreen(
                 showUserTypeDialog = true
             } catch (e: ApiException) {
                 println("Google sign-in failed: ${e.statusCode}")
+                errorMessage = when (e.statusCode) {
+                    GoogleSignInStatusCodes.SIGN_IN_CANCELLED -> null
+                    GoogleSignInStatusCodes.SIGN_IN_FAILED -> "Google Sign-In failed. Please try again."
+                    CommonStatusCodes.NETWORK_ERROR -> "Network error. Please check your connection."
+                    else -> "Google Sign-In error: ${e.message ?: "Unknown error"}"
+                }
+            } catch (e: Exception) {
+                println("Google sign-in exception: ${e.message}")
+                errorMessage = "Google Sign-In error: ${e.message ?: "Unknown error"}"
             }
-        } else {
+        } else if (result.resultCode != Activity.RESULT_CANCELED) {
             println("DEBUG: Google Sign-In cancelled or failed - resultCode: ${result.resultCode}")
+            errorMessage = "Google Sign-In failed. Please try again."
         }
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(SkyBluePeriwinkle)
+            .background(MaterialTheme.colorScheme.secondary)
     ) {
         ErrorToast(
             message = errorMessage,
@@ -188,7 +218,7 @@ fun LoginScreen(
                 .align(Alignment.BottomCenter),
             shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
             colors = CardDefaults.cardColors(
-                containerColor = BackgroundWhite
+                containerColor = MaterialTheme.colorScheme.background
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
@@ -206,16 +236,19 @@ fun LoginScreen(
                             elevation = 2.dp,
                             shape = RoundedCornerShape(28.dp)
                         )
-                        .background(Color(0xFFE8DFE4), RoundedCornerShape(28.dp))
+                        .background(
+                            MaterialTheme.colorScheme.surfaceVariant,
+                            RoundedCornerShape(28.dp)
+                        )
                 ) {
                     OutlinedTextField(
                         value = identifier,
                         onValueChange = { identifier = it },
                         placeholder = {
                             Text(
-                                "Email",
+                                "Email or Username",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color(0xFF757575)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         },
                         modifier = Modifier
@@ -226,8 +259,8 @@ fun LoginScreen(
                         colors = TextFieldDefaults.colors(
                             focusedTextColor = Color.Black,
                             unfocusedTextColor = Color.Black,
-                            focusedPlaceholderColor = Color(0xFF757575),
-                            unfocusedPlaceholderColor = Color(0xFF757575),
+                            focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             focusedContainerColor = Color.Transparent,
                             unfocusedContainerColor = Color.Transparent,
                             focusedIndicatorColor = Color.Transparent,
@@ -246,7 +279,10 @@ fun LoginScreen(
                             elevation = 2.dp,
                             shape = RoundedCornerShape(28.dp)
                         )
-                        .background(Color(0xFFE8DFE4), RoundedCornerShape(28.dp))
+                        .background(
+                            MaterialTheme.colorScheme.surfaceVariant,
+                            RoundedCornerShape(28.dp)
+                        )
                 ) {
                     OutlinedTextField(
                         value = password,
@@ -255,7 +291,7 @@ fun LoginScreen(
                             Text(
                                 "Password",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color(0xFF757575)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         },
                         modifier = Modifier
@@ -267,8 +303,8 @@ fun LoginScreen(
                         colors = TextFieldDefaults.colors(
                             focusedTextColor = Color.Black,
                             unfocusedTextColor = Color.Black,
-                            focusedPlaceholderColor = Color(0xFF757575),
-                            unfocusedPlaceholderColor = Color(0xFF757575),
+                            focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             focusedContainerColor = Color.Transparent,
                             unfocusedContainerColor = Color.Transparent,
                             focusedIndicatorColor = Color.Transparent,
@@ -280,7 +316,7 @@ fun LoginScreen(
                                 Icon(
                                     imageVector = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
                                     contentDescription = if (passwordVisible) "Hide password" else "Show password",
-                                    tint = Color(0xFF757575)
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         },
@@ -308,6 +344,7 @@ fun LoginScreen(
 
                 Button(
                     onClick = {
+                        hasInteracted = true
                         viewModel.loginUser(identifier, password) { success ->
                             if (success) {
                                 navController.navigate(Screen.Main.route) {
@@ -323,10 +360,10 @@ fun LoginScreen(
                             elevation = 4.dp,
                             shape = RoundedCornerShape(28.dp)
                         ),
-                    enabled = loginState !is LoginUiState.Loading,
+                    enabled = isFormValid && loginState !is LoginUiState.Loading,
                     shape = RoundedCornerShape(28.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = DarkNavyBlue
+                        containerColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
                     if (loginState is LoginUiState.Loading) {
@@ -355,7 +392,7 @@ fun LoginScreen(
                 ) {
                     HorizontalDivider(
                         modifier = Modifier.weight(1f),
-                        color = Color(0xFFBDBDBD)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
                         text = "or",
@@ -365,23 +402,21 @@ fun LoginScreen(
                     )
                     HorizontalDivider(
                         modifier = Modifier.weight(1f),
-                        color = Color(0xFFBDBDBD)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
                 Button(
                     onClick = {
-                        val signInIntent = try {
-                            println("DEBUG: Starting Google Sign-In...")
-                            GoogleAuthViewModel.getGoogleSignInClient(context).signInIntent
+                        try {
+                            val signInIntent =
+                                GoogleAuthViewModel.getGoogleSignInClient(context).signInIntent
+                            googleSignInLauncher.launch(signInIntent)
                         } catch (e: Exception) {
                             println("DEBUG: Google Sign-In error: ${e.message}")
                             e.printStackTrace()
-                            null
-                        }
-                        signInIntent?.let {
-                            println("DEBUG: Got sign-in intent: $it")
-                            googleSignInLauncher.launch(it)
+                            errorMessage =
+                                "Google Sign-In is not configured. Please contact support."
                         }
                     },
                     modifier = Modifier
@@ -394,8 +429,8 @@ fun LoginScreen(
                     enabled = !googleAuthState.isLoading,
                     shape = RoundedCornerShape(28.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFE8DFE4),
-                        contentColor = Color.Black
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.onSurface
                     )
                 ) {
                     Row(
@@ -413,7 +448,7 @@ fun LoginScreen(
                                 text = "G",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF4285F4)
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
 
@@ -469,7 +504,8 @@ fun LoginScreen(
     }
 
     LaunchedEffect(googleAuthState.errorMessage) {
-        googleAuthState.errorMessage?.let {
+        googleAuthState.errorMessage?.let { error ->
+            errorMessage = error
             googleAuthViewModel.clearMessages()
         }
     }
@@ -498,23 +534,23 @@ fun ForgotPasswordDialog(
         org.koin.androidx.compose.getViewModel()
     val uiState by passwordResetViewModel.uiState.collectAsState()
 
-    LaunchedEffect(uiState.snackbarMessage) {
-        uiState.snackbarMessage?.let { message ->
-            if (message.contains("sent", ignoreCase = true)) {
-                onEmailSubmitted(email)
-            }
-        }
-    }
-
     LaunchedEffect(uiState.error) {
         uiState.error?.let { error ->
             errorMessage = error
         }
     }
 
+    LaunchedEffect(uiState.isCodeSent) {
+        if (uiState.isCodeSent && email.isNotBlank()) {
+            onEmailSubmitted(email)
+            passwordResetViewModel.clearCodeSentState()
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Reset Password") },
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(

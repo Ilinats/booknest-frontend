@@ -1,5 +1,6 @@
 package com.example.booknest.ui.applications
 
+import android.R
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -743,13 +744,20 @@ fun ReaderStatsRow(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     val topGenres = breakdown.entries.sortedByDescending { it.value }.take(5)
-                    Row(
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        topGenres.forEach { entry ->
-                            GenreTag(text = entry.key)
+                        topGenres.chunked(3).forEach { rowGenres ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                rowGenres.forEach { entry ->
+                                    GenreTag(text = entry.key)
+                                }
+                            }
                         }
                     }
                 }
@@ -808,19 +816,16 @@ fun BookApplicationDetailScreen(
     val isLoading by applicationViewModel.isLoading.collectAsState()
     val bookDetails by bookViewModel.bookDetails.collectAsState()
     val bookReviews by reviewViewModel.bookReviews.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
 
     var selectedTab by remember { mutableStateOf(0) }
-    val tabs = listOf("All", "Pending", "Approved", "Rejected", "Statistics")
+    val tabs = listOf("All", "Pending", "Approved", "Rejected", "Reviews", "Statistics")
 
     val book = bookDetails ?: bookApplications.firstOrNull()?.book
-    
-    // Check if this is a lottery book
+
     val isLotteryBook = book?.selectionMethod?.let { method ->
         method.lowercase().trim() == "lottery" || method.lowercase().trim() == "random_selection"
     } ?: false
-    
-    // Calculate lottery conditions
+
     val lotteryDeadlinePassed = book?.applicationDeadline?.let { deadline ->
         try {
             val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
@@ -845,9 +850,6 @@ fun BookApplicationDetailScreen(
         bookViewModel.getBookDetails(bookId)
         applicationViewModel.loadBookApplications(bookId)
         reviewViewModel.loadBookReviews(bookId)
-        applicationViewModel.snackbarEvent.collectLatest { message ->
-            snackbarHostState.showSnackbar(message)
-        }
     }
 
     LaunchedEffect(selectedTab) {
@@ -927,14 +929,6 @@ fun BookApplicationDetailScreen(
     val approvedCount = applicationStats.approved
 
     Scaffold(
-        snackbarHost = { 
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier
-                    .windowInsetsPadding(WindowInsets.navigationBars)
-                    .padding(bottom = 16.dp)
-            )
-        },
         topBar = {
             Surface(
                 shadowElevation = 4.dp,
@@ -1005,7 +999,6 @@ fun BookApplicationDetailScreen(
                 ApplicationStatsSection(stats = applicationStats)
             }
 
-            // Lottery Section - show for lottery books
             if (isLotteryBook) {
                 item {
                     Spacer(modifier = Modifier.height(10.dp))
@@ -1028,9 +1021,10 @@ fun BookApplicationDetailScreen(
             }
 
             item {
-                TabRow(
+                ScrollableTabRow(
                     selectedTabIndex = selectedTab,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    edgePadding = 0.dp
                 ) {
                     tabs.forEachIndexed { index, title ->
                         Tab(
@@ -1049,8 +1043,11 @@ fun BookApplicationDetailScreen(
                                         1 -> " (${applicationStats.pending})"
                                         2 -> " (${applicationStats.approved})"
                                         3 -> " (${applicationStats.rejected})"
+                                        4 -> " (${applicationsWithReviews.count { it.review != null }})"
                                         else -> ""
-                                    }
+                                    },
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         )
@@ -1094,13 +1091,18 @@ fun BookApplicationDetailScreen(
                             selectedApplicationIds = emptySet()
                             isSelectionMode = false
                         },
-                        showMarkSent = selectedTab == 2,
+                        showMarkSent = selectedTab == 2 && selectedApplicationIds.any { appId ->
+                            val app = filteredApplications.find { it.id == appId }
+                            val isCopySent = !app?.copySentAt.isNullOrBlank()
+                            val isDigital = app?.book?.distributionType?.lowercase() == "digital"
+                            !isCopySent && !isDigital
+                        },
                         canApprove = canApprove
                     )
                 }
             }
 
-            if (selectedTab != 4) {
+            if (selectedTab != 4 && selectedTab != 5) {
                 item {
                     SortFilterBar(
                         sortOption = sortOption,
@@ -1298,6 +1300,48 @@ fun BookApplicationDetailScreen(
                 }
 
                 4 -> {
+                    val reviewsApplications = applicationsWithReviews.filter { it.review != null }
+                    item {
+                        Text(
+                            text = "Submitted Reviews",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)
+                        )
+                    }
+                    if (isLoading && reviewsApplications.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(200.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        }
+                    } else if (reviewsApplications.isEmpty()) {
+                        item {
+                            Text(
+                                text = "No reviews submitted yet",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                            )
+                        }
+                    } else {
+                        items(
+                            reviewsApplications.size,
+                            key = { reviewsApplications[it].id }
+                        ) { index ->
+                            ReviewCard(application = reviewsApplications[index])
+                        }
+                    }
+                }
+
+                5 -> {
                     item {
                         StatisticsTabContent(
                             bookId = bookId,
@@ -1308,8 +1352,7 @@ fun BookApplicationDetailScreen(
             }
         }
     }
-    
-    // Lottery confirmation dialog
+
     if (showLotteryDialog) {
         AlertDialog(
             onDismissRequest = { showLotteryDialog = false },
@@ -1317,7 +1360,7 @@ fun BookApplicationDetailScreen(
             text = {
                 Text(
                     "This will randomly select ${book?.availableCopies ?: 0} reader(s) from ${applicationStats.pending} pending application(s). " +
-                    "Selected readers will be approved and others will be rejected. This action cannot be undone."
+                            "Selected readers will be approved and others will be rejected. This action cannot be undone."
                 )
             },
             confirmButton = {
@@ -1568,7 +1611,6 @@ fun EnhancedApplicationCard(
 
             if (application.status == "pending" && !isSelectionMode) {
                 if (isLotteryBook) {
-                    // For lottery books, show message instead of approve/reject buttons
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(
@@ -1637,6 +1679,9 @@ fun EnhancedApprovedApplicationCard(
     onMarkSent: (ApplicationResponse) -> Unit
 ) {
     val isCopySent = !application.copySentAt.isNullOrBlank()
+    val distributionType = application.book?.distributionType?.lowercase()
+    val isDigital = distributionType == "digital"
+    val shouldShowMarkSentButton = !isCopySent && !isDigital
     val readingStatus = application.readingStatus
     val hasReview = !application.reviewSubmittedAt.isNullOrBlank()
 
@@ -1688,7 +1733,7 @@ fun EnhancedApprovedApplicationCard(
                         }
                         Unit
                     }
-                    
+
                     if (application.reader?.profilePictureUrl.isNullOrBlank()) {
                         Box(
                             modifier = Modifier
@@ -1740,11 +1785,11 @@ fun EnhancedApprovedApplicationCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Copy Status: ${if (isCopySent) "Sent" else "Not Sent"}",
+                    text = "Copy Status: ${if (isCopySent || isDigital) "Sent" else "Not Sent"}",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (isCopySent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (isCopySent || isDigital) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                if (!isCopySent && !isSelectionMode) {
+                if (shouldShowMarkSentButton && !isSelectionMode) {
                     Button(onClick = { onMarkSent(application) }) {
                         Text("Mark as Sent")
                     }
@@ -1764,6 +1809,19 @@ fun EnhancedApprovedApplicationCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (hasReview) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            val requiresPhysicalCopy =
+                application.book?.distributionType?.lowercase() in listOf("physical", "both")
+            val shouldShowAddresses =
+                requiresPhysicalCopy && application.reader?.addresses?.isNotEmpty() == true
+
+            if (shouldShowAddresses) {
+                Spacer(modifier = Modifier.height(8.dp))
+                ReaderAddressesSection(
+                    addresses = application.reader?.addresses ?: emptyList(),
+                    readerName = application.reader?.username ?: "Reader"
+                )
+            }
         }
     }
 }
@@ -1812,7 +1870,8 @@ fun RejectedApplicationCard(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = application.reader?.username?.firstOrNull()?.uppercase() ?: "?",
+                                text = application.reader?.username?.firstOrNull()?.uppercase()
+                                    ?: "?",
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold
                             )
@@ -1837,22 +1896,22 @@ fun RejectedApplicationCard(
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.clickable(onClick = onProfileClick)
                         )
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Icon(
-                                    Icons.Filled.Close,
-                                    contentDescription = "Rejected",
-                                    tint = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Text(
-                                    text = "Rejected on ${formatDate(application.respondedAt ?: "")}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                            }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                Icons.Filled.Close,
+                                contentDescription = "Rejected",
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "Rejected on ${formatDate(application.respondedAt ?: "")}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 }
             }
@@ -2128,49 +2187,17 @@ fun ApprovedReaderCard(
 }
 
 @Composable
-fun ReviewsTab(
-    applications: List<ApplicationResponse>,
-    isLoading: Boolean
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        Text(
-            text = "Submitted Reviews",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        if (isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        } else {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(applications) { application ->
-                    ReviewCard(application = application)
-                }
-            }
-        }
-    }
-}
-
-@Composable
 fun ReviewCard(application: ApplicationResponse) {
     var showReviewDialog by remember { mutableStateOf(false) }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(2.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp),
+        elevation = CardDefaults.cardElevation(2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -2251,12 +2278,14 @@ fun ReviewDetailDialog(
         title = {
             Text("Review Details")
         },
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
         text = {
             Column(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
@@ -2302,8 +2331,10 @@ fun ReviewDetailDialog(
                         }
                     }
 
+                    Divider()
+
                     if (!r.reviewContent.isNullOrBlank()) {
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(3.dp))
                         Text(
                             text = "Review:",
                             fontWeight = FontWeight.Bold
@@ -2367,7 +2398,7 @@ fun ReviewDetailDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Close")
+                Text("Close", fontSize = MaterialTheme.typography.titleSmall.fontSize)
             }
         }
     )
@@ -3459,7 +3490,7 @@ fun LotterySelectionCard(
     onRunLottery: () -> Unit
 ) {
     val canRunLottery = deadlinePassed && hasPendingApplications && !hasProcessedApplications
-    
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -3525,13 +3556,12 @@ fun LotterySelectionCard(
                     )
                 }
             }
-            
+
             Divider(
                 color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
                 thickness = 0.5.dp
             )
-            
-            // Content based on state
+
             when {
                 hasProcessedApplications -> {
                     Row(
@@ -3551,6 +3581,7 @@ fun LotterySelectionCard(
                         )
                     }
                 }
+
                 !deadlinePassed -> {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(
@@ -3576,7 +3607,9 @@ fun LotterySelectionCard(
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.secondary,
                                 disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                    alpha = 0.6f
+                                )
                             )
                         ) {
                             Icon(
@@ -3585,10 +3618,14 @@ fun LotterySelectionCard(
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Run Lottery Selection", style = MaterialTheme.typography.bodySmall)
+                            Text(
+                                "Run Lottery Selection",
+                                style = MaterialTheme.typography.bodySmall
+                            )
                         }
                     }
                 }
+
                 !hasPendingApplications -> {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -3607,9 +3644,9 @@ fun LotterySelectionCard(
                         )
                     }
                 }
+
                 else -> {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        // Stats row
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
@@ -3643,13 +3680,13 @@ fun LotterySelectionCard(
                                 )
                             }
                         }
-                        
+
                         Text(
                             "Ready to randomly select winners from pending applications.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        
+
                         Button(
                             onClick = onRunLottery,
                             modifier = Modifier.fillMaxWidth(),
@@ -3671,3 +3708,4 @@ fun LotterySelectionCard(
         }
     }
 }
+

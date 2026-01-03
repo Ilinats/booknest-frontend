@@ -17,8 +17,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.booknest.R
-import com.example.booknest.ui.theme.BackgroundWhite
-import com.example.booknest.ui.theme.SkyBluePeriwinkle
+import androidx.compose.material3.MaterialTheme
 
 import androidx.navigation.NavController
 import com.example.booknest.data.session.SessionManager
@@ -54,7 +53,7 @@ fun SplashScreen(navController: NavController, sessionManager: SessionManager) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(BackgroundWhite)
+            .background(MaterialTheme.colorScheme.background)
             .graphicsLayer { clip = false },
         contentAlignment = Alignment.Center
     ) {
@@ -65,7 +64,7 @@ fun SplashScreen(navController: NavController, sessionManager: SessionManager) {
                 .offset(x = 175.dp, y = (-175).dp)
                 .size(350.dp)
                 .clip(CircleShape)
-                .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
         )
 
         Box(
@@ -75,7 +74,7 @@ fun SplashScreen(navController: NavController, sessionManager: SessionManager) {
                 .offset(x = 135.dp, y = (-135).dp)
                 .size(270.dp)
                 .clip(CircleShape)
-                .background(SkyBluePeriwinkle)
+                .background(MaterialTheme.colorScheme.secondary)
         )
 
         Box(
@@ -85,7 +84,7 @@ fun SplashScreen(navController: NavController, sessionManager: SessionManager) {
                 .offset(x = (-275).dp, y = 275.dp)
                 .size(550.dp)
                 .clip(CircleShape)
-                .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
         )
 
         Box(
@@ -95,7 +94,7 @@ fun SplashScreen(navController: NavController, sessionManager: SessionManager) {
                 .offset(x = (-250).dp, y = 250.dp)
                 .size(500.dp)
                 .clip(CircleShape)
-                .background(SkyBluePeriwinkle)
+                .background(MaterialTheme.colorScheme.secondary)
         )
 
         Image(

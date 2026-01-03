@@ -16,8 +16,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import com.example.booknest.ui.components.BackButton
-import com.example.booknest.ui.theme.DarkNavyBlue
-import com.example.booknest.ui.theme.SkyBluePeriwinkle
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,14 +55,9 @@ fun AuthorAnalyticsScreen(
     val analyticsState by analyticsViewModel.authorAnalyticsState.collectAsState()
     val currentAnalytics by analyticsViewModel.currentAuthorAnalytics.collectAsState()
     val bookPerformanceComparison by analyticsViewModel.bookPerformanceComparison.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-
     var selectedDateRange by remember { mutableStateOf(DateRangeOption.ALL_TIME) }
 
     LaunchedEffect(Unit) {
-        analyticsViewModel.snackbarEvent.collectLatest { message ->
-            snackbarHostState.showSnackbar(message)
-        }
         analyticsViewModel.loadAuthorAnalytics(selectedDateRange.apiValue)
         analyticsViewModel.loadBookPerformanceComparison()
     }
@@ -86,7 +79,7 @@ fun AuthorAnalyticsScreen(
                             "Author Analytics",
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp,
-                            color = DarkNavyBlue
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                     },
                     navigationIcon = {
@@ -94,8 +87,7 @@ fun AuthorAnalyticsScreen(
                     }
                 )
             }
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        }
     ) { paddingValues ->
         val currentState = analyticsState
         when (currentState) {
@@ -171,7 +163,7 @@ fun AuthorAnalyticsContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF1E9EE))
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Box(
             modifier = Modifier
@@ -179,7 +171,7 @@ fun AuthorAnalyticsContent(
                 .offset(x = (-175).dp, y = (-175).dp)
                 .size(350.dp)
                 .clip(CircleShape)
-                .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
         )
         Box(
             modifier = Modifier
@@ -187,7 +179,7 @@ fun AuthorAnalyticsContent(
                 .offset(x = (-135).dp, y = (-135).dp)
                 .size(270.dp)
                 .clip(CircleShape)
-                .background(SkyBluePeriwinkle)
+                .background(MaterialTheme.colorScheme.secondary)
         )
         Box(
             modifier = Modifier
@@ -195,7 +187,7 @@ fun AuthorAnalyticsContent(
                 .offset(x = 175.dp, y = 175.dp)
                 .size(350.dp)
                 .clip(CircleShape)
-                .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
         )
         Box(
             modifier = Modifier
@@ -203,7 +195,7 @@ fun AuthorAnalyticsContent(
                 .offset(x = 135.dp, y = 135.dp)
                 .size(270.dp)
                 .clip(CircleShape)
-                .background(SkyBluePeriwinkle)
+                .background(MaterialTheme.colorScheme.secondary)
         )
 
         Column(
@@ -256,7 +248,7 @@ fun DateRangeSelector(
             .shadow(elevation = 2.dp, shape = RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFE8DFE4)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -301,7 +293,7 @@ fun OverviewSection(overview: AuthorAnalyticsOverviewResponse) {
             .shadow(elevation = 2.dp, shape = RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFE8DFE4)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -371,7 +363,7 @@ fun OverviewStatCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFF5EDE8)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -410,7 +402,7 @@ fun PerformanceSection(
             .shadow(elevation = 2.dp, shape = RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFE8DFE4)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -528,7 +520,7 @@ fun TopPerformingBookItem(book: TopPerformingBookResponse) {
                     Icons.Default.Star,
                     contentDescription = null,
                     modifier = Modifier.size(16.dp),
-                    tint = Color(0xFFFFC107)
+                    tint = MaterialTheme.colorScheme.primary
                 )
                 Text(
                     text = String.format("%.1f", book.averageRating),
@@ -551,7 +543,7 @@ fun TrendsSection(
             .shadow(elevation = 2.dp, shape = RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFE8DFE4)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -576,7 +568,7 @@ fun TrendsSection(
             TrendChart(
                 title = "Monthly Reviews",
                 data = trends.monthlyReviews,
-                color = Color(0xFF4CAF50),
+                color = MaterialTheme.colorScheme.primary,
                 analyticsViewModel = analyticsViewModel
             )
         }
@@ -655,7 +647,7 @@ fun ReaderAnalyticsSection(readerAnalytics: ReaderAnalyticsResponse) {
             .shadow(elevation = 2.dp, shape = RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFE8DFE4)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -769,7 +761,7 @@ fun AgeDemographicsSection(ageDemographics: AgeDemographicsResponse) {
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFF5EDE8)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -879,7 +871,7 @@ fun CountryDemographicsSection(countryDemographics: CountryDemographicsResponse)
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFF5EDE8)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -955,7 +947,7 @@ fun GenrePreferencesSection(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFF5EDE8)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -1035,7 +1027,7 @@ fun BookPerformanceComparisonSection(
             .shadow(elevation = 2.dp, shape = RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFE8DFE4)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -1076,7 +1068,7 @@ fun BookPerformanceComparisonSection(
                             isBest = true,
                             onClick = {
                                 navController.navigate(
-                                    com.example.booknest.navigation.Screen.BookDetails.createRoute(
+                                    com.example.booknest.navigation.Screen.BookApplicationDetail.createRoute(
                                         bestPerformer.bookId
                                     )
                                 )
@@ -1089,7 +1081,7 @@ fun BookPerformanceComparisonSection(
                             isBest = false,
                             onClick = {
                                 navController.navigate(
-                                    com.example.booknest.navigation.Screen.BookDetails.createRoute(
+                                    com.example.booknest.navigation.Screen.BookApplicationDetail.createRoute(
                                         worstPerformer.bookId
                                     )
                                 )
@@ -1114,7 +1106,7 @@ fun BookPerformanceComparisonSection(
                         book = book,
                         onClick = {
                             navController.navigate(
-                                com.example.booknest.navigation.Screen.BookDetails.createRoute(
+                                com.example.booknest.navigation.Screen.BookApplicationDetail.createRoute(
                                     book.bookId
                                 )
                             )
@@ -1240,7 +1232,8 @@ fun BookPerformanceRow(
                     overflow = TextOverflow.Ellipsis
                 )
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     PerformanceMetricSmall(
                         label = "Rating",
@@ -1276,7 +1269,8 @@ fun PerformanceMetricSmall(
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.widthIn(min = 60.dp)
     ) {
         Icon(
             imageVector = icon,
@@ -1284,16 +1278,22 @@ fun PerformanceMetricSmall(
             modifier = Modifier.size(14.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Column {
+        Column(
+            modifier = Modifier.widthIn(max = 50.dp)
+        ) {
             Text(
                 text = value,
                 fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = label,
                 fontSize = 10.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }

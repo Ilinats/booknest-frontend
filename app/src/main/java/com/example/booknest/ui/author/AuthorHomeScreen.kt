@@ -66,9 +66,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import com.example.booknest.ui.theme.SkyBluePeriwinkle
-import com.example.booknest.ui.theme.DarkNavyBlue
-import com.example.booknest.ui.theme.BackgroundWhite
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -166,7 +163,7 @@ fun AuthorHomeScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(BackgroundWhite)
+                .background(MaterialTheme.colorScheme.background)
         ) {
             Box(
                 modifier = Modifier
@@ -174,7 +171,7 @@ fun AuthorHomeScreen(
                     .offset(x = (-175).dp, y = (-175).dp)
                     .size(350.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
             )
             Box(
                 modifier = Modifier
@@ -182,7 +179,7 @@ fun AuthorHomeScreen(
                     .offset(x = (-135).dp, y = (-135).dp)
                     .size(270.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle)
+                    .background(MaterialTheme.colorScheme.secondary)
             )
             Box(
                 modifier = Modifier
@@ -190,7 +187,7 @@ fun AuthorHomeScreen(
                     .offset(x = 175.dp, y = 175.dp)
                     .size(350.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
             )
             Box(
                 modifier = Modifier
@@ -198,7 +195,7 @@ fun AuthorHomeScreen(
                     .offset(x = 135.dp, y = 135.dp)
                     .size(270.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle)
+                    .background(MaterialTheme.colorScheme.secondary)
             )
 
             LazyColumn(
@@ -273,13 +270,21 @@ fun AuthorHomeScreen(
                         onViewAllClick = {
                             if (recentReviews.isNotEmpty()) {
                                 recentReviews.first().application?.bookId?.let { bookId ->
-                                    navController.navigate(Screen.BookDetails.createRoute(bookId))
+                                    navController.navigate(
+                                        Screen.BookApplicationDetail.createRoute(
+                                            bookId
+                                        )
+                                    )
                                 }
                             }
                         },
                         onReviewClick = { review ->
                             review.application?.bookId?.let { bookId ->
-                                navController.navigate(Screen.BookDetails.createRoute(bookId))
+                                navController.navigate(
+                                    Screen.BookApplicationDetail.createRoute(
+                                        bookId
+                                    )
+                                )
                             }
                         }
                     )
@@ -309,7 +314,7 @@ fun WelcomeSection(
             text = "Welcome back, $authorName!",
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
-            color = DarkNavyBlue
+            color = MaterialTheme.colorScheme.onBackground
         )
     }
 }
@@ -429,7 +434,7 @@ fun ActiveCampaignsSection(
             text = "Active Campaigns",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
-            color = DarkNavyBlue,
+            color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(bottom = 12.dp)
         )
 
@@ -452,7 +457,7 @@ fun ActiveCampaignsSection(
                     ),
                 shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFFE8DFE4)
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
                 ),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
@@ -463,7 +468,7 @@ fun ActiveCampaignsSection(
                     Text(
                         text = "No active campaigns",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = DarkNavyBlue
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
@@ -509,7 +514,7 @@ fun ActiveCampaignCard(
             ),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFE8DFE4)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -522,7 +527,7 @@ fun ActiveCampaignCard(
                     .fillMaxWidth()
                     .height(180.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(SkyBluePeriwinkle.copy(alpha = 0.3f)),
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
                 if (book.coverImageUrl != null) {
@@ -546,7 +551,7 @@ fun ActiveCampaignCard(
                 text = book.title,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
-                color = DarkNavyBlue,
+                color = MaterialTheme.colorScheme.onBackground,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 fontSize = 16.sp
@@ -555,7 +560,7 @@ fun ActiveCampaignCard(
             Text(
                 text = "Applications: ${stats?.approvedReaders ?: 0} / ${book.totalCopies ?: "∞"}",
                 style = MaterialTheme.typography.bodySmall,
-                color = DarkNavyBlue
+                color = MaterialTheme.colorScheme.onBackground
             )
 
             book.applicationDeadline?.let { deadline ->
@@ -582,14 +587,14 @@ fun ActiveCampaignCard(
                 Button(
                     onClick = { onBookClick() },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFE8DFE4)
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
                     ),
                     contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
                 ) {
                     Text(
                         "View",
                         style = MaterialTheme.typography.labelSmall,
-                        color = DarkNavyBlue
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                 }
                 IconButton(
@@ -597,7 +602,7 @@ fun ActiveCampaignCard(
                     modifier = Modifier
                         .size(40.dp)
                         .background(
-                            Color(0xFFE8DFE4),
+                            MaterialTheme.colorScheme.surfaceVariant,
                             shape = RoundedCornerShape(6.dp)
                         )
                 ) {
@@ -605,7 +610,7 @@ fun ActiveCampaignCard(
                         Icons.Default.Edit,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
-                        tint = DarkNavyBlue
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -620,7 +625,7 @@ fun QuickStatsSection(quickStats: AuthorViewModel.QuickStats) {
             text = "Quick Stats",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
-            color = DarkNavyBlue,
+            color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(bottom = 12.dp)
         )
 
@@ -693,7 +698,7 @@ fun PerformanceSummarySection(
             ),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFE8DFE4)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -705,7 +710,7 @@ fun PerformanceSummarySection(
                 text = "Performance Summary",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = DarkNavyBlue
+                color = MaterialTheme.colorScheme.onBackground
             )
 
             Row(
@@ -746,7 +751,7 @@ fun PerformanceMetric(
             text = value,
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
-            color = DarkNavyBlue
+            color = MaterialTheme.colorScheme.onBackground
         )
         Text(
             text = label,
@@ -774,13 +779,8 @@ fun RecentReviewsSection(
                 text = "Recent Reviews",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = DarkNavyBlue
+                color = MaterialTheme.colorScheme.onBackground
             )
-            if (reviews.isNotEmpty()) {
-                TextButton(onClick = onViewAllClick) {
-                    Text("View All", color = DarkNavyBlue)
-                }
-            }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -854,7 +854,7 @@ fun ReviewCard(
                             text = bookTitle,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = DarkNavyBlue,
+                            color = MaterialTheme.colorScheme.onBackground,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -932,7 +932,7 @@ fun QuickActionsSection(
             text = "Quick Actions",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
-            color = DarkNavyBlue,
+            color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(bottom = 24.dp)
         )
 
@@ -944,15 +944,22 @@ fun QuickActionsSection(
                     elevation = 2.dp,
                     shape = RoundedCornerShape(12.dp)
                 )
-                .background(Color(0xFFE8DFE4), shape = RoundedCornerShape(12.dp)),
+                .background(
+                    MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(12.dp)
+                ),
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFE8DFE4)
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
             )
         ) {
-            Icon(Icons.Default.Add, contentDescription = null, tint = DarkNavyBlue)
+            Icon(
+                Icons.Default.Add,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Create New Book", color = DarkNavyBlue)
+            Text("Create New Book", color = MaterialTheme.colorScheme.primary)
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -965,33 +972,33 @@ fun QuickActionsSection(
                 onClick = onViewAnalyticsClick,
                 modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = DarkNavyBlue
+                    contentColor = MaterialTheme.colorScheme.primary
                 )
             ) {
                 Icon(
                     Icons.Default.Analytics,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
-                    tint = DarkNavyBlue
+                    tint = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("View Analytics", color = DarkNavyBlue)
+                Text("View Analytics", color = MaterialTheme.colorScheme.primary)
             }
             OutlinedButton(
                 onClick = onManageSeriesClick,
                 modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = DarkNavyBlue
+                    contentColor = MaterialTheme.colorScheme.primary
                 )
             ) {
                 Icon(
                     Icons.Default.Collections,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
-                    tint = DarkNavyBlue
+                    tint = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Manage Series", color = DarkNavyBlue)
+                Text("Manage Series", color = MaterialTheme.colorScheme.primary)
             }
         }
     }
@@ -1013,7 +1020,7 @@ fun StatCard(
             ),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFE8DFE4)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -1037,14 +1044,14 @@ fun StatCard(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
-                color = DarkNavyBlue
+                color = MaterialTheme.colorScheme.onBackground
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = value,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                color = DarkNavyBlue
+                color = MaterialTheme.colorScheme.onBackground
             )
         }
     }
@@ -1100,7 +1107,7 @@ fun AuthorTopBar(
 
     Surface(
         modifier = Modifier.shadow(elevation = 4.dp),
-        color = BackgroundWhite
+        color = MaterialTheme.colorScheme.surface
     ) {
         Row(
             modifier = Modifier
@@ -1114,7 +1121,7 @@ fun AuthorTopBar(
                 text = "BookNest",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                color = DarkNavyBlue
+                color = MaterialTheme.colorScheme.onBackground
             )
 
             Box {
@@ -1133,7 +1140,7 @@ fun AuthorTopBar(
                         .size(40.dp)
                         .clip(CircleShape)
                         .clickable { menuExpanded = true }
-                        .background(SkyBluePeriwinkle),
+                        .background(MaterialTheme.colorScheme.secondary),
                     contentAlignment = Alignment.Center
                 ) {
                     if (!avatarUrl.isNullOrEmpty()) {
@@ -1148,7 +1155,7 @@ fun AuthorTopBar(
                     } else {
                         Text(
                             text = initials,
-                            color = DarkNavyBlue,
+                            color = MaterialTheme.colorScheme.onBackground,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -1156,17 +1163,28 @@ fun AuthorTopBar(
 
                 DropdownMenu(
                     expanded = menuExpanded,
-                    onDismissRequest = { menuExpanded = false }
+                    onDismissRequest = { menuExpanded = false },
+                    modifier = Modifier.background(MaterialTheme.colorScheme.background)
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Series Management", color = DarkNavyBlue) },
+                        text = {
+                            Text(
+                                "Series Management",
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        },
                         onClick = {
                             menuExpanded = false
                             onSeriesManagementClick()
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("View Analytics", color = DarkNavyBlue) },
+                        text = {
+                            Text(
+                                "View Analytics",
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        },
                         onClick = {
                             menuExpanded = false
                             onViewAnalyticsClick()

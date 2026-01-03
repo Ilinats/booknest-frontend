@@ -23,9 +23,6 @@ import androidx.navigation.NavController
 import com.example.booknest.R
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.navigation.Screen
-import com.example.booknest.ui.theme.BackgroundWhite
-import com.example.booknest.ui.theme.DarkNavyBlue
-import com.example.booknest.ui.theme.SkyBluePeriwinkle
 
 @Composable
 fun LandingScreen(navController: NavController, sessionManager: SessionManager) {
@@ -42,7 +39,7 @@ fun LandingScreen(navController: NavController, sessionManager: SessionManager) 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(BackgroundWhite)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Box(
             modifier = Modifier
@@ -50,7 +47,7 @@ fun LandingScreen(navController: NavController, sessionManager: SessionManager) 
                 .offset(x = 175.dp, y = (-175).dp)
                 .size(350.dp)
                 .clip(CircleShape)
-                .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
         )
 
         Box(
@@ -59,7 +56,7 @@ fun LandingScreen(navController: NavController, sessionManager: SessionManager) 
                 .offset(x = 135.dp, y = (-135).dp)
                 .size(270.dp)
                 .clip(CircleShape)
-                .background(SkyBluePeriwinkle)
+                .background(MaterialTheme.colorScheme.secondary)
         )
 
         Image(
@@ -79,7 +76,7 @@ fun LandingScreen(navController: NavController, sessionManager: SessionManager) 
                 .fillMaxHeight(0.47f),
             shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
             colors = CardDefaults.cardColors(
-                containerColor = SkyBluePeriwinkle
+                containerColor = MaterialTheme.colorScheme.secondary
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
@@ -95,7 +92,7 @@ fun LandingScreen(navController: NavController, sessionManager: SessionManager) 
                         fontSize = 50.sp,
                         fontWeight = FontWeight.Bold
                     ),
-                    color = DarkNavyBlue,
+                    color = MaterialTheme.colorScheme.onSecondary,
                     modifier = Modifier.padding(top = 20.dp),
                 )
 
@@ -105,7 +102,7 @@ fun LandingScreen(navController: NavController, sessionManager: SessionManager) 
                         fontWeight = FontWeight.Medium,
                         fontSize = 20.sp
                     ),
-                    color = DarkNavyBlue
+                    color = MaterialTheme.colorScheme.onSecondary
                 )
 
                 Spacer(modifier = Modifier.weight(0.5f))
@@ -126,7 +123,7 @@ fun LandingScreen(navController: NavController, sessionManager: SessionManager) 
                                 shape = RoundedCornerShape(24.dp)
                             ),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = DarkNavyBlue
+                            containerColor = MaterialTheme.colorScheme.primary
                         ),
                         shape = RoundedCornerShape(24.dp)
                     ) {
@@ -149,8 +146,8 @@ fun LandingScreen(navController: NavController, sessionManager: SessionManager) 
                                 shape = RoundedCornerShape(24.dp)
                             ),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = BackgroundWhite,
-                            contentColor = DarkNavyBlue
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            contentColor = MaterialTheme.colorScheme.primary
                         ),
                         shape = RoundedCornerShape(24.dp)
                     ) {

@@ -40,11 +40,13 @@ import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.model.response.CustomSocialLinkResponse
 import com.example.booknest.domain.model.response.SocialMediaResponse
 import com.example.booknest.navigation.Screen
-import com.example.booknest.ui.theme.DarkNavyBlue
-import com.example.booknest.ui.theme.SkyBluePeriwinkle
 import com.example.booknest.viewmodel.ProfileViewModel
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
+
+fun isValidUrl(url: String): Boolean {
+    return url.isNotBlank() && (url.startsWith("http://") || url.startsWith("https://"))
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,6 +69,13 @@ fun SocialMediaScreen(
     var newCustomPlatform by remember { mutableStateOf("") }
     var newCustomUrl by remember { mutableStateOf("") }
 
+    val isCustomUrlValid = remember(newCustomUrl) {
+        newCustomUrl.isBlank() || isValidUrl(newCustomUrl)
+    }
+    val isCustomFormValid = remember(newCustomPlatform, newCustomUrl) {
+        newCustomPlatform.isNotBlank() && newCustomUrl.isNotBlank() && isValidUrl(newCustomUrl)
+    }
+
     LaunchedEffect(Unit) {
         profileViewModel.loadMyProfile()
     }
@@ -84,7 +93,7 @@ fun SocialMediaScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF1E9EE))
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Box(
             modifier = Modifier
@@ -92,7 +101,7 @@ fun SocialMediaScreen(
                 .offset(x = (-175).dp, y = (-175).dp)
                 .size(350.dp)
                 .clip(CircleShape)
-                .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
         )
         Box(
             modifier = Modifier
@@ -100,7 +109,7 @@ fun SocialMediaScreen(
                 .offset(x = (-135).dp, y = (-135).dp)
                 .size(270.dp)
                 .clip(CircleShape)
-                .background(SkyBluePeriwinkle)
+                .background(MaterialTheme.colorScheme.secondary)
         )
         Box(
             modifier = Modifier
@@ -108,7 +117,7 @@ fun SocialMediaScreen(
                 .offset(x = 175.dp, y = 175.dp)
                 .size(350.dp)
                 .clip(CircleShape)
-                .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
         )
         Box(
             modifier = Modifier
@@ -116,7 +125,7 @@ fun SocialMediaScreen(
                 .offset(x = 135.dp, y = 135.dp)
                 .size(270.dp)
                 .clip(CircleShape)
-                .background(SkyBluePeriwinkle)
+                .background(MaterialTheme.colorScheme.secondary)
         )
 
         Column(
@@ -152,7 +161,7 @@ fun SocialMediaScreen(
                     fontSize = 40.sp,
                     fontWeight = FontWeight.Bold
                 ),
-                color = DarkNavyBlue,
+                color = MaterialTheme.colorScheme.onBackground,
                 textAlign = TextAlign.Center
             )
 
@@ -163,7 +172,7 @@ fun SocialMediaScreen(
                 style = MaterialTheme.typography.bodyLarge.copy(
                     fontSize = 16.sp
                 ),
-                color = Color(0xFF757575),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
 
@@ -220,7 +229,7 @@ fun SocialMediaScreen(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 20.sp
                             ),
-                            color = DarkNavyBlue
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                         if (!showAddCustom) {
                             Button(
@@ -228,8 +237,8 @@ fun SocialMediaScreen(
                                 modifier = Modifier.height(40.dp),
                                 shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFFE8DFE4),
-                                    contentColor = DarkNavyBlue
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    contentColor = MaterialTheme.colorScheme.primary
                                 )
                             ) {
                                 Icon(
@@ -256,7 +265,7 @@ fun SocialMediaScreen(
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(
-                                containerColor = Color(0xFFE8DFE4)
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
                             ),
                             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                         ) {
@@ -274,7 +283,7 @@ fun SocialMediaScreen(
                                         style = MaterialTheme.typography.titleMedium.copy(
                                             fontWeight = FontWeight.Bold
                                         ),
-                                        color = DarkNavyBlue
+                                        color = MaterialTheme.colorScheme.onBackground
                                     )
                                     IconButton(
                                         onClick = {
@@ -312,8 +321,8 @@ fun SocialMediaScreen(
                                     colors = TextFieldDefaults.colors(
                                         focusedTextColor = Color.Black,
                                         unfocusedTextColor = Color.Black,
-                                        focusedContainerColor = Color(0xFFE8DFE4),
-                                        unfocusedContainerColor = Color(0xFFE8DFE4),
+                                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                                         focusedIndicatorColor = Color.Transparent,
                                         unfocusedIndicatorColor = Color.Transparent,
                                         disabledIndicatorColor = Color.Transparent
@@ -333,20 +342,31 @@ fun SocialMediaScreen(
                                         ),
                                     singleLine = true,
                                     shape = RoundedCornerShape(28.dp),
+                                    isError = !isCustomUrlValid,
+                                    supportingText = if (!isCustomUrlValid && newCustomUrl.isNotBlank()) {
+                                        {
+                                            Text(
+                                                "Please enter a valid URL starting with http:// or https://",
+                                                fontSize = 12.sp
+                                            )
+                                        }
+                                    } else null,
                                     colors = TextFieldDefaults.colors(
                                         focusedTextColor = Color.Black,
                                         unfocusedTextColor = Color.Black,
-                                        focusedContainerColor = Color(0xFFE8DFE4),
-                                        unfocusedContainerColor = Color(0xFFE8DFE4),
+                                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                                         focusedIndicatorColor = Color.Transparent,
                                         unfocusedIndicatorColor = Color.Transparent,
-                                        disabledIndicatorColor = Color.Transparent
+                                        disabledIndicatorColor = Color.Transparent,
+                                        errorIndicatorColor = MaterialTheme.colorScheme.error,
+                                        errorContainerColor = MaterialTheme.colorScheme.errorContainer
                                     )
                                 )
 
                                 Button(
                                     onClick = {
-                                        if (newCustomPlatform.isNotBlank() && newCustomUrl.isNotBlank()) {
+                                        if (isCustomFormValid) {
                                             customLinks = customLinks + CustomSocialLinkResponse(
                                                 platform = newCustomPlatform,
                                                 url = newCustomUrl
@@ -359,10 +379,10 @@ fun SocialMediaScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(48.dp),
-                                    enabled = newCustomPlatform.isNotBlank() && newCustomUrl.isNotBlank(),
+                                    enabled = isCustomFormValid,
                                     shape = RoundedCornerShape(12.dp),
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = DarkNavyBlue,
+                                        containerColor = MaterialTheme.colorScheme.primary,
                                         disabledContainerColor = Color(0xFFE0E0E0)
                                     )
                                 ) {
@@ -371,7 +391,7 @@ fun SocialMediaScreen(
                                         style = MaterialTheme.typography.labelLarge.copy(
                                             fontWeight = FontWeight.Bold
                                         ),
-                                        color = if (newCustomPlatform.isNotBlank() && newCustomUrl.isNotBlank()) Color.White else Color(
+                                        color = if (isCustomFormValid) Color.White else Color(
                                             0xFF757575
                                         )
                                     )
@@ -388,8 +408,8 @@ fun SocialMediaScreen(
                         .height(48.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFE8DFE4),
-                        contentColor = DarkNavyBlue
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
                     Icon(
@@ -433,7 +453,7 @@ fun SocialMediaScreen(
                     ),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = DarkNavyBlue
+                    containerColor = MaterialTheme.colorScheme.primary
                 )
             ) {
                 Text(
@@ -462,7 +482,7 @@ fun SocialMediaScreen(
                         fontWeight = FontWeight.Medium,
                         fontSize = 16.sp
                     ),
-                    color = DarkNavyBlue
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
 
@@ -487,7 +507,7 @@ fun SocialMediaInputField(
             style = MaterialTheme.typography.bodyMedium.copy(
                 fontWeight = FontWeight.Medium
             ),
-            color = DarkNavyBlue,
+            color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(horizontal = 8.dp)
         )
         OutlinedTextField(
@@ -506,8 +526,8 @@ fun SocialMediaInputField(
             colors = TextFieldDefaults.colors(
                 focusedTextColor = Color.Black,
                 unfocusedTextColor = Color.Black,
-                focusedContainerColor = Color(0xFFE8DFE4),
-                unfocusedContainerColor = Color(0xFFE8DFE4),
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent,
                 disabledIndicatorColor = Color.Transparent
@@ -524,7 +544,7 @@ fun CustomLinkCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFE8DFE4)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -543,7 +563,7 @@ fun CustomLinkCard(
                 Icon(
                     Icons.Default.Link,
                     contentDescription = customLink.platform,
-                    tint = DarkNavyBlue,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(24.dp)
                 )
                 Column {
@@ -552,7 +572,7 @@ fun CustomLinkCard(
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold
                         ),
-                        color = DarkNavyBlue
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = customLink.url,

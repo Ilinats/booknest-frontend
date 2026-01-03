@@ -33,9 +33,6 @@ import coil.compose.AsyncImage
 import androidx.navigation.NavController
 import com.example.booknest.navigation.Screen
 import com.example.booknest.ui.components.ErrorToast
-import com.example.booknest.ui.theme.BackgroundWhite
-import com.example.booknest.ui.theme.DarkNavyBlue
-import com.example.booknest.ui.theme.SkyBluePeriwinkle
 import com.example.booknest.viewmodel.SignupUiState
 import com.example.booknest.viewmodel.SignupViewModel
 import java.text.SimpleDateFormat
@@ -75,7 +72,7 @@ fun ProfileDetailsScreen(navController: NavController, viewModel: SignupViewMode
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF1E9EE))
+            .background(MaterialTheme.colorScheme.background)
     ) {
         ErrorToast(
             message = errorMessage,
@@ -88,7 +85,7 @@ fun ProfileDetailsScreen(navController: NavController, viewModel: SignupViewMode
                 .offset(x = (-175).dp, y = (-175).dp)
                 .size(350.dp)
                 .clip(CircleShape)
-                .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
         )
         Box(
             modifier = Modifier
@@ -96,7 +93,7 @@ fun ProfileDetailsScreen(navController: NavController, viewModel: SignupViewMode
                 .offset(x = (-135).dp, y = (-135).dp)
                 .size(270.dp)
                 .clip(CircleShape)
-                .background(SkyBluePeriwinkle)
+                .background(MaterialTheme.colorScheme.secondary)
         )
         Box(
             modifier = Modifier
@@ -104,7 +101,7 @@ fun ProfileDetailsScreen(navController: NavController, viewModel: SignupViewMode
                 .offset(x = 175.dp, y = 175.dp)
                 .size(350.dp)
                 .clip(CircleShape)
-                .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
         )
         Box(
             modifier = Modifier
@@ -112,7 +109,7 @@ fun ProfileDetailsScreen(navController: NavController, viewModel: SignupViewMode
                 .offset(x = 135.dp, y = 135.dp)
                 .size(270.dp)
                 .clip(CircleShape)
-                .background(SkyBluePeriwinkle)
+                .background(MaterialTheme.colorScheme.secondary)
         )
 
         Column(
@@ -129,19 +126,19 @@ fun ProfileDetailsScreen(navController: NavController, viewModel: SignupViewMode
                     modifier = Modifier
                         .weight(1f)
                         .height(4.dp)
-                        .background(DarkNavyBlue, RoundedCornerShape(2.dp))
+                        .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp))
                 )
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .height(4.dp)
-                        .background(DarkNavyBlue, RoundedCornerShape(2.dp))
+                        .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp))
                 )
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .height(4.dp)
-                        .background(DarkNavyBlue, RoundedCornerShape(2.dp))
+                        .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp))
                 )
             }
 
@@ -161,7 +158,7 @@ fun ProfileDetailsScreen(navController: NavController, viewModel: SignupViewMode
                         fontSize = 40.sp,
                         fontWeight = FontWeight.Bold
                     ),
-                    color = DarkNavyBlue,
+                    color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
@@ -172,7 +169,7 @@ fun ProfileDetailsScreen(navController: NavController, viewModel: SignupViewMode
                     modifier = Modifier.fillMaxWidth(),
                     elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFFE8DFE4)
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                 ) {
                     Column(
@@ -271,8 +268,8 @@ fun ProfileDetailsScreen(navController: NavController, viewModel: SignupViewMode
                     colors = TextFieldDefaults.colors(
                         focusedTextColor = Color.Black,
                         unfocusedTextColor = Color.Black,
-                        focusedContainerColor = Color(0xFFE8DFE4),
-                        unfocusedContainerColor = Color(0xFFE8DFE4),
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                         disabledIndicatorColor = Color.Transparent
@@ -283,7 +280,7 @@ fun ProfileDetailsScreen(navController: NavController, viewModel: SignupViewMode
                     modifier = Modifier.fillMaxWidth(),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFFE8DFE4)
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                 ) {
                     Column(
@@ -426,7 +423,7 @@ fun ProfileDetailsScreen(navController: NavController, viewModel: SignupViewMode
                     enabled = signupState !is SignupUiState.Loading,
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = DarkNavyBlue
+                        containerColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
                     if (signupState is SignupUiState.Loading) {

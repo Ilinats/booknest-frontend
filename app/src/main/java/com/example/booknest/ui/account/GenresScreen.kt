@@ -38,8 +38,6 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.booknest.domain.model.response.GenreResponse
 import com.example.booknest.navigation.Screen
-import com.example.booknest.ui.theme.DarkNavyBlue
-import com.example.booknest.ui.theme.SkyBluePeriwinkle
 import com.example.booknest.viewmodel.SignupViewModel
 import kotlinx.coroutines.launch
 
@@ -103,7 +101,6 @@ fun GenresScreen(navController: NavController, viewModel: SignupViewModel) {
     val availableGenresDtoList by viewModel.availableGenres.collectAsState()
     val selectedGenres = remember { mutableStateListOf<String>() }
 
-    val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(selectedGenres.toList()) {
@@ -113,7 +110,7 @@ fun GenresScreen(navController: NavController, viewModel: SignupViewModel) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF1E9EE))
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Box(
             modifier = Modifier
@@ -121,7 +118,7 @@ fun GenresScreen(navController: NavController, viewModel: SignupViewModel) {
                 .offset(x = (-175).dp, y = (-175).dp)
                 .size(350.dp)
                 .clip(CircleShape)
-                .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
         )
         Box(
             modifier = Modifier
@@ -129,7 +126,7 @@ fun GenresScreen(navController: NavController, viewModel: SignupViewModel) {
                 .offset(x = (-135).dp, y = (-135).dp)
                 .size(270.dp)
                 .clip(CircleShape)
-                .background(SkyBluePeriwinkle)
+                .background(MaterialTheme.colorScheme.secondary)
         )
         Box(
             modifier = Modifier
@@ -137,7 +134,7 @@ fun GenresScreen(navController: NavController, viewModel: SignupViewModel) {
                 .offset(x = 175.dp, y = 175.dp)
                 .size(350.dp)
                 .clip(CircleShape)
-                .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
         )
         Box(
             modifier = Modifier
@@ -145,7 +142,7 @@ fun GenresScreen(navController: NavController, viewModel: SignupViewModel) {
                 .offset(x = 135.dp, y = 135.dp)
                 .size(270.dp)
                 .clip(CircleShape)
-                .background(SkyBluePeriwinkle)
+                .background(MaterialTheme.colorScheme.secondary)
         )
 
         Column(
@@ -168,7 +165,7 @@ fun GenresScreen(navController: NavController, viewModel: SignupViewModel) {
                         fontSize = 40.sp,
                         fontWeight = FontWeight.Bold
                     ),
-                    color = DarkNavyBlue,
+                    color = MaterialTheme.colorScheme.onBackground,
                     textAlign = TextAlign.Center
                 )
 
@@ -179,7 +176,7 @@ fun GenresScreen(navController: NavController, viewModel: SignupViewModel) {
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontSize = 16.sp
                     ),
-                    color = Color(0xFF757575),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
                 )
 
@@ -273,20 +270,16 @@ fun GenresScreen(navController: NavController, viewModel: SignupViewModel) {
                     onClick = {
                         viewModel.saveGenres { success, message ->
                             if (success) {
-                                scope.launch {
-                                    snackbarHostState.showSnackbar(
-                                        message ?: "Genres saved successfully!"
-                                    )
-                                }
+                                com.example.booknest.ui.toast.GlobalToastHandler.showSuccess(
+                                    message ?: "Genres saved successfully!"
+                                )
                                 navController.navigate(Screen.SocialMedia.route) {
                                     popUpTo(Screen.Genres.route) { inclusive = true }
                                 }
                             } else {
-                                scope.launch {
-                                    snackbarHostState.showSnackbar(
-                                        message ?: "Failed to save genres."
-                                    )
-                                }
+                                com.example.booknest.ui.toast.GlobalToastHandler.showError(
+                                    message ?: "Failed to save genres."
+                                )
                             }
                         }
                     },
@@ -300,9 +293,7 @@ fun GenresScreen(navController: NavController, viewModel: SignupViewModel) {
                     enabled = selectedGenres.size >= 2,
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (selectedGenres.size >= 2) DarkNavyBlue else Color(
-                            0xFFE0E0E0
-                        ),
+                        containerColor = if (selectedGenres.size >= 2) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
                         disabledContainerColor = Color(0xFFE0E0E0)
                     )
                 ) {
@@ -320,11 +311,8 @@ fun GenresScreen(navController: NavController, viewModel: SignupViewModel) {
     }
 
     Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.BottomCenter
-    ) {
-        SnackbarHost(snackbarHostState)
-    }
+        modifier = Modifier.fillMaxSize()
+    )
 }
 
 @Composable
@@ -339,12 +327,12 @@ fun GenreButton(
             .defaultMinSize(minHeight = 40.dp)
             .clip(RoundedCornerShape(30.dp))
             .background(
-                if (isSelected) Color(0xFFE8DFE4) else Color.White,
+                if (isSelected) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface,
                 RoundedCornerShape(30.dp)
             )
             .border(
                 width = if (isSelected) 2.dp else 1.dp,
-                color = if (isSelected) DarkNavyBlue else Color(0xFFE0E0E0),
+                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
                 shape = RoundedCornerShape(30.dp)
             )
             .clickable { onClick() },
@@ -356,7 +344,7 @@ fun GenreButton(
                 fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
                 fontSize = 13.sp
             ),
-            color = if (isSelected) DarkNavyBlue else Color(0xFF757575),
+            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             maxLines = 2,
             modifier = Modifier.padding(horizontal = 30.dp, vertical = 8.dp)
