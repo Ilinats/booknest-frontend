@@ -69,5 +69,9 @@ class BNApplicationsRepository(private val applicationsDataSource: ApplicationsD
     override suspend fun getOverdueReviews(): Result<List<ApplicationResponse>> {
         return resultBody(applicationsDataSource.getOverdueReviews())
     }
+
+    override suspend fun runLotterySelection(bookId: String): Result<com.example.booknest.domain.model.response.LotteryResponse> {
+        return resultBody(applicationsDataSource.runLotterySelection(bookId))
+    }
 }
 

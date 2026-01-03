@@ -67,3 +67,10 @@ data class BulkActionResponse(
     val updated: Int
 )
 
+@Serializable
+data class LotteryResponse(
+    val approved: Int,
+    val rejected: Int,
+    val message: String
+)
+

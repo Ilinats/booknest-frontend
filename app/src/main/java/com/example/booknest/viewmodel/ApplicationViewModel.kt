@@ -419,6 +419,40 @@ class ApplicationViewModel(
         }
     }
 
+    fun runLottery(bookId: String) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val result = applicationsRepository.runLotterySelection(bookId)
+                result
+                    .onSuccess { lotteryResult ->
+                        val message = "Lottery completed: ${lotteryResult.approved} approved, ${lotteryResult.rejected} rejected"
+                        _snackbarEvent.emit(message)
+                        loadBookApplications(bookId)
+                    }
+                    .onFailure { e ->
+                        val errorMessage = when {
+                            e.message?.contains("deadline", ignoreCase = true) == true -> {
+                                "Application deadline has not passed yet. Lottery can only be run after the deadline."
+                            }
+                            e.message?.contains("already been run", ignoreCase = true) == true -> {
+                                "Lottery has already been run for this book."
+                            }
+                            e.message?.contains("lottery selection", ignoreCase = true) == true -> {
+                                "This book does not use lottery selection method."
+                            }
+                            else -> e.message ?: "Failed to run lottery"
+                        }
+                        _snackbarEvent.emit(errorMessage)
+                    }
+            } catch (e: Exception) {
+                _snackbarEvent.emit("Error running lottery: ${e.message}")
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
     fun clearApplicationCheck() {
         _applicationCheck.value = null
     }

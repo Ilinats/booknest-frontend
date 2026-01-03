@@ -9,6 +9,7 @@ import com.example.booknest.domain.model.request.UpdateReadingStatusRequest
 import com.example.booknest.domain.model.response.ApplicationCheckResponse
 import com.example.booknest.domain.model.response.ApplicationResponse
 import com.example.booknest.domain.model.response.BulkActionResponse
+import com.example.booknest.domain.model.response.LotteryResponse
 
 class BNApplicationsDataSource(private val applicationsService: ApplicationsService) :
     ApplicationsDataSource {
@@ -79,6 +80,10 @@ class BNApplicationsDataSource(private val applicationsService: ApplicationsServ
 
     override suspend fun getOverdueReviews(): Result<List<ApplicationResponse>> {
         return requestBody(applicationsService.getOverdueReviews())
+    }
+
+    override suspend fun runLotterySelection(bookId: String): Result<LotteryResponse> {
+        return requestBody(applicationsService.runLottery(bookId))
     }
 }
 

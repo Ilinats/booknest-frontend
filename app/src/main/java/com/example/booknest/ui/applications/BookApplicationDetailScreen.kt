@@ -4,6 +4,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -13,7 +16,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import com.example.booknest.ui.components.BackButton
-import com.example.booknest.ui.theme.DarkNavyBlue
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -113,7 +115,10 @@ fun BookSummaryHeader(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
     ) {
         Row(
             modifier = Modifier
@@ -366,7 +371,7 @@ fun ApplicationStatCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFF5EDE8)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -809,6 +814,26 @@ fun BookApplicationDetailScreen(
     val tabs = listOf("All", "Pending", "Approved", "Rejected", "Statistics")
 
     val book = bookDetails ?: bookApplications.firstOrNull()?.book
+    
+    // Check if this is a lottery book
+    val isLotteryBook = book?.selectionMethod?.let { method ->
+        method.lowercase().trim() == "lottery" || method.lowercase().trim() == "random_selection"
+    } ?: false
+    
+    // Calculate lottery conditions
+    val lotteryDeadlinePassed = book?.applicationDeadline?.let { deadline ->
+        try {
+            val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
+            inputFormat.timeZone = TimeZone.getTimeZone("UTC")
+            val deadlineDate = inputFormat.parse(deadline)
+            deadlineDate?.before(Date()) ?: false
+        } catch (e: Exception) {
+            false
+        }
+    } ?: false
+    val lotteryHasPending = bookApplications.any { it.status == "pending" }
+    val lotteryHasProcessed = bookApplications.any { it.status in listOf("approved", "rejected") }
+    var showLotteryDialog by remember { mutableStateOf(false) }
 
     var selectedApplicationIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var isSelectionMode by remember { mutableStateOf(false) }
@@ -902,7 +927,14 @@ fun BookApplicationDetailScreen(
     val approvedCount = applicationStats.approved
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { 
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .windowInsetsPadding(WindowInsets.navigationBars)
+                    .padding(bottom = 16.dp)
+            )
+        },
         topBar = {
             Surface(
                 shadowElevation = 4.dp,
@@ -916,7 +948,7 @@ fun BookApplicationDetailScreen(
                                 book?.title ?: "Book Details",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 20.sp,
-                                color = DarkNavyBlue
+                                color = MaterialTheme.colorScheme.primary
                             )
                             Text(
                                 "Status: ${
@@ -971,6 +1003,24 @@ fun BookApplicationDetailScreen(
 
             item {
                 ApplicationStatsSection(stats = applicationStats)
+            }
+
+            // Lottery Section - show for lottery books
+            if (isLotteryBook) {
+                item {
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+                item {
+                    LotterySelectionCard(
+                        isLotteryBook = isLotteryBook,
+                        deadlinePassed = lotteryDeadlinePassed,
+                        hasPendingApplications = lotteryHasPending,
+                        hasProcessedApplications = lotteryHasProcessed,
+                        pendingCount = applicationStats.pending,
+                        availableCopies = book?.availableCopies ?: 0,
+                        onRunLottery = { showLotteryDialog = true }
+                    )
+                }
             }
 
             item {
@@ -1114,7 +1164,8 @@ fun BookApplicationDetailScreen(
                                             notes
                                         )
                                     },
-                                    onMarkSent = null
+                                    onMarkSent = null,
+                                    isLotteryBook = isLotteryBook
                                 )
                             }
                         }
@@ -1172,7 +1223,8 @@ fun BookApplicationDetailScreen(
                                             notes
                                         )
                                     },
-                                    onMarkSent = null
+                                    onMarkSent = null,
+                                    isLotteryBook = isLotteryBook
                                 )
                             }
                         }
@@ -1255,6 +1307,35 @@ fun BookApplicationDetailScreen(
                 }
             }
         }
+    }
+    
+    // Lottery confirmation dialog
+    if (showLotteryDialog) {
+        AlertDialog(
+            onDismissRequest = { showLotteryDialog = false },
+            title = { Text("Run Lottery Selection") },
+            text = {
+                Text(
+                    "This will randomly select ${book?.availableCopies ?: 0} reader(s) from ${applicationStats.pending} pending application(s). " +
+                    "Selected readers will be approved and others will be rejected. This action cannot be undone."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        applicationViewModel.runLottery(bookId)
+                        showLotteryDialog = false
+                    }
+                ) {
+                    Text("Run Lottery")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showLotteryDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
@@ -1364,7 +1445,8 @@ fun EnhancedApplicationCard(
     navController: NavController,
     onApprove: (ApplicationResponse, String?) -> Unit,
     onReject: (ApplicationResponse, String?) -> Unit,
-    onMarkSent: ((ApplicationResponse) -> Unit)?
+    onMarkSent: ((ApplicationResponse) -> Unit)?,
+    isLotteryBook: Boolean = false
 ) {
     var isExpanded by remember { mutableStateOf(false) }
     var authorNotes by remember { mutableStateOf(application.authorNotes ?: "") }
@@ -1411,12 +1493,20 @@ fun EnhancedApplicationCard(
                         )
                     }
 
+                    val onProfileClick: () -> Unit = {
+                        application.reader?.id?.let { readerId ->
+                            navController.navigate(Screen.Profile.createRoute(readerId))
+                        }
+                        Unit
+                    }
+
                     if (application.reader?.profilePictureUrl.isNullOrBlank()) {
                         Box(
                             modifier = Modifier
                                 .size(48.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary),
+                                .background(MaterialTheme.colorScheme.primary)
+                                .clickable(onClick = onProfileClick),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
@@ -1433,7 +1523,8 @@ fun EnhancedApplicationCard(
                             modifier = Modifier
                                 .size(48.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .clickable(onClick = onProfileClick),
                             contentScale = ContentScale.Crop
                         )
                     }
@@ -1443,11 +1534,7 @@ fun EnhancedApplicationCard(
                             text = application.reader?.username ?: "Unknown Reader",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.clickable {
-                                application.reader?.id?.let { readerId ->
-                                    navController.navigate(Screen.Profile.createRoute(readerId))
-                                }
-                            }
+                            modifier = Modifier.clickable(onClick = onProfileClick)
                         )
                         Text(
                             text = "Applied on ${formatDate(application.appliedAt ?: "")}",
@@ -1480,32 +1567,59 @@ fun EnhancedApplicationCard(
             )
 
             if (application.status == "pending" && !isSelectionMode) {
-                OutlinedTextField(
-                    value = authorNotes,
-                    onValueChange = { authorNotes = it },
-                    label = { Text("Add notes (optional)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    maxLines = 2,
-                    placeholder = { Text("Add private notes about this application") }
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Button(
-                        onClick = {
-                            onApprove(application, authorNotes.ifBlank { null })
-                        },
-                        modifier = Modifier.weight(1f)
+                if (isLotteryBook) {
+                    // For lottery books, show message instead of approve/reject buttons
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        )
                     ) {
-                        Text("Approve")
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Filled.Info,
+                                contentDescription = "Lottery",
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Text(
+                                "This application will be decided by lottery selection",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
                     }
-                    OutlinedButton(
-                        onClick = { onReject(application, authorNotes.ifBlank { null }) },
-                        modifier = Modifier.weight(1f)
+                } else {
+                    OutlinedTextField(
+                        value = authorNotes,
+                        onValueChange = { authorNotes = it },
+                        label = { Text("Add notes (optional)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        maxLines = 2,
+                        placeholder = { Text("Add private notes about this application") }
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("Reject")
+                        Button(
+                            onClick = {
+                                onApprove(application, authorNotes.ifBlank { null })
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Approve")
+                        }
+                        OutlinedButton(
+                            onClick = { onReject(application, authorNotes.ifBlank { null }) },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Reject")
+                        }
                     }
                 }
             }
@@ -1568,12 +1682,20 @@ fun EnhancedApprovedApplicationCard(
                         )
                     }
 
+                    val onProfileClick: () -> Unit = {
+                        application.reader?.id?.let { readerId ->
+                            navController.navigate(Screen.Profile.createRoute(readerId))
+                        }
+                        Unit
+                    }
+                    
                     if (application.reader?.profilePictureUrl.isNullOrBlank()) {
                         Box(
                             modifier = Modifier
                                 .size(48.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary),
+                                .background(MaterialTheme.colorScheme.primary)
+                                .clickable(onClick = onProfileClick),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
@@ -1590,7 +1712,8 @@ fun EnhancedApprovedApplicationCard(
                             modifier = Modifier
                                 .size(48.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .clickable(onClick = onProfileClick),
                             contentScale = ContentScale.Crop
                         )
                     }
@@ -1600,11 +1723,7 @@ fun EnhancedApprovedApplicationCard(
                             text = application.reader?.username ?: "Unknown Reader",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.clickable {
-                                application.reader?.id?.let { readerId ->
-                                    navController.navigate(Screen.Profile.createRoute(readerId))
-                                }
-                            }
+                            modifier = Modifier.clickable(onClick = onProfileClick)
                         )
                         Text(
                             text = "Approved on ${formatDate(application.respondedAt ?: "")}",
@@ -1656,10 +1775,11 @@ fun RejectedApplicationCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
-        )
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        shape = RoundedCornerShape(12.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -1667,60 +1787,99 @@ fun RejectedApplicationCard(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                if (application.reader?.profilePictureUrl.isNullOrBlank()) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.error),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = application.reader?.username?.firstOrNull()?.uppercase() ?: "?",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    val onProfileClick: () -> Unit = {
+                        application.reader?.id?.let { readerId ->
+                            navController.navigate(Screen.Profile.createRoute(readerId))
+                        }
+                        Unit
+                    }
+
+                    if (application.reader?.profilePictureUrl.isNullOrBlank()) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary)
+                                .clickable(onClick = onProfileClick),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = application.reader?.username?.firstOrNull()?.uppercase() ?: "?",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    } else {
+                        AsyncImage(
+                            model = application.reader?.profilePictureUrl,
+                            contentDescription = "Reader Avatar",
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .clickable(onClick = onProfileClick),
+                            contentScale = ContentScale.Crop
                         )
                     }
-                } else {
-                    AsyncImage(
-                        model = application.reader?.profilePictureUrl,
-                        contentDescription = "Reader Avatar",
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                        contentScale = ContentScale.Crop
-                    )
-                }
 
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = application.reader?.username ?: "Unknown Reader",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.clickable {
-                            application.reader?.id?.let { readerId ->
-                                navController.navigate(Screen.Profile.createRoute(readerId))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = application.reader?.username ?: "Unknown Reader",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.clickable(onClick = onProfileClick)
+                        )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    Icons.Filled.Close,
+                                    contentDescription = "Rejected",
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "Rejected on ${formatDate(application.respondedAt ?: "")}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
                             }
-                        }
-                    )
-                    Text(
-                        text = "Rejected on ${formatDate(application.respondedAt ?: "")}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    }
                 }
             }
 
-            application.authorNotes?.let { notes ->
-                Text(
-                    text = "Notes: $notes",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            application.authorNotes?.takeIf { it.isNotBlank() }?.let { notes ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            text = "Author Notes",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = notes,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
     }
@@ -2401,7 +2560,7 @@ fun StatisticsTab(
                                 .shadow(elevation = 2.dp, shape = RoundedCornerShape(16.dp)),
                             shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = Color(0xFFE8DFE4)
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
                             ),
                             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                         ) {
@@ -2587,7 +2746,7 @@ fun StatisticsTab(
                                     .shadow(elevation = 2.dp, shape = RoundedCornerShape(16.dp)),
                                 shape = RoundedCornerShape(16.dp),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = Color(0xFFE8DFE4)
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
                                 ),
                                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                             ) {
@@ -2650,7 +2809,7 @@ fun StatisticsTab(
                                     .shadow(elevation = 2.dp, shape = RoundedCornerShape(16.dp)),
                                 shape = RoundedCornerShape(16.dp),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = Color(0xFFE8DFE4)
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
                                 ),
                                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                             ) {
@@ -2683,7 +2842,7 @@ fun StatisticsTab(
                                     .shadow(elevation = 2.dp, shape = RoundedCornerShape(16.dp)),
                                 shape = RoundedCornerShape(16.dp),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = Color(0xFFE8DFE4)
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
                                 ),
                                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                             ) {
@@ -2864,7 +3023,7 @@ fun StatisticsTab(
             modifier = modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFF5EDE8)
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
@@ -3285,6 +3444,230 @@ fun StatisticsTab(
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+@Composable
+fun LotterySelectionCard(
+    isLotteryBook: Boolean,
+    deadlinePassed: Boolean,
+    hasPendingApplications: Boolean,
+    hasProcessedApplications: Boolean,
+    pendingCount: Int,
+    availableCopies: Int,
+    onRunLottery: () -> Unit
+) {
+    val canRunLottery = deadlinePassed && hasPendingApplications && !hasProcessedApplications
+    
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (canRunLottery) {
+                MaterialTheme.colorScheme.surfaceVariant
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            }
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(
+                            if (canRunLottery) {
+                                MaterialTheme.colorScheme.secondary
+                            } else {
+                                MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
+                            }
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Filled.Shuffle,
+                        contentDescription = "Lottery",
+                        tint = if (canRunLottery) {
+                            MaterialTheme.colorScheme.onSecondary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Lottery Selection",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (canRunLottery) {
+                            MaterialTheme.colorScheme.onSecondaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                    )
+                    Text(
+                        "Random selection process",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 11.sp
+                    )
+                }
+            }
+            
+            Divider(
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                thickness = 0.5.dp
+            )
+            
+            // Content based on state
+            when {
+                hasProcessedApplications -> {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            Icons.Filled.CheckCircle,
+                            contentDescription = "Completed",
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            "Lottery completed. Winners have been selected.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                !deadlinePassed -> {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                Icons.Filled.Schedule,
+                                contentDescription = "Waiting",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                "Waiting for application deadline to pass",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Button(
+                            onClick = { },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = false,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.secondary,
+                                disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            )
+                        ) {
+                            Icon(
+                                Icons.Filled.Shuffle,
+                                contentDescription = "Run Lottery",
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Run Lottery Selection", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+                !hasPendingApplications -> {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            Icons.Filled.Info,
+                            contentDescription = "Info",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            "No pending applications available for lottery.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                else -> {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // Stats row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text(
+                                    "$pendingCount",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.secondary
+                                )
+                                Text(
+                                    "Pending",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 11.sp
+                                )
+                            }
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(
+                                    "$availableCopies",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.secondary
+                                )
+                                Text(
+                                    "Available Slots",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+                        
+                        Text(
+                            "Ready to randomly select winners from pending applications.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        
+                        Button(
+                            onClick = onRunLottery,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.secondary
+                            )
+                        ) {
+                            Icon(
+                                Icons.Filled.Shuffle,
+                                contentDescription = "Run Lottery",
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Run Lottery Selection", fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+            }
         }
     }
 }

@@ -12,6 +12,7 @@ import com.example.booknest.domain.model.request.UpdateReadingStatusRequest
 import com.example.booknest.domain.model.response.ApplicationCheckResponse
 import com.example.booknest.domain.model.response.ApplicationResponse
 import com.example.booknest.domain.model.response.BulkActionResponse
+import com.example.booknest.domain.model.response.LotteryResponse
 import com.example.booknest.domain.model.response.PaginatedResponse
 import retrofit2.Response
 import retrofit2.http.Body
@@ -88,5 +89,10 @@ interface ApplicationsService {
 
     @GET(Applications.OVERDUE_REVIEWS)
     suspend fun getOverdueReviews(): Response<List<ApplicationResponse>>
+
+    @POST(Applications.RUN_LOTTERY)
+    suspend fun runLottery(
+        @Path(PathConstants.BOOK_ID) bookId: String
+    ): Response<LotteryResponse>
 }
 

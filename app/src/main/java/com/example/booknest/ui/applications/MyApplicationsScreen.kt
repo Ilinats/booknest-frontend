@@ -177,7 +177,7 @@ fun MyApplicationsScreen(
                         ),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFFE8DFE4)
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
                     ),
                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
@@ -294,20 +294,20 @@ fun StatusChip(status: String?) {
         )
 
         "withdrawn" -> Triple(
-            Color(0xFFE8DFE4),
-            Color(0xFF757575),
+            MaterialTheme.colorScheme.surfaceVariant,
+            MaterialTheme.colorScheme.onSurfaceVariant,
             "Withdrawn"
         )
 
         null -> Triple(
-            Color(0xFFE8DFE4),
-            Color(0xFF757575),
+            MaterialTheme.colorScheme.surfaceVariant,
+            MaterialTheme.colorScheme.onSurfaceVariant,
             "Unknown"
         )
 
         else -> Triple(
-            Color(0xFFE8DFE4),
-            Color(0xFF757575),
+            MaterialTheme.colorScheme.surfaceVariant,
+            MaterialTheme.colorScheme.onSurfaceVariant,
             "Unknown"
         )
     }
@@ -346,7 +346,7 @@ fun EmptyApplicationsState(
                 ),
             shape = CircleShape,
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFE8DFE4)
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
@@ -705,7 +705,7 @@ fun StyledApplicationCard(
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFE8DFE4)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -849,7 +849,7 @@ fun ApplicationProgressBar(application: ApplicationResponse) {
                             .size(28.dp)
                             .clip(CircleShape)
                             .background(
-                                if (completed) DarkNavyBlue else Color(0xFFE8DFE4)
+                                if (completed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
                             ),
                         contentAlignment = Alignment.Center
                     ) {

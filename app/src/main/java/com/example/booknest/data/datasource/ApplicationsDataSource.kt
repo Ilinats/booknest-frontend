@@ -40,5 +40,6 @@ interface ApplicationsDataSource {
 
     suspend fun markCopySent(applicationId: String): Result<ApplicationResponse>
     suspend fun getOverdueReviews(): Result<List<ApplicationResponse>>
+    suspend fun runLotterySelection(bookId: String): Result<com.example.booknest.domain.model.response.LotteryResponse>
 }
 

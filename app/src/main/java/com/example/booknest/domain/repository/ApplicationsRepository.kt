@@ -8,6 +8,7 @@ import com.example.booknest.domain.model.request.UpdateReadingStatusRequest
 import com.example.booknest.domain.model.response.ApplicationCheckResponse
 import com.example.booknest.domain.model.response.ApplicationResponse
 import com.example.booknest.domain.model.response.BulkActionResponse
+import com.example.booknest.domain.model.response.LotteryResponse
 
 interface ApplicationsRepository {
     suspend fun createApplication(application: CreateApplicationRequest): Result<ApplicationResponse>
@@ -40,4 +41,5 @@ interface ApplicationsRepository {
 
     suspend fun markCopySent(applicationId: String): Result<ApplicationResponse>
     suspend fun getOverdueReviews(): Result<List<ApplicationResponse>>
+    suspend fun runLotterySelection(bookId: String): Result<LotteryResponse>
 }
