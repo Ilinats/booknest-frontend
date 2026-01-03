@@ -1,64 +1,72 @@
 package com.example.booknest.viewmodel
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.booknest.data.AuthManager
-import com.example.booknest.network.*
+import com.example.booknest.domain.model.request.ApproveApplicationRequest
+import com.example.booknest.domain.model.request.UpdateApplicationCompleteRequest
+import com.example.booknest.domain.model.request.BulkActionRequest
+import com.example.booknest.domain.model.request.CreateApplicationRequest
+import com.example.booknest.domain.model.request.RejectApplicationRequest
+import com.example.booknest.domain.model.request.UpdateApplicationRequest
+import com.example.booknest.domain.model.request.UpdateReadingStatusRequest
+import com.example.booknest.domain.model.response.ApplicationCheckResponse
+import com.example.booknest.domain.model.response.ApplicationResponse
+import com.example.booknest.domain.repository.ApplicationsRepository
+import com.example.booknest.domain.usecase.applications.GetMyApplicationsUseCase
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class ApplicationViewModel(private val authManager: AuthManager) : ViewModel() {
+enum class ReadingStatus(val value: String) {
+    NOT_STARTED("not_started"),
+    CURRENTLY_READING("currently_reading"),
+    FOR_REVIEW("for_review")
+}
 
-    // Reader state
-    private val _myApplications = MutableStateFlow<List<Application>>(emptyList())
-    val myApplications: StateFlow<List<Application>> = _myApplications
+enum class ApplicationStatus {
+    PENDING,
+    APPROVED,
+    REJECTED,
+    WITHDRAWN
+}
 
-    private val _readingProgress = MutableStateFlow<List<Application>>(emptyList())
-    val readingProgress: StateFlow<List<Application>> = _readingProgress
+class ApplicationViewModel(
+    private val getMyApplicationsUseCase: GetMyApplicationsUseCase,
+    private val applicationsRepository: ApplicationsRepository
+) : ViewModel() {
+
+    private val _myApplications = MutableStateFlow<List<ApplicationResponse>>(emptyList())
+    val myApplications: StateFlow<List<ApplicationResponse>> = _myApplications
+
+    private val _readingProgress = MutableStateFlow<List<ApplicationResponse>>(emptyList())
+    val readingProgress: StateFlow<List<ApplicationResponse>> = _readingProgress
 
     private val _applicationCheck = MutableStateFlow<ApplicationCheckResponse?>(null)
     val applicationCheck: StateFlow<ApplicationCheckResponse?> = _applicationCheck
 
-    // Author state
-    private val _bookApplications = MutableStateFlow<List<Application>>(emptyList())
-    val bookApplications: StateFlow<List<Application>> = _bookApplications
+    private val _bookApplications = MutableStateFlow<List<ApplicationResponse>>(emptyList())
+    val bookApplications: StateFlow<List<ApplicationResponse>> = _bookApplications
 
-    // Common state
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
     private val _snackbarEvent = MutableSharedFlow<String>()
     val snackbarEvent: SharedFlow<String> = _snackbarEvent
 
-    // Reader operations
     fun loadMyApplications() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val response = RetrofitInstance.api.getMyApplications()
-                if (response.isSuccessful && response.body() != null) {
-                    val apiResponse = response.body()!!
-                    println("DEBUG: Applications API response - success: ${apiResponse.success}, data size: ${apiResponse.data?.size ?: 0}")
-                    if (apiResponse.success) {
-                        // Applications are already properly mapped by the serializers
-                        val applications = apiResponse.data ?: emptyList()
+                val result = getMyApplicationsUseCase()
+                result
+                    .onSuccess { applications ->
                         _myApplications.value = applications
-                        println("DEBUG: Applications loaded: ${applications.size} applications")
-                        applications.forEach { app ->
-                            println("DEBUG: Application ${app.id} - status: ${app.status}, book: ${app.bookTitle ?: "N/A"}, author: ${app.authorName ?: "N/A"}")
-                        }
-                    } else {
-                        println("DEBUG: Applications API error: ${apiResponse.message}")
-                        _snackbarEvent.emit(apiResponse.message ?: "Failed to load applications")
                     }
-                } else {
-                    println("DEBUG: Applications API error: ${response.code()} - ${response.message()}")
-                    _snackbarEvent.emit("Failed to load applications: ${response.message()}")
-                }
+                    .onFailure { e ->
+                        _snackbarEvent.emit(e.message ?: "Failed to load applications")
+                    }
             } catch (e: Exception) {
                 _snackbarEvent.emit("Error loading applications: ${e.message}")
             } finally {
@@ -71,17 +79,14 @@ class ApplicationViewModel(private val authManager: AuthManager) : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val response = RetrofitInstance.api.checkApplication(bookId)
-                if (response.isSuccessful && response.body() != null) {
-                    val apiResponse = response.body()!!
-                    if (apiResponse.success) {
-                        _applicationCheck.value = apiResponse.data
-                    } else {
-                        _snackbarEvent.emit(apiResponse.message ?: "Failed to check application status")
+                val result = applicationsRepository.checkApplication(bookId)
+                result
+                    .onSuccess { check ->
+                        _applicationCheck.value = check
                     }
-                } else {
-                    _snackbarEvent.emit("Failed to check application status: ${response.message()}")
-                }
+                    .onFailure { e ->
+                        _snackbarEvent.emit(e.message ?: "Failed to check application status")
+                    }
             } catch (e: Exception) {
                 _snackbarEvent.emit("Error checking application status: ${e.message}")
             } finally {
@@ -90,21 +95,17 @@ class ApplicationViewModel(private val authManager: AuthManager) : ViewModel() {
         }
     }
 
+    suspend fun getApplication(applicationId: String) =
+        applicationsRepository.getApplication(applicationId)
+
     fun loadReadingProgress() {
         viewModelScope.launch {
             try {
-                val response = RetrofitInstance.api.getReadingProgress()
-                if (response.isSuccessful && response.body() != null) {
-                    val apiResponse = response.body()!!
-                    if (apiResponse.success) {
-                        _readingProgress.value = apiResponse.data ?: emptyList()
-                    }
-                    // Silently fail - reading progress is not critical
+                val result = applicationsRepository.getReadingProgress()
+                result.onSuccess { progress ->
+                    _readingProgress.value = progress
                 }
-                // Silently fail on error - reading progress is not critical
             } catch (e: Exception) {
-                // Silently fail - reading progress is not critical for the main flow
-                // Just set empty list to avoid errors
                 _readingProgress.value = emptyList()
             }
         }
@@ -114,38 +115,78 @@ class ApplicationViewModel(private val authManager: AuthManager) : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val response = RetrofitInstance.api.createApplication(
-                    CreateApplicationDto(
-                        bookId = bookId,
-                        applicationMessage = message
-                    )
+                val request = CreateApplicationRequest(
+                    bookId = bookId,
+                    applicationMessage = message
                 )
-                if (response.isSuccessful && response.body() != null) {
-                    val apiResponse = response.body()!!
-                    if (apiResponse.success) {
-                        _snackbarEvent.emit(apiResponse.message ?: "Application submitted successfully!")
-                        loadMyApplications() // Refresh the list
-                    } else {
-                        // Backend returned success: false - this could be email verification requirement
-                        val errorMessage = apiResponse.message ?: "Failed to submit application"
+                val result = applicationsRepository.createApplication(request)
+                result
+                    .onSuccess {
+                        _snackbarEvent.emit("Application submitted successfully!")
+                        checkApplication(bookId)
+                        loadMyApplications()
+                    }
+                    .onFailure { e ->
+                        val errorMessage = when (e) {
+                            is com.example.booknest.data.error.BNError.Generic -> {
+                                when {
+                                    e.messageString?.contains(
+                                        "already applied",
+                                        ignoreCase = true
+                                    ) == true ||
+                                            e.messageString?.contains(
+                                                "APPLICATION_ALREADY_EXISTS",
+                                                ignoreCase = true
+                                            ) == true -> {
+                                        "You have already applied for this book"
+                                    }
+
+                                    e.messageString?.contains(
+                                        "email verification",
+                                        ignoreCase = true
+                                    ) == true -> {
+                                        "Please verify your email address before applying"
+                                    }
+
+                                    e.messageString?.contains(
+                                        "address",
+                                        ignoreCase = true
+                                    ) == true -> {
+                                        "Please add your address in your profile to apply for physical copies"
+                                    }
+
+                                    else -> e.messageString ?: e.message
+                                    ?: "Failed to submit application"
+                                }
+                            }
+
+                            else -> {
+                                val msg = e.message ?: "Failed to submit application"
+                                if (msg.contains("\"message\"") && msg.contains("already applied")) {
+                                    "You have already applied for this book"
+                                } else {
+                                    msg
+                                }
+                            }
+                        }
                         _snackbarEvent.emit(errorMessage)
                     }
-                } else {
-                    // Handle HTTP errors
-                    val errorBody = response.errorBody()?.string()
-                    val errorMessage = if (errorBody != null) {
-                        try {
-                            "Failed to submit application: ${response.message()}"
-                        } catch (e: Exception) {
-                            "Failed to submit application: ${response.message()}"
-                        }
-                    } else {
-                        "Failed to submit application: ${response.message()}"
-                    }
-                    _snackbarEvent.emit(errorMessage)
-                }
             } catch (e: Exception) {
-                _snackbarEvent.emit("Error submitting application: ${e.message}")
+                val errorMessage = when (e) {
+                    is com.example.booknest.data.error.BNError.Generic -> {
+                        e.messageString ?: e.message ?: "Error submitting application"
+                    }
+
+                    else -> {
+                        val msg = e.message ?: "Error submitting application"
+                        if (msg.contains("\"message\"") && msg.contains("already applied")) {
+                            "You have already applied for this book"
+                        } else {
+                            msg
+                        }
+                    }
+                }
+                _snackbarEvent.emit(errorMessage)
             } finally {
                 _isLoading.value = false
             }
@@ -156,16 +197,16 @@ class ApplicationViewModel(private val authManager: AuthManager) : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val response = RetrofitInstance.api.updateApplication(
-                    applicationId,
-                    UpdateApplicationDto(applicationMessage = message)
-                )
-                if (response.isSuccessful) {
-                    _snackbarEvent.emit("Application updated successfully!")
-                    loadMyApplications()
-                } else {
-                    _snackbarEvent.emit("Failed to update application: ${response.message()}")
-                }
+                val request = UpdateApplicationRequest(applicationMessage = message)
+                val result = applicationsRepository.updateApplication(applicationId, request)
+                result
+                    .onSuccess {
+                        _snackbarEvent.emit("Application updated successfully!")
+                        loadMyApplications()
+                    }
+                    .onFailure { e ->
+                        _snackbarEvent.emit(e.message ?: "Failed to update application")
+                    }
             } catch (e: Exception) {
                 _snackbarEvent.emit("Error updating application: ${e.message}")
             } finally {
@@ -178,13 +219,15 @@ class ApplicationViewModel(private val authManager: AuthManager) : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val response = RetrofitInstance.api.withdrawApplication(applicationId)
-                if (response.isSuccessful) {
-                    _snackbarEvent.emit("Application withdrawn successfully!")
-                    loadMyApplications()
-                } else {
-                    _snackbarEvent.emit("Failed to withdraw application: ${response.message()}")
-                }
+                val result = applicationsRepository.withdrawApplication(applicationId)
+                result
+                    .onSuccess {
+                        _snackbarEvent.emit("Application withdrawn successfully!")
+                        loadMyApplications()
+                    }
+                    .onFailure { e ->
+                        _snackbarEvent.emit(e.message ?: "Failed to withdraw application")
+                    }
             } catch (e: Exception) {
                 _snackbarEvent.emit("Error withdrawing application: ${e.message}")
             } finally {
@@ -197,13 +240,15 @@ class ApplicationViewModel(private val authManager: AuthManager) : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val response = RetrofitInstance.api.markCopyReceived(applicationId)
-                if (response.isSuccessful) {
-                    _snackbarEvent.emit("Copy marked as received!")
-                    loadMyApplications()
-                } else {
-                    _snackbarEvent.emit("Failed to mark copy as received: ${response.message()}")
-                }
+                val result = applicationsRepository.markCopyReceived(applicationId)
+                result
+                    .onSuccess {
+                        _snackbarEvent.emit("Copy marked as received!")
+                        loadMyApplications()
+                    }
+                    .onFailure { e ->
+                        _snackbarEvent.emit(e.message ?: "Failed to mark copy as received")
+                    }
             } catch (e: Exception) {
                 _snackbarEvent.emit("Error marking copy as received: ${e.message}")
             } finally {
@@ -216,18 +261,17 @@ class ApplicationViewModel(private val authManager: AuthManager) : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val response = RetrofitInstance.api.updateReadingStatus(
-                    applicationId,
-                    UpdateReadingStatusDto(readingStatus = status.value)
-                )
-                if (response.isSuccessful) {
-                    _snackbarEvent.emit("Reading status updated!")
-                    loadMyApplications()
-                    // Load reading progress in background (non-blocking)
-                    loadReadingProgress()
-                } else {
-                    _snackbarEvent.emit("Failed to update reading status: ${response.message()}")
-                }
+                val request = UpdateReadingStatusRequest(readingStatus = status.value)
+                val result = applicationsRepository.updateReadingStatus(applicationId, request)
+                result
+                    .onSuccess {
+                        _snackbarEvent.emit("Reading status updated!")
+                        loadMyApplications()
+                        loadReadingProgress()
+                    }
+                    .onFailure { e ->
+                        _snackbarEvent.emit(e.message ?: "Failed to update reading status")
+                    }
             } catch (e: Exception) {
                 _snackbarEvent.emit("Error updating reading status: ${e.message}")
             } finally {
@@ -236,22 +280,18 @@ class ApplicationViewModel(private val authManager: AuthManager) : ViewModel() {
         }
     }
 
-    // Author operations
     fun loadBookApplications(bookId: String) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val response = RetrofitInstance.api.getBookApplications(bookId)
-                if (response.isSuccessful && response.body() != null) {
-                    val apiResponse = response.body()!!
-                    if (apiResponse.success) {
-                        _bookApplications.value = apiResponse.data ?: emptyList()
-                    } else {
-                        _snackbarEvent.emit(apiResponse.message ?: "Failed to load book applications")
+                val result = applicationsRepository.getBookApplications(bookId)
+                result
+                    .onSuccess { apps ->
+                        _bookApplications.value = apps
                     }
-                } else {
-                    _snackbarEvent.emit("Failed to load book applications: ${response.message()}")
-                }
+                    .onFailure { e ->
+                        _snackbarEvent.emit(e.message ?: "Failed to load book applications")
+                    }
             } catch (e: Exception) {
                 _snackbarEvent.emit("Error loading book applications: ${e.message}")
             } finally {
@@ -264,20 +304,23 @@ class ApplicationViewModel(private val authManager: AuthManager) : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val response = RetrofitInstance.api.approveApplication(
-                    applicationId,
-                    ApproveApplicationDto(authorNotes = authorNotes)
+                val request = UpdateApplicationCompleteRequest(
+                    status = "approved",
+                    authorNotes = authorNotes
                 )
-                if (response.isSuccessful) {
-                    _snackbarEvent.emit("Application approved!")
-                    // Refresh the current book's applications
-                    val currentBookId = _bookApplications.value.firstOrNull()?.bookId
-                    if (currentBookId != null) {
-                        loadBookApplications(currentBookId)
+                val result =
+                    applicationsRepository.updateApplicationComplete(applicationId, request)
+                result
+                    .onSuccess {
+                        _snackbarEvent.emit("Application approved!")
+                        val currentBookId = _bookApplications.value.firstOrNull()?.bookId
+                        if (currentBookId != null) {
+                            loadBookApplications(currentBookId)
+                        }
                     }
-                } else {
-                    _snackbarEvent.emit("Failed to approve application: ${response.message()}")
-                }
+                    .onFailure { e ->
+                        _snackbarEvent.emit(e.message ?: "Failed to approve application")
+                    }
             } catch (e: Exception) {
                 _snackbarEvent.emit("Error approving application: ${e.message}")
             } finally {
@@ -290,20 +333,23 @@ class ApplicationViewModel(private val authManager: AuthManager) : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val response = RetrofitInstance.api.rejectApplication(
-                    applicationId,
-                    RejectApplicationDto(authorNotes = authorNotes)
+                val request = UpdateApplicationCompleteRequest(
+                    status = "rejected",
+                    authorNotes = authorNotes
                 )
-                if (response.isSuccessful) {
-                    _snackbarEvent.emit("Application rejected!")
-                    // Refresh the current book's applications
-                    val currentBookId = _bookApplications.value.firstOrNull()?.bookId
-                    if (currentBookId != null) {
-                        loadBookApplications(currentBookId)
+                val result =
+                    applicationsRepository.updateApplicationComplete(applicationId, request)
+                result
+                    .onSuccess {
+                        _snackbarEvent.emit("Application rejected!")
+                        val currentBookId = _bookApplications.value.firstOrNull()?.bookId
+                        if (currentBookId != null) {
+                            loadBookApplications(currentBookId)
+                        }
                     }
-                } else {
-                    _snackbarEvent.emit("Failed to reject application: ${response.message()}")
-                }
+                    .onFailure { e ->
+                        _snackbarEvent.emit(e.message ?: "Failed to reject application")
+                    }
             } catch (e: Exception) {
                 _snackbarEvent.emit("Error rejecting application: ${e.message}")
             } finally {
@@ -312,27 +358,35 @@ class ApplicationViewModel(private val authManager: AuthManager) : ViewModel() {
         }
     }
 
-    fun bulkActionApplications(applicationIds: List<String>, action: String, authorNotes: String? = null) {
+    fun bulkActionApplications(
+        applicationIds: List<String>,
+        action: String,
+        authorNotes: String? = null
+    ) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val response = RetrofitInstance.api.bulkActionApplications(
-                    BulkActionDto(
-                        applicationIds = applicationIds,
-                        action = action,
-                        authorNotes = authorNotes
-                    )
+                val currentBookId = _bookApplications.value.firstOrNull()?.bookId
+                if (currentBookId == null) {
+                    _snackbarEvent.emit("Error: Book ID not found")
+                    _isLoading.value = false
+                    return@launch
+                }
+
+                val request = BulkActionRequest(
+                    applicationIds = applicationIds,
+                    action = action,
+                    authorNotes = authorNotes
                 )
-                if (response.isSuccessful) {
-                    _snackbarEvent.emit("Bulk action completed!")
-                    // Refresh the current book's applications
-                    val currentBookId = _bookApplications.value.firstOrNull()?.bookId
-                    if (currentBookId != null) {
+                val result = applicationsRepository.bulkActionApplications(currentBookId, request)
+                result
+                    .onSuccess {
+                        _snackbarEvent.emit("Bulk action completed!")
                         loadBookApplications(currentBookId)
                     }
-                } else {
-                    _snackbarEvent.emit("Failed to perform bulk action: ${response.message()}")
-                }
+                    .onFailure { e ->
+                        _snackbarEvent.emit(e.message ?: "Failed to perform bulk action")
+                    }
             } catch (e: Exception) {
                 _snackbarEvent.emit("Error performing bulk action: ${e.message}")
             } finally {
@@ -345,17 +399,18 @@ class ApplicationViewModel(private val authManager: AuthManager) : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val response = RetrofitInstance.api.markCopySent(applicationId)
-                if (response.isSuccessful) {
-                    _snackbarEvent.emit("Copy marked as sent!")
-                    // Refresh the current book's applications
-                    val currentBookId = _bookApplications.value.firstOrNull()?.bookId
-                    if (currentBookId != null) {
-                        loadBookApplications(currentBookId)
+                val result = applicationsRepository.markCopySent(applicationId)
+                result
+                    .onSuccess {
+                        _snackbarEvent.emit("Copy marked as sent!")
+                        val currentBookId = _bookApplications.value.firstOrNull()?.bookId
+                        if (currentBookId != null) {
+                            loadBookApplications(currentBookId)
+                        }
                     }
-                } else {
-                    _snackbarEvent.emit("Failed to mark copy as sent: ${response.message()}")
-                }
+                    .onFailure { e ->
+                        _snackbarEvent.emit(e.message ?: "Failed to mark copy as sent")
+                    }
             } catch (e: Exception) {
                 _snackbarEvent.emit("Error marking copy as sent: ${e.message}")
             } finally {
@@ -363,9 +418,12 @@ class ApplicationViewModel(private val authManager: AuthManager) : ViewModel() {
             }
         }
     }
-    
-    // Helper functions for mapping string status to enums
-    private fun mapStringToApplicationStatus(status: String?): ApplicationStatus {
+
+    fun clearApplicationCheck() {
+        _applicationCheck.value = null
+    }
+
+    fun mapStringToApplicationStatus(status: String?): ApplicationStatus {
         return when (status?.lowercase()) {
             "pending" -> ApplicationStatus.PENDING
             "approved" -> ApplicationStatus.APPROVED
@@ -374,24 +432,14 @@ class ApplicationViewModel(private val authManager: AuthManager) : ViewModel() {
             else -> ApplicationStatus.PENDING
         }
     }
-    
-    private fun mapStringToReadingStatus(status: String?): ReadingStatus {
+
+    fun mapStringToReadingStatus(status: String?): ReadingStatus {
         return when (status?.lowercase()) {
             "not_started" -> ReadingStatus.NOT_STARTED
             "currently_reading" -> ReadingStatus.CURRENTLY_READING
             "for_review" -> ReadingStatus.FOR_REVIEW
-            "reviewed" -> ReadingStatus.REVIEWED
+            "reviewed" -> ReadingStatus.FOR_REVIEW
             else -> ReadingStatus.NOT_STARTED
         }
-    }
-}
-
-class ApplicationViewModelFactory(private val authManager: AuthManager) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(ApplicationViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return ApplicationViewModel(authManager) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
