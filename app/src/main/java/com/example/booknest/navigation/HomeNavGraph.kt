@@ -7,10 +7,12 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.example.booknest.data.AuthManager
-import com.example.booknest.ui.applications.MyApplicationsScreen
+import com.example.booknest.data.session.SessionManager
+import com.example.booknest.ui.myapplications.MyApplicationsScreen
 import com.example.booknest.ui.books.BookDetailsScreen
 import com.example.booknest.ui.books.BookListScreen
+import com.example.booknest.ui.books.BookCategoryScreen
+import com.example.booknest.ui.books.SeriesBooksScreen
 import com.example.booknest.ui.home.HomeScreen
 import com.example.booknest.ui.profile.ProfileEditScreen
 import com.example.booknest.ui.profile.ProfileScreen
@@ -23,110 +25,187 @@ import com.example.booknest.ui.profile.PrivacySettingsScreen
 import com.example.booknest.ui.profile.SocialMediaManagementScreen
 import com.example.booknest.ui.reviews.ReviewSubmissionScreen
 import com.example.booknest.ui.notifications.NotificationsScreen
+import com.example.booknest.ui.auth.PasswordResetScreen
 
 @Composable
 fun HomeNavGraph(
-    navController: NavHostController, 
-    authManager: AuthManager,
+    navController: NavHostController,
+    sessionManager: SessionManager,
     modifier: Modifier = Modifier
 ) {
-    NavHost(navController = navController, startDestination = BottomBarScreen.Home.route, modifier = modifier) {
+    NavHost(
+        navController = navController,
+        startDestination = BottomBarScreen.Home.route,
+        modifier = modifier
+    ) {
         composable(route = BottomBarScreen.Home.route) {
-            HomeScreen(navController, authManager)
+            HomeScreen(navController, sessionManager)
         }
         composable(route = BottomBarScreen.MyApplications.route) {
-            MyApplicationsScreen(navController, authManager)
+            MyApplicationsScreen(navController, sessionManager)
         }
         composable(
-            route = BottomBarScreen.Browse.route,
-            arguments = listOf(navArgument("searchQuery") { type = NavType.StringType; nullable = true })
+            route = "browse/{searchQuery}",
+            arguments = listOf(navArgument("searchQuery") {
+                type = NavType.StringType; nullable = true; defaultValue = ""
+            })
         ) { backStackEntry ->
-            val searchQuery = backStackEntry.arguments?.getString("searchQuery")
+            val encodedQuery = backStackEntry.arguments?.getString("searchQuery") ?: ""
+            val searchQuery = try {
+                android.net.Uri.decode(encodedQuery).takeIf { it.isNotBlank() }
+            } catch (e: Exception) {
+                encodedQuery.takeIf { it.isNotBlank() }
+            }
             BookListScreen(
                 navController = navController,
-                authManager = authManager,
-                searchQuery = searchQuery
+                sessionManager = sessionManager,
+                searchQuery = searchQuery,
+                category = "search"
             )
+        }
+        composable(route = "browse") {
+            BookListScreen(
+                navController = navController,
+                sessionManager = sessionManager,
+                searchQuery = null,
+                category = null
+            )
+        }
+        composable(
+            route = "books/{category}",
+            arguments = listOf(
+                navArgument("category") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val category = backStackEntry.arguments?.getString("category") ?: ""
+            if (category in listOf("recommended", "new_releases", "followed_authors", "trending")) {
+                BookCategoryScreen(
+                    navController = navController,
+                    category = category
+                )
+            } else {
+                val searchQuery = backStackEntry.arguments?.getString("searchQuery")
+                BookListScreen(
+                    navController = navController,
+                    sessionManager = sessionManager,
+                    searchQuery = searchQuery,
+                    category = category
+                )
+            }
         }
         composable(
             route = "book_details/{bookId}",
             arguments = listOf(navArgument("bookId") { type = NavType.StringType })
         ) { backStackEntry ->
             val bookId = backStackEntry.arguments?.getString("bookId") ?: ""
-            BookDetailsScreen(navController, authManager, bookId)
+            BookDetailsScreen(navController, sessionManager, bookId)
         }
-        
-        // Profile and Stats screens
+
+        composable(
+            route = "series_books/{seriesId}?seriesName={seriesName}",
+            arguments = listOf(
+                navArgument("seriesId") { type = NavType.StringType },
+                navArgument("seriesName") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { backStackEntry ->
+            val seriesId = backStackEntry.arguments?.getString("seriesId") ?: ""
+            val seriesName = backStackEntry.arguments?.getString("seriesName")
+            SeriesBooksScreen(navController, seriesId, seriesName)
+        }
+
+        composable(route = "profile") {
+            ProfileScreen(navController, sessionManager, null)
+        }
         composable(
             route = "profile/{userId}",
-            arguments = listOf(navArgument("userId") { 
+            arguments = listOf(navArgument("userId") {
                 type = NavType.StringType
             })
         ) { backStackEntry ->
             val userId = backStackEntry.arguments?.getString("userId")
-            ProfileScreen(navController, authManager, userId)
+            ProfileScreen(navController, sessionManager, userId)
         }
-        
+
         composable("profile_edit") {
-            ProfileEditScreen(navController, authManager)
+            ProfileEditScreen(navController, sessionManager)
         }
-        
+
         composable(
             route = "stats/{authorId?}",
-            arguments = listOf(navArgument("authorId") { 
+            arguments = listOf(navArgument("authorId") {
                 type = NavType.StringType
                 nullable = true
                 defaultValue = null
             })
         ) { backStackEntry ->
             val authorId = backStackEntry.arguments?.getString("authorId")
-            StatsScreen(navController, authManager, authorId)
+            StatsScreen(navController, sessionManager, authorId)
         }
-        
-        // Analytics screens
+
         composable(
             route = "book_analytics/{bookId}",
             arguments = listOf(navArgument("bookId") { type = NavType.StringType })
         ) { backStackEntry ->
             val bookId = backStackEntry.arguments?.getString("bookId") ?: ""
-            BookAnalyticsScreen(navController, authManager, bookId)
+            BookAnalyticsScreen(navController, sessionManager, bookId)
         }
-        
-        composable("author_analytics") {
-            AuthorAnalyticsScreen(navController, authManager)
-        }
-        
-        // Friend screens
+
         composable(Screen.Friends.route) {
-            FriendsScreen(navController, authManager)
+            FriendsScreen(navController, sessionManager)
         }
 
         composable(Screen.FavoriteGenres.route) {
-            FavoriteGenresScreen(navController, authManager)
+            FavoriteGenresScreen(navController, sessionManager)
         }
-        
-        // Privacy settings
+
         composable("privacy_settings") {
-            PrivacySettingsScreen(navController, authManager)
+            PrivacySettingsScreen(navController, sessionManager)
         }
-        
-        // Social media management
+
         composable("social_media_management") {
-            SocialMediaManagementScreen(navController, authManager)
+            SocialMediaManagementScreen(navController, sessionManager)
         }
-        
-        // Review submission
+
         composable(
-            route = "review_submission/{applicationId}",
-            arguments = listOf(navArgument("applicationId") { type = NavType.StringType })
+            route = Screen.PasswordReset.route,
+            arguments = listOf(navArgument("email") {
+                type = NavType.StringType
+            })
+        ) { backStackEntry ->
+            val email = backStackEntry.arguments?.getString("email") ?: ""
+            PasswordResetScreen(navController, sessionManager, email)
+        }
+
+        composable(
+            route = "review_submission/{applicationId}?reviewId={reviewId}",
+            arguments = listOf(
+                navArgument("applicationId") { type = NavType.StringType },
+                navArgument("reviewId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
         ) { backStackEntry ->
             val applicationId = backStackEntry.arguments?.getString("applicationId") ?: ""
-            ReviewSubmissionScreen(navController, authManager, applicationId)
+            val reviewId = backStackEntry.arguments?.getString("reviewId")
+            ReviewSubmissionScreen(navController, sessionManager, applicationId, reviewId)
         }
-        
-        // Notifications
+
         composable(Screen.Notifications.route) {
-            NotificationsScreen(navController, authManager)
+            NotificationsScreen(navController, sessionManager)
+        }
+
+        composable(
+            route = "user_profile/{username}",
+            arguments = listOf(navArgument("username") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val username = backStackEntry.arguments?.getString("username") ?: ""
+            ProfileScreen(navController, sessionManager, userId = null, username = username)
         }
     }
 }
