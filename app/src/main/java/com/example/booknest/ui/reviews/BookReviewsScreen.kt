@@ -1,6 +1,7 @@
 package com.example.booknest.ui.reviews
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,12 +21,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.booknest.data.AuthManager
-import com.example.booknest.network.Review
+import com.example.booknest.data.session.SessionManager
+import com.example.booknest.domain.model.response.ReviewResponse
 import com.example.booknest.viewmodel.ReviewViewModel
-import com.example.booknest.viewmodel.ReviewViewModelFactory
+import org.koin.androidx.compose.getViewModel
+import org.koin.compose.koinInject
 import kotlinx.coroutines.flow.collectLatest
 import java.text.SimpleDateFormat
 import java.util.*
@@ -34,21 +35,30 @@ import java.util.*
 @Composable
 fun BookReviewsScreen(
     navController: NavController,
-    authManager: AuthManager,
+    sessionManager: SessionManager = koinInject(),
     bookId: String,
-    reviewViewModel: ReviewViewModel = viewModel(
-        factory = ReviewViewModelFactory(authManager)
-    )
+    reviewViewModel: ReviewViewModel = getViewModel()
 ) {
     val bookReviews by reviewViewModel.bookReviews.collectAsState()
     val isLoading by reviewViewModel.isLoading.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val currentUser by sessionManager.currentUser.collectAsState()
 
     LaunchedEffect(bookId) {
         reviewViewModel.loadBookReviews(bookId)
         reviewViewModel.snackbarEvent.collectLatest { message ->
             snackbarHostState.showSnackbar(message)
         }
+    }
+
+    val myReview = remember(bookReviews, currentUser?.id) {
+        bookReviews.find { review ->
+            review.application?.reader?.id == currentUser?.id
+        }
+    }
+
+    val otherReviews = remember(bookReviews, myReview?.id) {
+        bookReviews.filter { it.id != myReview?.id }
     }
 
     Scaffold(
@@ -83,17 +93,36 @@ fun BookReviewsScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                // Review statistics
                 ReviewStats(reviews = bookReviews)
 
-                // Reviews list
                 LazyColumn(
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Featured reviews first
-                    val featuredReviews = bookReviews.filter { it.isFeatured }
+                    myReview?.let { review ->
+                        item {
+                            YourReviewCard(
+                                review = review,
+                                onEditClick = {
+                                    review.application?.id?.let { applicationId ->
+                                        navController.navigate(
+                                            com.example.booknest.navigation.Screen.ReviewSubmission.createRoute(
+                                                applicationId
+                                            ) + "?reviewId=${review.id}"
+                                        )
+                                    }
+                                }
+                            )
+                        }
+                        item {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Divider()
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                    }
+
+                    val featuredReviews = otherReviews.filter { it.isFeatured }
                     if (featuredReviews.isNotEmpty()) {
                         item {
                             Text(
@@ -108,7 +137,7 @@ fun BookReviewsScreen(
                                 isFeatured = true
                             )
                         }
-                        
+
                         item {
                             Text(
                                 text = "All Reviews",
@@ -117,9 +146,8 @@ fun BookReviewsScreen(
                             )
                         }
                     }
-                    
-                    // Regular reviews
-                    val regularReviews = bookReviews.filter { !it.isFeatured }
+
+                    val regularReviews = otherReviews.filter { !it.isFeatured }
                     items(regularReviews) { review ->
                         ReviewCard(
                             review = review,
@@ -133,11 +161,11 @@ fun BookReviewsScreen(
 }
 
 @Composable
-fun ReviewStats(reviews: List<Review>) {
+fun ReviewStats(reviews: List<ReviewResponse>) {
     val averageRating = if (reviews.isNotEmpty()) {
         reviews.map { it.rating }.average()
     } else 0.0
-    
+
     val ratingDistribution = reviews.groupingBy { it.rating }.eachCount()
 
     Card(
@@ -152,7 +180,6 @@ fun ReviewStats(reviews: List<Review>) {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Average rating
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -178,16 +205,16 @@ fun ReviewStats(reviews: List<Review>) {
                                     imageVector = if (star <= averageRating.toInt()) Icons.Filled.Star else Icons.Filled.FavoriteBorder,
                                     contentDescription = "$star stars",
                                     modifier = Modifier.size(16.dp),
-                                    tint = if (star <= averageRating.toInt()) 
-                                        Color.Yellow 
-                                    else 
+                                    tint = if (star <= averageRating.toInt())
+                                        Color.Yellow
+                                    else
                                         MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             }
                         }
                     }
                 }
-                
+
                 Text(
                     text = "${reviews.size} reviews",
                     style = MaterialTheme.typography.bodyMedium,
@@ -195,7 +222,6 @@ fun ReviewStats(reviews: List<Review>) {
                 )
             }
 
-            // Rating distribution
             if (reviews.isNotEmpty()) {
                 Text(
                     text = "Rating Distribution",
@@ -203,11 +229,12 @@ fun ReviewStats(reviews: List<Review>) {
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
-                
+
                 (5 downTo 1).forEach { rating ->
                     val count = ratingDistribution[rating] ?: 0
-                    val percentage = if (reviews.isNotEmpty()) (count.toFloat() / reviews.size * 100) else 0f
-                    
+                    val percentage =
+                        if (reviews.isNotEmpty()) (count.toFloat() / reviews.size * 100) else 0f
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
@@ -225,7 +252,7 @@ fun ReviewStats(reviews: List<Review>) {
                             tint = Color.Yellow
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        
+
                         LinearProgressIndicator(
                             progress = percentage / 100f,
                             modifier = Modifier
@@ -234,7 +261,7 @@ fun ReviewStats(reviews: List<Review>) {
                             color = MaterialTheme.colorScheme.primary,
                             trackColor = MaterialTheme.colorScheme.surface
                         )
-                        
+
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "$count",
@@ -250,7 +277,7 @@ fun ReviewStats(reviews: List<Review>) {
 
 @Composable
 fun ReviewCard(
-    review: Review,
+    review: ReviewResponse,
     isFeatured: Boolean
 ) {
     Card(
@@ -259,9 +286,9 @@ fun ReviewCard(
             .clip(RoundedCornerShape(8.dp)),
         elevation = CardDefaults.cardElevation(if (isFeatured) 4.dp else 2.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isFeatured) 
-                MaterialTheme.colorScheme.secondaryContainer 
-            else 
+            containerColor = if (isFeatured)
+                MaterialTheme.colorScheme.secondaryContainer
+            else
                 MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
@@ -270,23 +297,21 @@ fun ReviewCard(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // Header with rating and featured badge
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Rating stars
                     Row {
                         (1..5).forEach { star ->
                             Icon(
                                 imageVector = if (star <= review.rating) Icons.Filled.Star else Icons.Filled.FavoriteBorder,
                                 contentDescription = "$star stars",
                                 modifier = Modifier.size(16.dp),
-                                tint = if (star <= review.rating) 
-                                    Color.Yellow 
-                                else 
+                                tint = if (star <= review.rating)
+                                    Color.Yellow
+                                else
                                     MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -298,7 +323,7 @@ fun ReviewCard(
                         fontWeight = FontWeight.Medium
                     )
                 }
-                
+
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (isFeatured) {
                         Box(
@@ -318,9 +343,9 @@ fun ReviewCard(
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                     }
-                    
+
                     Text(
-                        text = formatDate(review.createdAt),
+                        text = formatDateReview(review.createdAt),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -328,20 +353,18 @@ fun ReviewCard(
             }
 
             Spacer(modifier = Modifier.height(12.dp))
-            
-            // Reviewer info
+
             val reviewer = review.application?.reader
-            val reviewerName = reviewer?.username 
+            val reviewerName = reviewer?.username
                 ?: "${reviewer?.firstName ?: ""} ${reviewer?.lastName ?: ""}".trim()
-                .takeIf { it.isNotBlank() }
+                    .takeIf { it.isNotBlank() }
                 ?: "Reviewer"
-            
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Reviewer profile picture
                 val reviewerInitial = reviewer?.username?.firstOrNull()?.uppercase() ?: "R"
                 Box(
                     modifier = Modifier
@@ -364,7 +387,7 @@ fun ReviewCard(
                         fontWeight = FontWeight.Bold
                     )
                 }
-                
+
                 Column {
                     Text(
                         text = reviewerName,
@@ -376,17 +399,16 @@ fun ReviewCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Review content
-            val reviewType = review.reviewType ?: com.example.booknest.network.ReviewType.TEXT
+            val reviewType = review.reviewType ?: "text"
             when (reviewType) {
-                com.example.booknest.network.ReviewType.TEXT -> {
+                "text" -> {
                     review.reviewContent?.let { content ->
                         Text(
                             text = content,
                             style = MaterialTheme.typography.bodyMedium,
                             lineHeight = MaterialTheme.typography.bodyMedium.lineHeight
                         )
-                        
+
                         if (review.wordCount != null) {
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
@@ -397,8 +419,8 @@ fun ReviewCard(
                         }
                     }
                 }
-                
-                com.example.booknest.network.ReviewType.LINK -> {
+
+                "link" -> {
                     review.reviewUrls?.forEach { url ->
                         if (url.isNotBlank()) {
                             Spacer(modifier = Modifier.height(8.dp))
@@ -410,8 +432,7 @@ fun ReviewCard(
                     }
                 }
             }
-            
-            // Show both text and links if both are present
+
             if (review.reviewContent != null && review.reviewUrls != null && review.reviewUrls.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 review.reviewUrls.forEach { url ->
@@ -425,20 +446,19 @@ fun ReviewCard(
                 }
             }
 
-            // Review metadata
             Spacer(modifier = Modifier.height(12.dp))
-            
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Review Type: ${(review.reviewType ?: com.example.booknest.network.ReviewType.TEXT).value.replaceFirstChar { it.uppercase() }}",
+                    text = "Review Type: ${(review.reviewType ?: "text").replaceFirstChar { it.uppercase() }}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                
+
                 if (!review.isPublic) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
@@ -452,6 +472,153 @@ fun ReviewCard(
                             text = "Private",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun YourReviewCard(
+    review: ReviewResponse,
+    onEditClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                MaterialTheme.colorScheme.primary,
+                                RoundedCornerShape(12.dp)
+                            )
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "Your Review",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Row {
+                        (1..5).forEach { star ->
+                            Icon(
+                                imageVector = if (star <= review.rating) Icons.Filled.Star else Icons.Filled.FavoriteBorder,
+                                contentDescription = "$star stars",
+                                modifier = Modifier.size(16.dp),
+                                tint = if (star <= review.rating)
+                                    Color.Yellow
+                                else
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "${review.rating}/5",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                OutlinedButton(
+                    onClick = onEditClick,
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = "Edit",
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Edit", style = MaterialTheme.typography.labelMedium)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            review.reviewContent?.let { content ->
+                Text(
+                    text = content,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            review.reviewUrls?.takeIf { it.isNotEmpty() }?.let { urls ->
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    urls.forEach { url ->
+                        if (url.isNotBlank()) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Link,
+                                    contentDescription = "Link",
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = url,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Reviewed on ${formatDateReview(review.createdAt)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                if (!review.isPublic) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.Lock,
+                            contentDescription = "Private",
+                            modifier = Modifier.size(12.dp),
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Private",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
                 }
@@ -490,7 +657,7 @@ fun EmptyReviewsState(
     }
 }
 
-private fun formatDate(dateString: String): String {
+private fun formatDateReview(dateString: String): String {
     return try {
         val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
         val outputFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
