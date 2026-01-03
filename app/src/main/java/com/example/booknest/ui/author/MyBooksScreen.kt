@@ -55,6 +55,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
+import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
@@ -85,8 +86,6 @@ import com.example.booknest.navigation.Screen
 import com.example.booknest.navigation.AuthorBottomBarScreen
 import com.example.booknest.ui.author.BookStatus
 import com.example.booknest.ui.components.BackButton
-import com.example.booknest.ui.theme.DarkNavyBlue
-import com.example.booknest.ui.theme.SkyBluePeriwinkle
 import com.example.booknest.viewmodel.AuthorViewModel
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
@@ -102,6 +101,7 @@ enum class BookSortOption {
     APPLICATION_COUNT
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyBooksScreen(
@@ -199,7 +199,7 @@ fun MyBooksScreen(
                             "My Books",
                             fontWeight = FontWeight.Bold,
                             fontSize = 24.sp,
-                            color = DarkNavyBlue
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                     },
                     actions = {
@@ -209,7 +209,7 @@ fun MyBooksScreen(
                             Icon(
                                 Icons.Default.Add,
                                 contentDescription = "Create New Book",
-                                tint = DarkNavyBlue
+                                tint = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
@@ -228,7 +228,7 @@ fun MyBooksScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF1E9EE))
+                .background(MaterialTheme.colorScheme.background)
         ) {
             Box(
                 modifier = Modifier
@@ -236,7 +236,7 @@ fun MyBooksScreen(
                     .offset(x = (-175).dp, y = (-175).dp)
                     .size(350.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
             )
             Box(
                 modifier = Modifier
@@ -244,7 +244,7 @@ fun MyBooksScreen(
                     .offset(x = (-135).dp, y = (-135).dp)
                     .size(270.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle)
+                    .background(MaterialTheme.colorScheme.secondary)
             )
             Box(
                 modifier = Modifier
@@ -252,7 +252,7 @@ fun MyBooksScreen(
                     .offset(x = 175.dp, y = 175.dp)
                     .size(350.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
+                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
             )
             Box(
                 modifier = Modifier
@@ -260,7 +260,7 @@ fun MyBooksScreen(
                     .offset(x = 135.dp, y = 135.dp)
                     .size(270.dp)
                     .clip(CircleShape)
-                    .background(SkyBluePeriwinkle)
+                    .background(MaterialTheme.colorScheme.secondary)
             )
 
             Column(
@@ -292,10 +292,10 @@ fun MyBooksScreen(
                     singleLine = true,
                     shape = RoundedCornerShape(28.dp),
                     colors = TextFieldDefaults.colors(
-                        focusedTextColor = Color.Black,
-                        unfocusedTextColor = Color.Black,
-                        focusedContainerColor = Color(0xFFE8DFE4),
-                        unfocusedContainerColor = Color(0xFFE8DFE4),
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                         disabledIndicatorColor = Color.Transparent
@@ -313,7 +313,7 @@ fun MyBooksScreen(
                         OutlinedButton(
                             onClick = { showSortMenu = true },
                             colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = DarkNavyBlue
+                                contentColor = MaterialTheme.colorScheme.primary
                             )
                         ) {
                             Icon(
@@ -329,7 +329,7 @@ fun MyBooksScreen(
                                     BookSortOption.STATUS -> "Status"
                                     BookSortOption.APPLICATION_COUNT -> "Application Count"
                                 },
-                                color = DarkNavyBlue
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
 
@@ -373,10 +373,11 @@ fun MyBooksScreen(
                     modifier = Modifier.fillMaxWidth(),
                     color = MaterialTheme.colorScheme.surface
                 ) {
-                    TabRow(
+                    ScrollableTabRow(
                         selectedTabIndex = selectedTab,
                         modifier = Modifier.fillMaxWidth(),
-                        containerColor = MaterialTheme.colorScheme.surface
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        edgePadding = 0.dp
                     ) {
                         listOf(
                             "All",
@@ -392,7 +393,9 @@ fun MyBooksScreen(
                                     val count = tabCounts[index] ?: 0
                                     Text(
                                         text = if (count > 0) "$title ($count)" else title,
-                                        color = if (selectedTab == index) DarkNavyBlue else MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = if (selectedTab == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
                             )
@@ -463,6 +466,7 @@ fun MyBooksScreen(
             AlertDialog(
                 onDismissRequest = { showDeleteDialog = null },
                 title = { Text("Delete Book?") },
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
                 text = { Text("This action cannot be undone. Are you sure you want to delete this book?") },
                 confirmButton = {
                     TextButton(
@@ -509,7 +513,7 @@ fun EnhancedBookCard(
             ),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFE8DFE4)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -525,7 +529,7 @@ fun EnhancedBookCard(
                     modifier = Modifier
                         .size(80.dp, 120.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFFE8DFE4)),
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center
                 ) {
                     if (book.coverImageUrl != null) {
@@ -550,7 +554,7 @@ fun EnhancedBookCard(
                         text = book.title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = DarkNavyBlue,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -598,7 +602,7 @@ fun EnhancedBookCard(
                                 ?: 0) - (stats?.approvedReaders ?: 0)
                             if (pendingCount > 0) {
                                 Surface(
-                                    color = SkyBluePeriwinkle.copy(alpha = 0.3f),
+                                    color = MaterialTheme.colorScheme.primaryContainer,
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
                                     Text(
@@ -609,7 +613,7 @@ fun EnhancedBookCard(
                                         ),
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Medium,
-                                        color = DarkNavyBlue
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                 }
                             }
@@ -646,7 +650,7 @@ fun EnhancedBookCard(
                                             Icons.Default.Star,
                                             contentDescription = null,
                                             modifier = Modifier.size(16.dp),
-                                            tint = Color(0xFFFFC107)
+                                            tint = MaterialTheme.colorScheme.primary
                                         )
                                         Text(
                                             text = String.format("%.1f", rating),
@@ -825,32 +829,32 @@ fun EnhancedBookCard(
 fun StatusChip(status: String?) {
     val (backgroundColor, textColor, statusText) = when (status) {
         BookStatus.DRAFT.value -> Triple(
-            Color(0xFFE8DFE4),
-            DarkNavyBlue,
+            MaterialTheme.colorScheme.surfaceVariant,
+            MaterialTheme.colorScheme.primary,
             "Draft"
         )
 
         BookStatus.ACTIVE.value -> Triple(
-            SkyBluePeriwinkle.copy(alpha = 0.3f),
-            DarkNavyBlue,
+            MaterialTheme.colorScheme.primaryContainer,
+            MaterialTheme.colorScheme.onPrimaryContainer,
             "Active"
         )
 
         BookStatus.IN_PROGRESS.value -> Triple(
-            SkyBluePeriwinkle.copy(alpha = 0.5f),
-            DarkNavyBlue,
+            MaterialTheme.colorScheme.tertiaryContainer,
+            MaterialTheme.colorScheme.onTertiaryContainer,
             "In Progress"
         )
 
         BookStatus.COMPLETED.value -> Triple(
-            SkyBluePeriwinkle.copy(alpha = 0.7f),
-            DarkNavyBlue,
+            MaterialTheme.colorScheme.primaryContainer,
+            MaterialTheme.colorScheme.onPrimaryContainer,
             "Completed"
         )
 
         else -> Triple(
-            Color(0xFFE8DFE4),
-            DarkNavyBlue,
+            MaterialTheme.colorScheme.surfaceVariant,
+            MaterialTheme.colorScheme.onSurfaceVariant,
             "Unknown"
         )
     }
@@ -911,10 +915,10 @@ fun EmptyBooksState(
                         elevation = 4.dp,
                         shape = RoundedCornerShape(12.dp)
                     )
-                    .background(color = DarkNavyBlue),
+                    .background(color = MaterialTheme.colorScheme.primary),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = DarkNavyBlue
+                    containerColor = MaterialTheme.colorScheme.primary
                 )
             ) {
                 Icon(

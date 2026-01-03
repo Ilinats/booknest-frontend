@@ -119,7 +119,7 @@ fun AuthorProfileScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color(0xFFF1E9EE))
+                    .background(MaterialTheme.colorScheme.background)
             ) {
                 Box(
                     modifier = Modifier
@@ -169,7 +169,7 @@ fun AuthorProfileScreen(
                             .shadow(elevation = 2.dp, shape = RoundedCornerShape(16.dp)),
                         shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = Color(0xFFE8DFE4)
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
                         ),
                         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                     ) {
@@ -297,12 +297,11 @@ fun AuthorProfileScreen(
 
                             myProfile?.socialMedia?.let { socialMedia ->
                                 if (hasSocialMediaLinks(socialMedia)) {
-                                    Spacer(modifier = Modifier.height(8.dp))
                                     Divider()
-                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Spacer(modifier = Modifier.height(3.dp))
                                     Text(
                                         text = "Social Media",
-                                        fontSize = 14.sp,
+                                        fontSize = 20.sp,
                                         fontWeight = FontWeight.Medium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -389,7 +388,7 @@ fun AuthorProfileScreen(
                                 .shadow(elevation = 2.dp, shape = RoundedCornerShape(16.dp)),
                             shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = Color(0xFFE8DFE4)
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
                             ),
                             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                         ) {
@@ -458,7 +457,7 @@ fun AuthorProfileScreen(
                                 .shadow(elevation = 2.dp, shape = RoundedCornerShape(16.dp)),
                             shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = Color(0xFFE8DFE4)
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
                             ),
                             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                         ) {
@@ -492,7 +491,7 @@ fun AuthorProfileScreen(
                                             book = book,
                                             onClick = {
                                                 navController.navigate(
-                                                    Screen.BookDetails.createRoute(
+                                                    Screen.BookApplicationDetail.createRoute(
                                                         book.id
                                                     )
                                                 )
@@ -519,7 +518,7 @@ fun AuthorStatCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFF5EDE8)
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -607,7 +606,7 @@ fun BookCoverCard(
             modifier = Modifier
                 .size(80.dp, 120.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFFE8DFE4)),
+                .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
             if (!book.coverImageUrl.isNullOrBlank()) {

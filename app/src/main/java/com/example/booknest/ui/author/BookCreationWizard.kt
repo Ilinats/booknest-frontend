@@ -772,6 +772,7 @@ fun BookCreationWizard(
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { },
             title = { Text("Book Created Successfully!") },
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
             text = {
                 Text("Would you like to publish your book now or keep it as a draft?")
             },
@@ -1613,7 +1614,10 @@ fun PreviewStep(
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -1772,6 +1776,7 @@ fun BookCreationCreateSeriesDialog(
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Create New Series") },
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
         text = {
             Column(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -1828,7 +1833,10 @@ fun CoverImagePicker(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
         Column(
             modifier = Modifier.padding(16.dp),

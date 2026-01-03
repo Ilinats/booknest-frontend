@@ -57,6 +57,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -1013,12 +1014,11 @@ fun FileUploadStepEdit(
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
             colors = CardDefaults.cardColors(
-                containerColor = if (isRequired && !hasNewFile && !hasExistingFile)
-                    MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+                containerColor = if (hasNewFile || hasExistingFile)
+                    MaterialTheme.colorScheme.surfaceVariant
                 else
-                    MaterialTheme.colorScheme.surface
+                    Color.Transparent
             )
         ) {
             Column(
@@ -1110,16 +1110,15 @@ fun FileUploadStepEdit(
                 if (!hasNewFile) {
                     Button(
                         onClick = {
-                            filePickerLauncher.launch("*/*")
+                            filePickerLauncher.launch("application/pdf,application/epub+zip")
                             fileError = null
                         },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
-                        shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary
-                        )
+                        ),
                     ) {
                         Icon(
                             Icons.Filled.Add,
@@ -1129,9 +1128,10 @@ fun FileUploadStepEdit(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            if (hasExistingFile) "Replace File" else "Select Book File",
+                            text = if (hasExistingFile) "Replace File" else "Select Book File",
                             style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimary
                         )
                     }
                 }
