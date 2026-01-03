@@ -22,8 +22,11 @@ import com.example.booknest.domain.model.response.UploadAvatarResponse
 import com.example.booknest.domain.model.response.UserSearchResultResponse
 import com.example.booknest.domain.model.response.UserStatsResponse
 import com.example.booknest.domain.model.response.AuthorStatsResponse
+import com.example.booknest.domain.model.response.MessageResponse
 import retrofit2.Response
 import okhttp3.MultipartBody
+import okhttp3.ResponseBody
+import retrofit2.http.Streaming
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
@@ -133,5 +136,9 @@ interface ProfilesService {
     
     @DELETE(Users.DELETE_AVATAR)
     suspend fun removeAvatar(): Response<UserResponse>
+    
+    @Streaming
+    @DELETE(Users.DELETE_ACCOUNT)
+    suspend fun deleteAccount(): Response<ResponseBody>
 }
 

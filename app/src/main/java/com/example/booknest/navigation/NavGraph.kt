@@ -44,10 +44,17 @@ fun NavGraph(
     val currentRoute = navBackStackEntry?.destination?.route
 
     LaunchedEffect(isLoggedIn) {
-        if (isLoggedIn == false && currentRoute != Screen.Splash.route && currentRoute != Screen.Landing.route) {
-            navController.navigate(Screen.Splash.route) {
-                popUpTo(navController.graph.startDestinationId) { inclusive = true }
-                launchSingleTop = true
+        if (isLoggedIn == false) {
+            android.util.Log.d("NavGraph", "isLoggedIn is false, currentRoute=$currentRoute")
+            kotlinx.coroutines.delay(300)
+           if (currentRoute != Screen.Splash.route && currentRoute != Screen.Landing.route) {
+                android.util.Log.d("NavGraph", "Navigating to Splash")
+                navController.navigate(Screen.Splash.route) {
+                    popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                    launchSingleTop = true
+                }
+            } else {
+                android.util.Log.d("NavGraph", "Already on Splash or Landing, skipping navigation")
             }
         }
     }

@@ -26,6 +26,7 @@ import com.example.booknest.ui.profile.SocialMediaManagementScreen
 import com.example.booknest.ui.reviews.ReviewSubmissionScreen
 import com.example.booknest.ui.notifications.NotificationsScreen
 import com.example.booknest.ui.auth.PasswordResetScreen
+import com.example.booknest.ui.auth.EmailVerificationScreen
 
 @Composable
 fun HomeNavGraph(
@@ -181,6 +182,18 @@ fun HomeNavGraph(
         }
 
         composable(
+            route = "email_verification?email={email}",
+            arguments = listOf(navArgument("email") {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            })
+        ) { backStackEntry ->
+            val email = backStackEntry.arguments?.getString("email")
+            EmailVerificationScreen(navController, sessionManager, email)
+        }
+
+        composable(
             route = "review_submission/{applicationId}?reviewId={reviewId}",
             arguments = listOf(
                 navArgument("applicationId") { type = NavType.StringType },
@@ -206,6 +219,29 @@ fun HomeNavGraph(
         ) { backStackEntry ->
             val username = backStackEntry.arguments?.getString("username") ?: ""
             ProfileScreen(navController, sessionManager, userId = null, username = username)
+        }
+
+        composable(
+            route = "user_reviews/{userId}?userName={userName}",
+            arguments = listOf(
+                navArgument("userId") { type = NavType.StringType },
+                navArgument("userName") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId") ?: ""
+            val encodedUserName = backStackEntry.arguments?.getString("userName")
+            val userName = encodedUserName?.let {
+                try {
+                    android.net.Uri.decode(it)
+                } catch (e: Exception) {
+                    it
+                }
+            }
+            com.example.booknest.ui.reviews.UserReviewsScreen(navController, userId, userName)
         }
     }
 }

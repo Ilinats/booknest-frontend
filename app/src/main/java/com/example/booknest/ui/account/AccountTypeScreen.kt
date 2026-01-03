@@ -27,8 +27,6 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.booknest.R
 import com.example.booknest.navigation.Screen
-import com.example.booknest.ui.theme.BackgroundWhite
-import com.example.booknest.ui.theme.DarkNavyBlue
 import com.example.booknest.viewmodel.SignupViewModel
 
 @Composable
@@ -38,7 +36,7 @@ fun AccountTypeScreen(navController: NavController, viewModel: SignupViewModel) 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF1E9EE))
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -55,13 +53,13 @@ fun AccountTypeScreen(navController: NavController, viewModel: SignupViewModel) 
                     modifier = Modifier
                         .weight(1f)
                         .height(4.dp)
-                        .background(DarkNavyBlue, RoundedCornerShape(2.dp))
+                        .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp))
                 )
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .height(4.dp)
-                        .background(Color(0xFFE0E0E0), RoundedCornerShape(2.dp)),
+                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(2.dp)),
                 )
                 Box(
                     modifier = Modifier
@@ -79,7 +77,7 @@ fun AccountTypeScreen(navController: NavController, viewModel: SignupViewModel) 
                     fontSize = 40.sp,
                     fontWeight = FontWeight.Bold
                 ),
-                color = DarkNavyBlue,
+                color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
@@ -140,8 +138,8 @@ fun AccountTypeScreen(navController: NavController, viewModel: SignupViewModel) 
                     enabled = selected != null,
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = DarkNavyBlue,
-                        disabledContainerColor = Color(0xFFE0E0E0)
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                 ) {
                     Text(
@@ -150,7 +148,7 @@ fun AccountTypeScreen(navController: NavController, viewModel: SignupViewModel) 
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp
                         ),
-                        color = if (selected != null) Color.White else Color(0xFF757575)
+                        color = if (selected != null) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
@@ -171,7 +169,7 @@ fun AccountTypeScreen(navController: NavController, viewModel: SignupViewModel) 
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.Normal
                         ),
-                        color = Color(0xFF757575)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -195,7 +193,7 @@ fun AccountTypeCard(
                 if (isSelected) {
                     Modifier.border(
                         width = 2.dp,
-                        color = DarkNavyBlue,
+                        color = MaterialTheme.colorScheme.onBackground,
                         shape = RoundedCornerShape(16.dp)
                     )
                 } else {
@@ -204,7 +202,7 @@ fun AccountTypeCard(
             ),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFE8DFE4)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = if (isSelected) 4.dp else 2.dp
@@ -234,7 +232,7 @@ fun AccountTypeCard(
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp
                     ),
-                    color = DarkNavyBlue
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
                     text = description,
@@ -250,7 +248,7 @@ fun AccountTypeCard(
                 Box(
                     modifier = Modifier
                         .size(24.dp)
-                        .background(DarkNavyBlue, CircleShape),
+                        .background(MaterialTheme.colorScheme.primary, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -266,7 +264,7 @@ fun AccountTypeCard(
                         .size(24.dp)
                         .border(
                             width = 2.dp,
-                            color = DarkNavyBlue,
+                            color = MaterialTheme.colorScheme.onBackground,
                             shape = CircleShape
                         )
                 )

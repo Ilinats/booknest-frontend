@@ -56,5 +56,6 @@ interface ProfilesDataSource {
     suspend fun searchUsers(query: String, limit: Int?): Result<UserSearchResultResponse>
     suspend fun uploadAvatar(avatarPart: MultipartBody.Part): Result<UploadAvatarResponse>
     suspend fun removeAvatar(): Result<UserResponse>
+    suspend fun deleteAccount(): Result<Unit>
 }
 

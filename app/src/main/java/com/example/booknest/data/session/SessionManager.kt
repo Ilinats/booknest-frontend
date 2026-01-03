@@ -44,9 +44,11 @@ object SessionManager {
     }
 
     suspend fun logout() {
+        android.util.Log.d("SessionManager", "logout() called")
         setAuthEntities("", "", "", "", "", "")
         _isLoggedIn.emit(false)
         _currentUser.emit(null)
+        android.util.Log.d("SessionManager", "logout() completed, isLoggedIn=${_isLoggedIn.value}")
     }
 
     suspend fun setLoggedIn() {

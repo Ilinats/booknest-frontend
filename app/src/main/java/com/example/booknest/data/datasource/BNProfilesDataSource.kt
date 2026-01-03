@@ -19,6 +19,7 @@ import com.example.booknest.domain.model.response.UserResponse
 import com.example.booknest.domain.model.response.UserSearchResultResponse
 import com.example.booknest.domain.model.response.UploadAvatarResponse
 import com.example.booknest.domain.model.response.UserStatsResponse
+import com.example.booknest.domain.model.response.MessageResponse
 import okhttp3.MultipartBody
 
 class BNProfilesDataSource(private val profilesService: ProfilesService) : ProfilesDataSource {
@@ -235,6 +236,51 @@ class BNProfilesDataSource(private val profilesService: ProfilesService) : Profi
 
     override suspend fun removeAvatar(): Result<UserResponse> {
         return requestBody(profilesService.removeAvatar())
+    }
+
+    override suspend fun deleteAccount(): Result<Unit> {
+        var responseBody: okhttp3.ResponseBody? = null
+        return try {
+            val response = profilesService.deleteAccount()
+            responseBody = response.body()
+            
+            android.util.Log.d("BNProfilesDataSource", "Delete account response: code=${response.code()}, isSuccessful=${response.isSuccessful}")
+            
+            if (response.isSuccessful && response.code() == 200) {
+                // Read and close the response body
+                try {
+                    responseBody?.string() // Read the body to consume it
+                } catch (e: Exception) {
+                    android.util.Log.w("BNProfilesDataSource", "Error reading response body", e)
+                }
+                android.util.Log.d("BNProfilesDataSource", "Delete account successful")
+                Result.success(Unit)
+            } else {
+                val errorBody = try {
+                    response.errorBody()?.string()
+                } catch (e: Exception) {
+                    null
+                }
+                val errorMessage = extractErrorMessage(errorBody)
+                android.util.Log.e("BNProfilesDataSource", "Delete account failed: $errorMessage")
+                val errorWithMessage = com.example.booknest.data.error.BNError.Generic(
+                    messageString = errorMessage,
+                    error = null,
+                    statusCode = response.code()
+                )
+                Result.failure(errorWithMessage)
+            }
+        } catch (ex: Exception) {
+            android.util.Log.e("BNProfilesDataSource", "Exception deleting account: ${ex.message}", ex)
+            Result.failure(Throwable(ex.message ?: "Failed to delete account: ${ex.javaClass.simpleName}"))
+        } finally {
+            // Ensure response body is closed
+            try {
+                responseBody?.close()
+            } catch (e: Exception) {
+                // Ignore
+            }
+        }
     }
 }
 

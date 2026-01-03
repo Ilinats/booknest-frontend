@@ -125,5 +125,9 @@ class BNProfileRepository(private val profilesDataSource: ProfilesDataSource) : 
     override suspend fun removeAvatar(): Result<UserResponse> {
         return resultBody(profilesDataSource.removeAvatar())
     }
+
+    override suspend fun deleteAccount(): Result<Unit> {
+        return resultBody(profilesDataSource.deleteAccount())
+    }
 }
 
