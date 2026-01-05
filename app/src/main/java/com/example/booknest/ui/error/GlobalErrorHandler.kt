@@ -2,6 +2,7 @@ package com.example.booknest.ui.error
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -9,7 +10,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.example.booknest.data.datasource.extractErrorMessage
 import com.example.booknest.data.error.BNError
-import com.example.booknest.ui.components.ErrorToast
+import com.example.booknest.data.session.SessionManager
+import com.example.booknest.ui.components.Toast
+import com.example.booknest.ui.components.ToastMessage
+import com.example.booknest.ui.components.ToastType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -79,18 +83,27 @@ object GlobalErrorHandler {
 
 @Composable
 fun GlobalErrorHandler(
+    sessionManager: SessionManager,
     modifier: Modifier = Modifier
 ) {
     var currentError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         GlobalErrorHandler.errorMessage.collectLatest { message ->
-            currentError = message
+            val isTokenError = message.contains("token", ignoreCase = true) ||
+                    message.contains("missing", ignoreCase = true) ||
+                    message.contains("unauthorized", ignoreCase = true) ||
+                    message.contains("not authorized", ignoreCase = true)
+
+            val isLoggedIn = sessionManager.isLoggedIn.value
+            if (isLoggedIn == true || !isTokenError) {
+                currentError = message
+            }
         }
     }
 
-    ErrorToast(
-        message = currentError,
+    Toast(
+        toastMessage = currentError?.let { ToastMessage(it, ToastType.ERROR) },
         onDismiss = { currentError = null },
         modifier = modifier
     )

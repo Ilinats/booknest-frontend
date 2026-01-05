@@ -21,6 +21,7 @@ import com.example.booknest.domain.model.response.UserStatsResponse
 import okhttp3.MultipartBody
 
 interface ProfilesDataSource {
+    suspend fun getMe(): Result<UserResponse>
     suspend fun getMyProfile(): Result<UserProfileResponse>
     suspend fun updateMyProfile(profile: UpdateProfileRequest): Result<UserProfileResponse>
     suspend fun updateUserProfile(
@@ -28,7 +29,6 @@ interface ProfilesDataSource {
         profile: UpdateUserProfileRequest
     ): Result<UserResponse>
 
-    suspend fun getSocialMediaOptions(): Result<SocialMediaOptionsResponse>
     suspend fun updateSocialMedia(request: UpdateSocialMediaRequest): Result<UserProfileResponse>
     suspend fun updatePrivacySettings(request: UpdatePrivacyRequest): Result<UserProfileResponse>
     suspend fun updateNotificationSettings(request: UpdateNotificationSettingsRequest): Result<UserProfileResponse>
@@ -53,7 +53,6 @@ interface ProfilesDataSource {
     suspend fun deleteAddress(addressId: String): Result<Unit>
     suspend fun getMyStats(): Result<UserStatsResponse>
     suspend fun getAuthorStats(authorId: String): Result<AuthorStatsResponse>
-    suspend fun searchUsers(query: String, limit: Int?): Result<UserSearchResultResponse>
     suspend fun uploadAvatar(avatarPart: MultipartBody.Part): Result<UploadAvatarResponse>
     suspend fun removeAvatar(): Result<UserResponse>
     suspend fun deleteAccount(): Result<Unit>

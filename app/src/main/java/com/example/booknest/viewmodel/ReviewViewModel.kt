@@ -42,18 +42,40 @@ class ReviewViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val result = booksRepository.getBookAllReviews(bookId)
+                val result = reviewsRepository.getBookReviews(bookId)
                 result
                     .onSuccess { reviews ->
                         _bookReviews.value = reviews
                     }
                     .onFailure { e ->
-                        GlobalToastHandler.showError(e.message ?: "Failed to load book reviews")
+                        println("DEBUG: ReviewsRepository failed, trying BooksRepository: ${e.message}")
+                        val fallbackResult = booksRepository.getBookAllReviews(bookId)
+                        fallbackResult
+                            .onSuccess { reviews ->
+                                _bookReviews.value = reviews
+                            }
+                            .onFailure { fallbackError ->
+                                println("DEBUG: Both endpoints failed. ReviewsRepository: ${e.message}, BooksRepository: ${fallbackError.message}")
+                                GlobalToastHandler.showError(
+                                    fallbackError.message ?: "Failed to load book reviews"
+                                )
+                            }
                     }
             } catch (e: Exception) {
                 println("DEBUG: Exception loading book reviews: ${e.message}")
                 e.printStackTrace()
-                GlobalToastHandler.showError("Error loading book reviews: ${e.message}")
+                try {
+                    val fallbackResult = booksRepository.getBookAllReviews(bookId)
+                    fallbackResult
+                        .onSuccess { reviews ->
+                            _bookReviews.value = reviews
+                        }
+                        .onFailure { fallbackError ->
+                            GlobalToastHandler.showError("Error loading book reviews: ${fallbackError.message}")
+                        }
+                } catch (fallbackException: Exception) {
+                    GlobalToastHandler.showError("Error loading book reviews: ${e.message}")
+                }
             } finally {
                 _isLoading.value = false
             }
@@ -74,26 +96,6 @@ class ReviewViewModel(
                     }
             } catch (e: Exception) {
                 GlobalToastHandler.showError("Error loading user reviews: ${e.message}")
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
-    fun loadFeaturedReviews() {
-        viewModelScope.launch {
-            _isLoading.value = true
-            try {
-                val result = reviewsRepository.getFeaturedReviews()
-                result
-                    .onSuccess { reviews ->
-                        _featuredReviews.value = reviews
-                    }
-                    .onFailure { e ->
-                        GlobalToastHandler.showError(e.message ?: "Failed to load featured reviews")
-                    }
-            } catch (e: Exception) {
-                GlobalToastHandler.showError("Error loading featured reviews: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -194,106 +196,5 @@ class ReviewViewModel(
                 _isLoading.value = false
             }
         }
-    }
-
-    fun deleteReview(reviewId: String) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            try {
-                val result = reviewsRepository.deleteReview(reviewId)
-                result
-                    .onSuccess {
-                        GlobalToastHandler.showSuccess("Review deleted successfully!")
-                        val currentReview = _currentReview.value
-                        _currentReview.value = null
-                        if (currentReview?.application?.bookId != null) {
-                            loadBookReviews(currentReview.application.bookId)
-                        }
-                    }
-                    .onFailure { e ->
-                        GlobalToastHandler.showError(e.message ?: "Failed to delete review")
-                    }
-            } catch (e: Exception) {
-                GlobalToastHandler.showError("Error deleting review: ${e.message}")
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
-    fun featureReview(reviewId: String) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            try {
-                val result = reviewsRepository.featureReview(reviewId)
-                result
-                    .onSuccess { review ->
-                        GlobalToastHandler.showSuccess("Review featured!")
-                        _currentReview.value = review
-                        if (review.application?.bookId != null) {
-                            loadBookReviews(review.application.bookId)
-                        }
-                        loadFeaturedReviews()
-                    }
-                    .onFailure { e ->
-                        GlobalToastHandler.showError(e.message ?: "Failed to feature review")
-                    }
-            } catch (e: Exception) {
-                GlobalToastHandler.showError("Error featuring review: ${e.message}")
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
-    fun unfeatureReview(reviewId: String) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            try {
-                val result = reviewsRepository.unfeatureReview(reviewId)
-                result
-                    .onSuccess { review ->
-                        GlobalToastHandler.showSuccess("Review unfeatured!")
-                        _currentReview.value = review
-                        if (review.application?.bookId != null) {
-                            loadBookReviews(review.application.bookId)
-                        }
-                        loadFeaturedReviews()
-                    }
-                    .onFailure { e ->
-                        GlobalToastHandler.showError(e.message ?: "Failed to unfeature review")
-                    }
-            } catch (e: Exception) {
-                GlobalToastHandler.showError("Error unfeaturing review: ${e.message}")
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
-    fun getAverageRating(reviews: List<ReviewResponse>): Double {
-        if (reviews.isEmpty()) return 0.0
-        return reviews.map { it.rating }.average()
-    }
-
-    fun getRatingDistribution(reviews: List<ReviewResponse>): Map<Int, Int> {
-        return reviews.groupingBy { it.rating }.eachCount()
-    }
-
-    fun canSubmitReview(application: ApplicationResponse): Boolean {
-        return application.status == "approved" &&
-                application.copyReceivedAt != null &&
-                application.reviewSubmittedAt == null
-    }
-
-    fun canUpdateReadingStatus(
-        application: ApplicationResponse,
-        newStatus: ReadingStatus
-    ): Boolean {
-        return application.status == "approved"
-    }
-
-    fun clearCurrentReview() {
-        _currentReview.value = null
     }
 }

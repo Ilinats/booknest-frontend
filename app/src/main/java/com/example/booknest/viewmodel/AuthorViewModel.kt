@@ -30,6 +30,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import com.example.booknest.ui.toast.GlobalToastHandler
+import com.example.booknest.ui.state.UiState
 
 class AuthorViewModel(
     private val booksRepository: BooksRepository,
@@ -75,6 +76,15 @@ class AuthorViewModel(
     private val _isLoadingReviews = MutableStateFlow(false)
     val isLoadingReviews: StateFlow<Boolean> = _isLoadingReviews.asStateFlow()
 
+    private val _coverImageRemovalState = MutableStateFlow<UiState<Unit>>(UiState.Idle)
+    val coverImageRemovalState: StateFlow<UiState<Unit>> = _coverImageRemovalState.asStateFlow()
+
+    private val _coverImageUploadState = MutableStateFlow<UiState<Pair<String, String>>>(UiState.Idle)
+    val coverImageUploadState: StateFlow<UiState<Pair<String, String>>> = _coverImageUploadState.asStateFlow()
+
+    private val _bookFileUploadState = MutableStateFlow<UiState<String>>(UiState.Idle)
+    val bookFileUploadState: StateFlow<UiState<String>> = _bookFileUploadState.asStateFlow()
+
     data class QuickStats(
         val totalBooks: Int = 0,
         val activeBooks: Int = 0,
@@ -106,10 +116,10 @@ class AuthorViewModel(
                         updateQuickStats()
                     }
                     .onFailure { e ->
-                        com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                        GlobalToastHandler.showError(e)
                     }
             } catch (e: Exception) {
-                com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                GlobalToastHandler.showError(e)
             } finally {
                 _isLoadingBooks.value = false
             }
@@ -126,25 +136,19 @@ class AuthorViewModel(
                         _mySeries.value = series
                     }
                     .onFailure { e ->
-                        com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                        GlobalToastHandler.showError(e)
                     }
             } catch (e: Exception) {
-                com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                GlobalToastHandler.showError(e)
             } finally {
                 _isLoadingSeries.value = false
             }
         }
     }
 
-    private val _bookCreationState = MutableStateFlow<BookCreationState>(BookCreationState.Idle)
-    val bookCreationState: StateFlow<BookCreationState> = _bookCreationState.asStateFlow()
+    private val _bookCreationState = MutableStateFlow<UiState<BookResponse>>(UiState.Idle)
+    val bookCreationState: StateFlow<UiState<BookResponse>> = _bookCreationState.asStateFlow()
 
-    sealed class BookCreationState {
-        object Idle : BookCreationState()
-        object Creating : BookCreationState()
-        data class Success(val book: BookResponse) : BookCreationState()
-        data class Error(val message: String) : BookCreationState()
-    }
 
     fun createBook(
         book: CreateBookRequest,
@@ -154,18 +158,17 @@ class AuthorViewModel(
     ) {
         viewModelScope.launch {
             try {
-                _bookCreationState.value = BookCreationState.Creating
+                _bookCreationState.value = UiState.Loading
 
                 if (context == null && (fileUri != null || coverImageUri != null)) {
-                    _bookCreationState.value =
-                        BookCreationState.Error("Context required for file upload")
+                    _bookCreationState.value = UiState.Error("Context required for file upload")
                     return@launch
                 }
 
                 val filePart = fileUri?.let { uri ->
                     val contextNonNull = context ?: run {
                         _bookCreationState.value =
-                            BookCreationState.Error("Context required for file upload")
+                            UiState.Error("Context required for file upload")
                         return@launch
                     }
 
@@ -176,15 +179,14 @@ class AuthorViewModel(
                     val file = withContext(kotlinx.coroutines.Dispatchers.IO) {
                         uriToFileForBook(contextNonNull, uri, mimeType)
                     } ?: run {
-                        _bookCreationState.value =
-                            BookCreationState.Error("File type not allowed. Allowed types: pdf, epub")
+                        _bookCreationState.value = UiState.Error("File type not allowed. Allowed types: pdf, epub")
                         return@launch
                     }
 
                     val uploadManager = com.example.booknest.utils.FileUploadManager(contextNonNull)
                     val validationResult = uploadManager.validateBookFile(file)
                     if (validationResult is com.example.booknest.utils.FileUploadManager.ValidationResult.Error) {
-                        _bookCreationState.value = BookCreationState.Error(validationResult.message)
+                        _bookCreationState.value = UiState.Error(validationResult.message)
                         return@launch
                     }
 
@@ -196,39 +198,27 @@ class AuthorViewModel(
                 result
                     .onSuccess { createdBook ->
                         coverImageUri?.let { uri ->
-                            uploadBookCoverImage(
-                                createdBook.id,
-                                uri,
-                                context!!,
-                                onSuccess = { coverUrl ->
-                                    GlobalToastHandler.showSuccess("Book created successfully!")
-                                    _bookCreationState.value =
-                                        BookCreationState.Success(createdBook.copy(coverImageUrl = coverUrl))
-                                    reloadHomeScreenData()
-                                },
-                                onError = { errorMsg ->
-                                    GlobalToastHandler.showSuccess("Book created successfully!")
-                                    com.example.booknest.ui.error.GlobalErrorHandler.showError("Cover upload failed: $errorMsg")
-                                    _bookCreationState.value =
-                                        BookCreationState.Success(createdBook)
-                                    reloadHomeScreenData()
-                                }
-                            )
+                            // Upload cover image (non-blocking)
+                            uploadBookCoverImage(createdBook.id, uri, context!!)
+                            // Set success state immediately, cover will be updated via state flow
+                            GlobalToastHandler.showSuccess("Book created successfully!")
+                            _bookCreationState.value = UiState.Success(createdBook)
+                            reloadHomeScreenData()
                         } ?: run {
                             GlobalToastHandler.showSuccess("Book created successfully!")
-                            _bookCreationState.value = BookCreationState.Success(createdBook)
+                            _bookCreationState.value = UiState.Success(createdBook)
                             reloadHomeScreenData()
                         }
                     }
                     .onFailure { e ->
                         val errorMsg = e.message ?: "Failed to create book"
-                        com.example.booknest.ui.error.GlobalErrorHandler.showError(errorMsg)
-                        _bookCreationState.value = BookCreationState.Error(errorMsg)
+                        GlobalToastHandler.showError(errorMsg)
+                        _bookCreationState.value = UiState.Error(errorMsg)
                     }
             } catch (e: Exception) {
                 val errorMsg = e.message ?: "Error creating book"
-                com.example.booknest.ui.error.GlobalErrorHandler.showError(errorMsg)
-                _bookCreationState.value = BookCreationState.Error(errorMsg)
+                GlobalToastHandler.showError(errorMsg)
+                _bookCreationState.value = UiState.Error(errorMsg)
             }
         }
     }
@@ -291,12 +281,11 @@ class AuthorViewModel(
     fun uploadBookCoverImage(
         bookId: String,
         imageUri: android.net.Uri,
-        context: android.content.Context,
-        onSuccess: (String) -> Unit,
-        onError: (String) -> Unit
+        context: android.content.Context
     ) {
         viewModelScope.launch(kotlinx.coroutines.NonCancellable) {
             try {
+                _coverImageUploadState.value = UiState.Loading
                 val mimeType = withContext(kotlinx.coroutines.Dispatchers.IO) {
                     context.contentResolver.getType(imageUri) ?: "image/png"
                 }
@@ -304,7 +293,9 @@ class AuthorViewModel(
                 val file = withContext(kotlinx.coroutines.Dispatchers.IO) {
                     uriToFile(context, imageUri, mimeType)
                 } ?: run {
-                    onError("Failed to process image file")
+                    val errorMsg = "Failed to process image file"
+                    _coverImageUploadState.value = UiState.Error(errorMsg)
+                        GlobalToastHandler.showError(errorMsg)
                     return@launch
                 }
 
@@ -331,7 +322,11 @@ class AuthorViewModel(
 
                 result
                     .onSuccess { bookResponse ->
-                        onSuccess(bookResponse.coverImageUrl ?: "")
+                        val coverUrl = bookResponse.coverImageUrl ?: ""
+                        _coverImageUploadState.value = UiState.Success(bookId to coverUrl)
+                        GlobalToastHandler.showSuccess("Cover image uploaded successfully")
+                        // Reload books to reflect the change
+                        loadMyBooks()
                         withContext(kotlinx.coroutines.Dispatchers.IO) {
                             try {
                                 if (file.exists()) file.delete()
@@ -341,34 +336,44 @@ class AuthorViewModel(
                     }
                     .onFailure { e ->
                         if (e !is kotlinx.coroutines.CancellationException) {
-                            onError(e.message ?: "Failed to upload cover image")
+                            val errorMsg = e.message ?: "Failed to upload cover image"
+                            _coverImageUploadState.value = UiState.Error(errorMsg)
+                            GlobalToastHandler.showError(e)
                         }
                     }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
                 if (e !is kotlinx.coroutines.CancellationException) {
-                    onError(e.message ?: "Error uploading cover image")
+                    val errorMsg = e.message ?: "Error uploading cover image"
+                    _coverImageUploadState.value = UiState.Error(errorMsg)
+                    GlobalToastHandler.showError(e)
                 }
             }
         }
     }
 
-    fun removeBookCoverImage(bookId: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+    fun removeBookCoverImage(bookId: String) {
         viewModelScope.launch(kotlinx.coroutines.NonCancellable) {
             try {
+                _coverImageRemovalState.value = UiState.Loading
                 val result = booksRepository.removeBookCoverImage(bookId)
                 result
                     .onSuccess {
-                        onSuccess()
+                        _coverImageRemovalState.value = UiState.Success(Unit)
+                        GlobalToastHandler.showSuccess("Cover image removed successfully")
+                        // Reload books to reflect the change
+                        loadMyBooks()
                     }
                     .onFailure { e ->
                         val errorMsg = e.message ?: "Failed to remove cover image"
-                        onError(errorMsg)
+                        _coverImageRemovalState.value = UiState.Error(errorMsg)
+                        GlobalToastHandler.showError(e)
                     }
             } catch (e: Exception) {
                 val errorMsg = e.message ?: "Error removing cover image"
-                onError(errorMsg)
+                _coverImageRemovalState.value = UiState.Error(errorMsg)
+                GlobalToastHandler.showError(e)
             }
         }
     }
@@ -415,7 +420,7 @@ class AuthorViewModel(
                 }
                 tempFile
             } catch (e: Exception) {
-                com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                GlobalToastHandler.showError(e)
                 null
             }
         }
@@ -504,13 +509,13 @@ class AuthorViewModel(
                 }
                 tempFile
             } catch (e: Exception) {
-                com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                GlobalToastHandler.showError(e)
                 null
             }
         }
 
     fun clearBookCreationState() {
-        _bookCreationState.value = BookCreationState.Idle
+        _bookCreationState.value = UiState.Idle
     }
 
     fun reloadHomeScreenData() {
@@ -532,10 +537,10 @@ class AuthorViewModel(
                         reloadHomeScreenData()
                     }
                     .onFailure { e ->
-                        com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                        GlobalToastHandler.showError(e)
                     }
             } catch (e: Exception) {
-                com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                GlobalToastHandler.showError(e)
             }
         }
     }
@@ -550,10 +555,10 @@ class AuthorViewModel(
                         reloadHomeScreenData()
                     }
                     .onFailure { e ->
-                        com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                        GlobalToastHandler.showError(e)
                     }
             } catch (e: Exception) {
-                com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                GlobalToastHandler.showError(e)
             }
         }
     }
@@ -567,10 +572,10 @@ class AuthorViewModel(
                         reloadHomeScreenData()
                     }
                     .onFailure { e ->
-                        com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                        GlobalToastHandler.showError(e)
                     }
             } catch (e: Exception) {
-                com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                GlobalToastHandler.showError(e)
             }
         }
     }
@@ -584,10 +589,10 @@ class AuthorViewModel(
                         _bookStats.value = _bookStats.value + (bookId to stats)
                     }
                     .onFailure { e ->
-                        com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                        GlobalToastHandler.showError(e)
                     }
             } catch (e: Exception) {
-                com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                GlobalToastHandler.showError(e)
             }
         }
     }
@@ -601,10 +606,10 @@ class AuthorViewModel(
                         loadMySeries()
                     }
                     .onFailure { e ->
-                        com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                        GlobalToastHandler.showError(e)
                     }
             } catch (e: Exception) {
-                com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                GlobalToastHandler.showError(e)
             }
         }
     }
@@ -618,27 +623,10 @@ class AuthorViewModel(
                         loadMySeries()
                     }
                     .onFailure { e ->
-                        com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                        GlobalToastHandler.showError(e)
                     }
             } catch (e: Exception) {
-                com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
-            }
-        }
-    }
-
-    fun deleteSeries(seriesId: String) {
-        viewModelScope.launch {
-            try {
-                val result = seriesRepository.deleteSeries(seriesId)
-                result
-                    .onSuccess {
-                        loadMySeries()
-                    }
-                    .onFailure { e ->
-                        com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
-                    }
-            } catch (e: Exception) {
-                com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                GlobalToastHandler.showError(e)
             }
         }
     }
@@ -654,10 +642,10 @@ class AuthorViewModel(
                         updateQuickStatsFromStats(stats)
                     }
                     .onFailure { e ->
-                        com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                        GlobalToastHandler.showError(e)
                     }
             } catch (e: Exception) {
-                com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                GlobalToastHandler.showError(e)
             } finally {
                 _isLoadingStats.value = false
             }
@@ -674,10 +662,10 @@ class AuthorViewModel(
                         _recentReviews.value = reviews
                     }
                     .onFailure { e ->
-                        com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                        GlobalToastHandler.showError(e)
                     }
             } catch (e: Exception) {
-                com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                GlobalToastHandler.showError(e)
             } finally {
                 _isLoadingReviews.value = false
             }
@@ -693,10 +681,10 @@ class AuthorViewModel(
                         _overdueReviews.value = applications
                     }
                     .onFailure { e ->
-                        com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                        GlobalToastHandler.showError(e)
                     }
             } catch (e: Exception) {
-                com.example.booknest.ui.error.GlobalErrorHandler.showError(e)
+                GlobalToastHandler.showError(e)
             }
         }
     }

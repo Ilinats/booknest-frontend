@@ -2,6 +2,7 @@ package com.example.booknest.data.session
 
 import androidx.datastore.core.DataStore
 import com.example.booknest.domain.model.response.UserResponse
+import com.example.booknest.domain.repository.AuthRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -43,8 +44,22 @@ object SessionManager {
         return sessionManager as SessionManager
     }
 
-    suspend fun logout() {
+    suspend fun logout(authRepository: AuthRepository? = null) {
         android.util.Log.d("SessionManager", "logout() called")
+        
+        // Call backend logout if repository is provided and we have a refresh token
+        val refreshToken = currentRefreshToken
+        if (authRepository != null && refreshToken.isNotEmpty()) {
+            try {
+                authRepository.logout(refreshToken)
+                android.util.Log.d("SessionManager", "Backend logout successful")
+            } catch (e: Exception) {
+                android.util.Log.e("SessionManager", "Backend logout failed: ${e.message}", e)
+                // Continue with local logout even if backend logout fails
+            }
+        }
+        
+        // Clear local session data
         setAuthEntities("", "", "", "", "", "")
         _isLoggedIn.emit(false)
         _currentUser.emit(null)

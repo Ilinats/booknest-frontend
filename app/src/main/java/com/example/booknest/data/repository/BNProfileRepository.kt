@@ -25,6 +25,10 @@ import okhttp3.MultipartBody
 
 class BNProfileRepository(private val profilesDataSource: ProfilesDataSource) : ProfileRepository {
 
+    override suspend fun getMe(): Result<UserResponse> {
+        return profilesDataSource.getMe()
+    }
+
     override suspend fun getMyProfile(): Result<UserProfileResponse> {
         return resultBody(profilesDataSource.getMyProfile())
     }
@@ -38,10 +42,6 @@ class BNProfileRepository(private val profilesDataSource: ProfilesDataSource) : 
         profile: UpdateUserProfileRequest
     ): Result<UserResponse> {
         return resultBody(profilesDataSource.updateUserProfile(userId, profile))
-    }
-
-    override suspend fun getSocialMediaOptions(): Result<SocialMediaOptionsResponse> {
-        return resultBody(profilesDataSource.getSocialMediaOptions())
     }
 
     override suspend fun updateSocialMedia(request: UpdateSocialMediaRequest): Result<UserProfileResponse> {
@@ -113,11 +113,6 @@ class BNProfileRepository(private val profilesDataSource: ProfilesDataSource) : 
     override suspend fun getAuthorStats(authorId: String): Result<AuthorStatsResponse> {
         return resultBody(profilesDataSource.getAuthorStats(authorId))
     }
-
-    override suspend fun searchUsers(query: String, limit: Int?): Result<UserSearchResultResponse> {
-        return resultBody(profilesDataSource.searchUsers(query, limit))
-    }
-
     override suspend fun uploadAvatar(avatarPart: MultipartBody.Part): Result<UploadAvatarResponse> {
         return resultBody(profilesDataSource.uploadAvatar(avatarPart))
     }

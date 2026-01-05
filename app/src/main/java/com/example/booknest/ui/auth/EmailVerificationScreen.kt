@@ -1,13 +1,11 @@
 package com.example.booknest.ui.auth
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -16,9 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -26,13 +22,12 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import org.koin.androidx.compose.getViewModel
-import com.example.booknest.ui.components.CodeInputField
+import com.example.booknest.ui.components.auth.CodeInputField
+import com.example.booknest.ui.components.auth.ResendCodeButton
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.viewmodel.EmailVerificationViewModel
 import com.example.booknest.navigation.Screen
-import com.example.booknest.ui.theme.BackgroundWhite
-import com.example.booknest.ui.theme.DarkNavyBlue
-import com.example.booknest.ui.theme.SkyBluePeriwinkle
+import com.example.booknest.ui.auth.components.AuthBackgroundDecoration
 
 @Composable
 fun EmailVerificationScreen(
@@ -71,55 +66,12 @@ fun EmailVerificationScreen(
         }
     }
 
-    var resendTimeLeft by remember { mutableStateOf(60) }
-    var canResend by remember { mutableStateOf(false) }
-
-    LaunchedEffect(resendTimeLeft) {
-        if (resendTimeLeft > 0) {
-            kotlinx.coroutines.delay(1000)
-            resendTimeLeft--
-        } else {
-            canResend = true
-        }
-    }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF1E9EE))
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .offset(x = (-175).dp, y = (-175).dp)
-                .size(350.dp)
-                .clip(CircleShape)
-                .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .offset(x = (-135).dp, y = (-135).dp)
-                .size(270.dp)
-                .clip(CircleShape)
-                .background(SkyBluePeriwinkle)
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .offset(x = 175.dp, y = 175.dp)
-                .size(350.dp)
-                .clip(CircleShape)
-                .background(SkyBluePeriwinkle.copy(alpha = 0.3f))
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .offset(x = 135.dp, y = 135.dp)
-                .size(270.dp)
-                .clip(CircleShape)
-                .background(SkyBluePeriwinkle)
-        )
+        AuthBackgroundDecoration(modifier = Modifier.fillMaxSize())
 
         Column(
             modifier = Modifier
@@ -137,7 +89,7 @@ fun EmailVerificationScreen(
                     fontSize = 40.sp,
                     fontWeight = FontWeight.Bold
                 ),
-                color = DarkNavyBlue,
+                color = MaterialTheme.colorScheme.onBackground,
                 textAlign = TextAlign.Center
             )
 
@@ -149,7 +101,7 @@ fun EmailVerificationScreen(
                     fontSize = 16.sp
                 ),
                 textAlign = TextAlign.Center,
-                color = Color(0xFF757575)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(40.dp))
@@ -158,7 +110,7 @@ fun EmailVerificationScreen(
                 imageVector = Icons.Default.Email,
                 contentDescription = "Email",
                 modifier = Modifier.size(80.dp),
-                tint = DarkNavyBlue
+                tint = MaterialTheme.colorScheme.primary
             )
 
             Spacer(modifier = Modifier.height(40.dp))
@@ -189,13 +141,13 @@ fun EmailVerificationScreen(
                 enabled = enteredCode.length == 6 && enteredCode.all { it.isDigit() } && !uiState.isLoading,
                 shape = RoundedCornerShape(28.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = DarkNavyBlue
+                    containerColor = MaterialTheme.colorScheme.primary
                 )
             ) {
                 if (uiState.isLoading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
                 } else {
                     Text(
@@ -204,28 +156,19 @@ fun EmailVerificationScreen(
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp
                         ),
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(30.dp))
 
-            Text(
-                text = if (canResend) "Resend code" else "Resend code in $resendTimeLeft sec",
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = 14.sp
-                ),
-                textAlign = TextAlign.Center,
-                color = Color(0xFF757575),
-                modifier = Modifier
-                    .clickable(enabled = canResend) {
-                        if (canResend) {
-                            viewModel.resendVerificationCode()
-                            resendTimeLeft = 60
-                            canResend = false
-                        }
-                    }
+            ResendCodeButton(
+                onResend = {
+                    viewModel.resendVerificationCode()
+                },
+                cooldownSeconds = 60,
+                modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -236,7 +179,7 @@ fun EmailVerificationScreen(
                     fontSize = 12.sp
                 ),
                 textAlign = TextAlign.Center,
-                color = Color(0xFF9E9E9E)
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -271,7 +214,7 @@ fun EmailVerificationScreen(
                         fontWeight = FontWeight.Medium,
                         fontSize = 16.sp
                     ),
-                    color = DarkNavyBlue
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
 

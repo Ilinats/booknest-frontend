@@ -7,6 +7,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -16,10 +18,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.booknest.ui.books.components.list.BookItem
 import com.example.booknest.ui.components.BackButton
 import com.example.booknest.viewmodel.AuthorFollowViewModel
 import com.example.booknest.viewmodel.BookViewModel
@@ -74,6 +79,24 @@ fun BookCategoryScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .offset(x = 175.dp, y = (-175).dp)
+                .size(350.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
+        )
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .offset(x = 135.dp, y = (-135).dp)
+                .size(270.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.secondary)
+        )
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -81,8 +104,7 @@ fun BookCategoryScreen(
         ) {
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                    .fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 BackButton(onClick = { navController.popBackStack() })

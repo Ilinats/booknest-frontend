@@ -16,13 +16,12 @@ import com.example.booknest.ui.books.SeriesBooksScreen
 import com.example.booknest.ui.home.HomeScreen
 import com.example.booknest.ui.profile.ProfileEditScreen
 import com.example.booknest.ui.profile.ProfileScreen
-import com.example.booknest.ui.profile.StatsScreen
-import com.example.booknest.ui.profile.FavoriteGenresScreen
-import com.example.booknest.ui.analytics.AuthorAnalyticsScreen
+import com.example.booknest.ui.account.StatsScreen
+import com.example.booknest.ui.account.FavoriteGenresScreen
 import com.example.booknest.ui.analytics.BookAnalyticsScreen
 import com.example.booknest.ui.friends.FriendsScreen
-import com.example.booknest.ui.profile.PrivacySettingsScreen
-import com.example.booknest.ui.profile.SocialMediaManagementScreen
+import com.example.booknest.ui.account.PrivacySettingsScreen
+import com.example.booknest.ui.account.SocialMediaManagementScreen
 import com.example.booknest.ui.reviews.ReviewSubmissionScreen
 import com.example.booknest.ui.notifications.NotificationsScreen
 import com.example.booknest.ui.auth.PasswordResetScreen
@@ -46,7 +45,7 @@ fun HomeNavGraph(
             MyApplicationsScreen(navController, sessionManager)
         }
         composable(
-            route = "browse/{searchQuery}",
+            route = "${Screen.Browse.route}/{searchQuery}",
             arguments = listOf(navArgument("searchQuery") {
                 type = NavType.StringType; nullable = true; defaultValue = ""
             })
@@ -64,7 +63,7 @@ fun HomeNavGraph(
                 category = "search"
             )
         }
-        composable(route = "browse") {
+        composable(route = Screen.Browse.route) {
             BookListScreen(
                 navController = navController,
                 sessionManager = sessionManager,
@@ -73,7 +72,7 @@ fun HomeNavGraph(
             )
         }
         composable(
-            route = "books/{category}",
+            route = Screen.Books.route,
             arguments = listOf(
                 navArgument("category") { type = NavType.StringType }
             )
@@ -95,7 +94,7 @@ fun HomeNavGraph(
             }
         }
         composable(
-            route = "book_details/{bookId}",
+            route = Screen.BookDetails.route,
             arguments = listOf(navArgument("bookId") { type = NavType.StringType })
         ) { backStackEntry ->
             val bookId = backStackEntry.arguments?.getString("bookId") ?: ""
@@ -103,7 +102,7 @@ fun HomeNavGraph(
         }
 
         composable(
-            route = "series_books/{seriesId}?seriesName={seriesName}",
+            route = "${Screen.SeriesBooks.route}?seriesName={seriesName}",
             arguments = listOf(
                 navArgument("seriesId") { type = NavType.StringType },
                 navArgument("seriesName") {
@@ -119,8 +118,9 @@ fun HomeNavGraph(
         }
 
         composable(route = "profile") {
-            ProfileScreen(navController, sessionManager, null)
+            ProfileScreen(navController, sessionManager, userId = null)
         }
+
         composable(
             route = "profile/{userId}",
             arguments = listOf(navArgument("userId") {
@@ -131,12 +131,12 @@ fun HomeNavGraph(
             ProfileScreen(navController, sessionManager, userId)
         }
 
-        composable("profile_edit") {
+        composable(Screen.ProfileEdit.route) {
             ProfileEditScreen(navController, sessionManager)
         }
 
         composable(
-            route = "stats/{authorId?}",
+            route = Screen.Stats.route,
             arguments = listOf(navArgument("authorId") {
                 type = NavType.StringType
                 nullable = true
@@ -148,7 +148,7 @@ fun HomeNavGraph(
         }
 
         composable(
-            route = "book_analytics/{bookId}",
+            route = Screen.BookAnalytics.route,
             arguments = listOf(navArgument("bookId") { type = NavType.StringType })
         ) { backStackEntry ->
             val bookId = backStackEntry.arguments?.getString("bookId") ?: ""
@@ -163,11 +163,11 @@ fun HomeNavGraph(
             FavoriteGenresScreen(navController, sessionManager)
         }
 
-        composable("privacy_settings") {
+        composable(Screen.PrivacySettings.route) {
             PrivacySettingsScreen(navController, sessionManager)
         }
 
-        composable("social_media_management") {
+        composable(Screen.SocialMediaManagement.route) {
             SocialMediaManagementScreen(navController, sessionManager)
         }
 
@@ -182,7 +182,7 @@ fun HomeNavGraph(
         }
 
         composable(
-            route = "email_verification?email={email}",
+            route = "${Screen.EmailVerification.route}?email={email}",
             arguments = listOf(navArgument("email") {
                 type = NavType.StringType
                 nullable = true
@@ -194,7 +194,7 @@ fun HomeNavGraph(
         }
 
         composable(
-            route = "review_submission/{applicationId}?reviewId={reviewId}",
+            route = "${Screen.ReviewSubmission.route}?reviewId={reviewId}",
             arguments = listOf(
                 navArgument("applicationId") { type = NavType.StringType },
                 navArgument("reviewId") {
@@ -214,7 +214,7 @@ fun HomeNavGraph(
         }
 
         composable(
-            route = "user_profile/{username}",
+            route = Screen.UserProfile.route,
             arguments = listOf(navArgument("username") { type = NavType.StringType })
         ) { backStackEntry ->
             val username = backStackEntry.arguments?.getString("username") ?: ""
@@ -222,7 +222,7 @@ fun HomeNavGraph(
         }
 
         composable(
-            route = "user_reviews/{userId}?userName={userName}",
+            route = "${Screen.UserReviews.route}?userName={userName}",
             arguments = listOf(
                 navArgument("userId") { type = NavType.StringType },
                 navArgument("userName") {

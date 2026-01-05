@@ -12,8 +12,6 @@ interface ReviewsDataSource {
     suspend fun getBookReviews(bookId: String): Result<List<ReviewResponse>>
     suspend fun getUserReviews(userId: String): Result<List<ReviewResponse>>
     suspend fun getFeaturedReviews(): Result<List<ReviewResponse>>
-    suspend fun featureReview(reviewId: String): Result<ReviewResponse>
-    suspend fun unfeatureReview(reviewId: String): Result<ReviewResponse>
     suspend fun getAuthorLatestReviews(limit: Int?): Result<List<ReviewResponse>>
 }
 

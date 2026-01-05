@@ -9,6 +9,7 @@ import com.example.booknest.domain.model.response.DetailedBookAnalyticsResponse
 import com.example.booknest.domain.model.response.DownloadBookResponse
 import com.example.booknest.domain.model.response.RecommendedBookResponse
 import com.example.booknest.domain.model.response.ReviewResponse
+import com.example.booknest.domain.model.response.TrendingBookResponse
 import com.example.booknest.domain.model.response.UploadBookFileResponse
 import okhttp3.MultipartBody
 
@@ -40,6 +41,7 @@ interface BooksRepository {
     suspend fun getFeaturedBooks(): Result<List<BookResponse>>
     suspend fun searchBooks(query: String, skip: Int? = null, take: Int? = null): Result<List<RecommendedBookResponse>>
     suspend fun getRecommendedBooks(take: Int? = null): Result<List<RecommendedBookResponse>>
+    suspend fun getTrendingBooks(limit: Int? = null): Result<List<TrendingBookResponse>>
     suspend fun getBookDetails(bookId: String): Result<BookResponse>
     suspend fun createBook(book: CreateBookRequest, filePart: MultipartBody.Part? = null): Result<BookResponse>
     suspend fun getMyBooks(): Result<List<BookResponse>>

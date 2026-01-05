@@ -9,7 +9,7 @@ object Auth {
     const val LOGIN = "$AUTH/login"
     const val REGISTER = "$AUTH/register"
     const val REFRESH = "$AUTH/refresh-token"
-    const val GOOGLE = "$AUTH/google"
+    const val LOGOUT = "$AUTH/logout"
     const val VERIFY_EMAIL = "$AUTH/verify-email"
     const val RESEND_VERIFICATION = "$AUTH/resend-verification"
     const val REQUEST_PASSWORD_RESET = "$AUTH/request-password-reset"
@@ -25,7 +25,6 @@ object Users {
     const val PROFILE = "$USERS/profile/{userId}"
     const val MY_STATS = "$USERS/me/stats"
     const val AUTHOR_STATS = "$USERS/profile/{authorId}/stats"
-    const val SEARCH = "$USERS/search"
     const val UPLOAD_AVATAR = "$USERS/me/avatar"
     const val DELETE_AVATAR = "$USERS/me/avatar"
     const val DELETE_ACCOUNT = "$USERS/me"
@@ -35,7 +34,6 @@ object Profiles {
     private const val PROFILES = "${Api.PREFIX}/profiles"
     const val ME = "$PROFILES/me"
     const val USER = "$PROFILES/user/{username}"
-    const val SOCIAL_MEDIA_OPTIONS = "$PROFILES/social-media/options"
     const val SOCIAL_MEDIA = "$PROFILES/me/social-media"
     const val PRIVACY = "$PROFILES/me/privacy"
     const val NOTIFICATIONS = "$PROFILES/me/notifications"
@@ -73,7 +71,6 @@ object Books {
 object Genres {
     private const val GENRES = "${Api.PREFIX}/genres"
     const val LIST = GENRES
-    const val BY_ID = "$GENRES/{genreId}"
 }
 
 object GenrePreferences {
@@ -95,8 +92,6 @@ object Applications {
     const val CHECK = "$APPLICATIONS/check/{bookId}"
     const val BY_ID = "$APPLICATIONS/{applicationId}"
     const val BOOK_APPLICATIONS = "$APPLICATIONS/books/{bookId}"
-    const val APPROVE = "$APPLICATIONS/{applicationId}/approve"
-    const val REJECT = "$APPLICATIONS/{applicationId}/reject"
     const val BULK_ACTION = "$APPLICATIONS/books/{bookId}/bulk-action"
     const val RUN_LOTTERY = "$APPLICATIONS/books/{bookId}/run-lottery"
     const val MARK_SENT = "$APPLICATIONS/{applicationId}/mark-sent"
@@ -113,17 +108,7 @@ object Reviews {
     const val BOOK_REVIEWS = "$REVIEWS/books/{bookId}"
     const val USER_REVIEWS = "$REVIEWS/users/{userId}"
     const val FEATURED = "$REVIEWS/featured"
-    const val FEATURE = "$REVIEWS/{reviewId}/feature"
-    const val UNFEATURE = "$REVIEWS/{reviewId}/unfeature"
     const val AUTHOR_LATEST = "$REVIEWS/author/latest"
-}
-
-object Files {
-    private const val FILES = "${Api.PREFIX}/files"
-    const val UPLOAD = "$FILES/upload"
-    const val DOWNLOAD = "$FILES/download/{key}"
-    const val DELETE = "$FILES/{key}"
-    const val METADATA = "$FILES/metadata/{key}"
 }
 
 object Friends {
@@ -133,14 +118,11 @@ object Friends {
     const val ACCEPT = "$FRIENDS/accept/{requesterId}"
     const val DECLINE = "$FRIENDS/decline/{requesterId}"
     const val CANCEL = "$FRIENDS/cancel/{addresseeId}"
-    const val UNFRIEND = "$FRIENDS/unfriend/{friendId}"
-    const val BLOCK = "$FRIENDS/block/{userId}"
-    const val UNBLOCK = "$FRIENDS/unblock/{userId}"
+    const val UNFRIEND = "$FRIENDS/unfriend/{friendId"
     const val REQUESTS_SENT = "$FRIENDS/requests/sent"
     const val REQUESTS_RECEIVED = "$FRIENDS/requests/received"
     const val STATUS = "$FRIENDS/status/{userId}"
     const val SEARCH = "$FRIENDS/search"
-    const val SUGGESTIONS = "$FRIENDS/suggestions"
     const val ACTIVITY = "$FRIENDS/activity"
 }
 
@@ -149,7 +131,6 @@ object Authors {
     const val FOLLOW = "$AUTHORS/follow/{authorId}"
     const val UNFOLLOW = "$AUTHORS/unfollow/{authorId}"
     const val FOLLOWING = "$AUTHORS/following"
-    const val FOLLOWING_WITH_STATS = "$AUTHORS/following/with-stats"
     const val FOLLOWERS = "$AUTHORS/followers/{authorId}"
     const val CHECK_FOLLOWING = "$AUTHORS/following/check/{authorId}"
     const val FOLLOWING_BOOKS = "$AUTHORS/following/books"
@@ -168,9 +149,6 @@ object Notifications {
 object DeviceTokens {
     private const val DEVICE_TOKENS = "${Api.PREFIX}/device-tokens"
     const val REGISTER = "$DEVICE_TOKENS/register"
-    const val LIST = DEVICE_TOKENS
-    const val UPDATE = "$DEVICE_TOKENS/{token}"
-    const val DELETE = "$DEVICE_TOKENS/{token}"
 }
 
 object PathConstants {
@@ -187,14 +165,11 @@ object PathConstants {
     const val REQUESTER_ID = "requesterId"
     const val ADDRESSEE_ID = "addresseeId"
     const val FRIEND_ID = "friendId"
-    const val KEY = "key"
-    const val TOKEN = "token"
 }
 
 object QueryConstants {
     const val SEARCH = "search"
     const val QUERY = "q"
-    const val GENRE_ID = "genreId"
     const val GENRES = "genres"
     const val AGE_RATING = "ageRating"
     const val DISTRIBUTION_TYPE = "distributionType"

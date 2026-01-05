@@ -15,7 +15,4 @@ interface NotificationsRepository {
     suspend fun deleteNotification(notificationId: String): Result<Unit>
     suspend fun deleteAllNotifications(): Result<Unit>
     suspend fun registerDeviceToken(request: RegisterDeviceTokenRequest): Result<DeviceTokenResponse>
-    suspend fun getDeviceTokens(): Result<List<DeviceTokenResponse>>
-    suspend fun updateDeviceToken(token: String, request: UpdateDeviceTokenRequest): Result<DeviceTokenResponse>
-    suspend fun deleteDeviceToken(token: String): Result<Unit>
 }

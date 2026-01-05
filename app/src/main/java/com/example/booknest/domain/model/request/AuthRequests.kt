@@ -41,12 +41,6 @@ data class RefreshTokenRequest(
 )
 
 @Serializable
-data class GoogleAuthRequest(
-    val idToken: String,
-    val userType: String
-)
-
-@Serializable
 data class VerifyEmailRequest(
     val code: String
 )

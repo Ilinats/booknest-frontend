@@ -28,13 +28,6 @@ data class AuthTokenResponse(
 )
 
 @Serializable
-data class GoogleAuthDataResponse(
-    val user: UserResponse,
-    val accessToken: String,
-    val refreshToken: String
-)
-
-@Serializable
 data class VerifyEmailDataResponse(
     val message: String? = null,
     val user: UserResponse? = null

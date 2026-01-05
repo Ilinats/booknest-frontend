@@ -40,19 +40,4 @@ class BNNotificationsRepository(private val notificationsDataSource: Notificatio
     override suspend fun registerDeviceToken(request: RegisterDeviceTokenRequest): Result<DeviceTokenResponse> {
         return resultBody(notificationsDataSource.registerDeviceToken(request))
     }
-
-    override suspend fun getDeviceTokens(): Result<List<DeviceTokenResponse>> {
-        return resultBody(notificationsDataSource.getDeviceTokens())
-    }
-
-    override suspend fun updateDeviceToken(
-        token: String,
-        request: UpdateDeviceTokenRequest
-    ): Result<DeviceTokenResponse> {
-        return resultBody(notificationsDataSource.updateDeviceToken(token, request))
-    }
-
-    override suspend fun deleteDeviceToken(token: String): Result<Unit> {
-        return resultBody(notificationsDataSource.deleteDeviceToken(token))
-    }
 }

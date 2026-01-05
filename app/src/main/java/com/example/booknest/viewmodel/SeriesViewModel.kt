@@ -114,13 +114,5 @@ class SeriesViewModel(
             }
         }
     }
-
-    fun getBookCountForSeries(seriesId: String): Int {
-        return _seriesBooks.value[seriesId]?.size ?: 0
-    }
-
-    fun hasBooks(seriesId: String): Boolean {
-        return getBookCountForSeries(seriesId) > 0
-    }
 }
 

@@ -9,6 +9,7 @@ import com.example.booknest.domain.model.response.DetailedBookAnalyticsResponse
 import com.example.booknest.domain.model.response.DownloadBookResponse
 import com.example.booknest.domain.model.response.RecommendedBookResponse
 import com.example.booknest.domain.model.response.ReviewResponse
+import com.example.booknest.domain.model.response.TrendingBookResponse
 import com.example.booknest.domain.model.response.UploadBookFileResponse
 import okhttp3.MultipartBody
 
@@ -45,6 +46,7 @@ interface BooksDataSource {
     ): Result<List<RecommendedBookResponse>>
 
     suspend fun getRecommendedBooks(take: Int?): Result<List<RecommendedBookResponse>>
+    suspend fun getTrendingBooks(limit: Int? = null): Result<List<com.example.booknest.domain.model.response.TrendingBookResponse>>
     suspend fun getBookDetails(bookId: String): Result<BookResponse>
     suspend fun createBook(
         book: CreateBookRequest,

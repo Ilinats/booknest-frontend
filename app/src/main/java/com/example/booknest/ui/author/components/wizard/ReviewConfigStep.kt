@@ -1,0 +1,299 @@
+package com.example.booknest.ui.author.components.wizard
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.example.booknest.ui.author.components.common.DatePickerDialog
+import com.example.booknest.ui.author.components.common.SelectionMethod
+import java.text.SimpleDateFormat
+import java.util.*
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ReviewConfigStep(
+    applicationDeadline: String?,
+    reviewDeadline: String?,
+    selectedSelectionMethod: SelectionMethod?,
+    selectionCriteria: String,
+    showApplicationDatePicker: Boolean,
+    showReviewDatePicker: Boolean,
+    applicationDatePickerState: DatePickerState,
+    reviewDatePickerState: DatePickerState,
+    applicationDeadlineError: String? = null,
+    reviewDeadlineError: String? = null,
+    onUpdate: (String?, String?, SelectionMethod?, String) -> Unit,
+    onShowApplicationDatePicker: () -> Unit,
+    onShowReviewDatePicker: () -> Unit,
+    onDismissApplicationDatePicker: () -> Unit,
+    onDismissReviewDatePicker: () -> Unit,
+    onValidationChange: ((String?, String?) -> Unit)? = null
+) {
+    val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
+    val inputDateFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
+
+    val formattedApplicationDeadline = remember(applicationDeadline) {
+        applicationDeadline?.let {
+            try {
+                val date = inputDateFormat.parse(it)
+                date?.let { dateFormat.format(it) } ?: it
+            } catch (e: Exception) {
+                it
+            }
+        } ?: ""
+    }
+
+    val formattedReviewDeadline = remember(reviewDeadline) {
+        reviewDeadline?.let {
+            try {
+                val date = inputDateFormat.parse(it)
+                date?.let { dateFormat.format(it) } ?: it
+            } catch (e: Exception) {
+                it
+            }
+        } ?: ""
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text(
+            text = "Campaign Settings",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold
+        )
+
+        OutlinedTextField(
+            value = formattedApplicationDeadline,
+            onValueChange = { },
+            label = { Text("Application Deadline *") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onShowApplicationDatePicker() },
+            readOnly = true,
+            singleLine = true,
+            placeholder = { Text("Select date") },
+            trailingIcon = {
+                IconButton(onClick = onShowApplicationDatePicker) {
+                    Icon(
+                        Icons.Default.CalendarToday,
+                        contentDescription = "Select Date"
+                    )
+                }
+            },
+            isError = applicationDeadlineError != null,
+            supportingText = applicationDeadlineError?.let {
+                {
+                    Text(
+                        it,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            } ?: {
+                if (applicationDeadline.isNullOrBlank()) {
+                    Text(
+                        "Application deadline is required",
+                        color = MaterialTheme.colorScheme.error
+                    )
+                } else null
+            }
+        )
+
+        OutlinedTextField(
+            value = formattedReviewDeadline,
+            onValueChange = { },
+            label = { Text("Review Deadline") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onShowReviewDatePicker() },
+            readOnly = true,
+            singleLine = true,
+            placeholder = { Text("Select date (optional)") },
+            trailingIcon = {
+                IconButton(onClick = onShowReviewDatePicker) {
+                    Icon(
+                        Icons.Default.CalendarToday,
+                        contentDescription = "Select Date"
+                    )
+                }
+            },
+            isError = reviewDeadlineError != null,
+            supportingText = reviewDeadlineError?.let {
+                {
+                    Text(
+                        it,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        )
+
+        Text(
+            text = "Selection Method *",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Column(modifier = Modifier.selectableGroup()) {
+            SelectionMethod.values().forEach { method ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .selectable(
+                            selected = selectedSelectionMethod == method,
+                            onClick = {
+                                onUpdate(
+                                    applicationDeadline,
+                                    reviewDeadline,
+                                    method,
+                                    selectionCriteria
+                                )
+                            },
+                            role = Role.RadioButton
+                        )
+                        .padding(vertical = 4.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (selectedSelectionMethod == method)
+                            MaterialTheme.colorScheme.primaryContainer
+                        else
+                            MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = selectedSelectionMethod == method,
+                            onClick = null
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = method.displayName,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = when (method) {
+                                    SelectionMethod.AUTHOR_SELECTS -> "You manually review and select reviewers from applications"
+                                    SelectionMethod.FIRST_COME -> "Applications are automatically approved on a first-come, first-served basis"
+                                    SelectionMethod.RANDOM -> "Reviewers are randomly selected via lottery after application deadline"
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        OutlinedTextField(
+            value = selectionCriteria,
+            onValueChange = {
+                onUpdate(
+                    applicationDeadline,
+                    reviewDeadline,
+                    selectedSelectionMethod,
+                    it
+                )
+            },
+            label = { Text("Selection Criteria") },
+            modifier = Modifier.fillMaxWidth(),
+            maxLines = 4,
+            placeholder = { Text("Describe what you're looking for in reviewers (optional)") },
+            supportingText = {
+                Text(
+                    text = "Help reviewers understand what you're looking for",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        )
+    }
+
+    if (showApplicationDatePicker) {
+        DatePickerDialog(
+            onDateSelected = { selectedDateMillis: Long? ->
+                selectedDateMillis?.let { millis: Long ->
+                    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                    val selectedDate = Date(millis)
+                    val newDeadline = dateFormat.format(selectedDate)
+
+                    val calendar = Calendar.getInstance()
+                    calendar.set(Calendar.HOUR_OF_DAY, 0)
+                    calendar.set(Calendar.MINUTE, 0)
+                    calendar.set(Calendar.SECOND, 0)
+                    calendar.set(Calendar.MILLISECOND, 0)
+                    val today = calendar.time
+
+                    val selectedCalendar = Calendar.getInstance()
+                    selectedCalendar.time = selectedDate
+                    selectedCalendar.set(Calendar.HOUR_OF_DAY, 0)
+                    selectedCalendar.set(Calendar.MINUTE, 0)
+                    selectedCalendar.set(Calendar.SECOND, 0)
+                    selectedCalendar.set(Calendar.MILLISECOND, 0)
+
+                    if (selectedCalendar.timeInMillis <= calendar.timeInMillis) {
+                        onValidationChange?.invoke("Application deadline must be at least tomorrow", reviewDeadlineError)
+                    } else {
+                        onUpdate(newDeadline, reviewDeadline, selectedSelectionMethod, selectionCriteria)
+                        val (appErr, revErr) = validateDeadlines(newDeadline, reviewDeadline)
+                        onValidationChange?.invoke(appErr, revErr)
+                    }
+                }
+                onDismissApplicationDatePicker()
+            },
+            onDismiss = onDismissApplicationDatePicker,
+            datePickerState = applicationDatePickerState
+        )
+    }
+
+    if (showReviewDatePicker) {
+        DatePickerDialog(
+            onDateSelected = { selectedDateMillis: Long? ->
+                selectedDateMillis?.let { millis: Long ->
+                    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                    val newDeadline = dateFormat.format(Date(millis))
+                    onUpdate(applicationDeadline, newDeadline, selectedSelectionMethod, selectionCriteria)
+                    val (appErr, revErr) = validateDeadlines(applicationDeadline, newDeadline)
+                    onValidationChange?.invoke(appErr, revErr)
+                }
+                onDismissReviewDatePicker()
+            },
+            onDismiss = onDismissReviewDatePicker,
+            datePickerState = reviewDatePickerState
+        )
+    }
+}
+
+private fun validateDeadlines(applicationDeadline: String?, reviewDeadline: String?): Pair<String?, String?> {
+    val appError = if (applicationDeadline.isNullOrBlank()) {
+        "Application deadline is required"
+    } else null
+
+    val revError = if (!reviewDeadline.isNullOrBlank()) {
+        try {
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            val appDate = dateFormat.parse(applicationDeadline!!)
+            val revDate = dateFormat.parse(reviewDeadline)
+            
+            if (appDate != null && revDate != null && revDate.before(appDate)) {
+                "Review deadline must be after application deadline"
+            } else null
+        } catch (e: Exception) {
+            "Invalid date format"
+        }
+    } else null
+
+    return Pair(appError, revError)
+}

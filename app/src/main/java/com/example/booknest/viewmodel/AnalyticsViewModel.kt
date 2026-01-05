@@ -14,20 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import com.example.booknest.ui.toast.GlobalToastHandler
-
-sealed class BookAnalyticsUiState {
-    object Idle : BookAnalyticsUiState()
-    object Loading : BookAnalyticsUiState()
-    data class Success(val analytics: DetailedBookAnalyticsResponse) : BookAnalyticsUiState()
-    data class Error(val message: String) : BookAnalyticsUiState()
-}
-
-sealed class AuthorAnalyticsUiState {
-    object Idle : AuthorAnalyticsUiState()
-    object Loading : AuthorAnalyticsUiState()
-    data class Success(val analytics: AuthorAnalyticsResponse) : AuthorAnalyticsUiState()
-    data class Error(val message: String) : AuthorAnalyticsUiState()
-}
+import com.example.booknest.ui.state.UiState
 
 class AnalyticsViewModel(
     private val getDetailedBookAnalyticsUseCase: GetDetailedBookAnalyticsUseCase,
@@ -36,15 +23,15 @@ class AnalyticsViewModel(
 ) : ViewModel() {
 
     private val _bookAnalyticsState =
-        MutableStateFlow<BookAnalyticsUiState>(BookAnalyticsUiState.Idle)
-    val bookAnalyticsState: StateFlow<BookAnalyticsUiState> = _bookAnalyticsState
+        MutableStateFlow<UiState<DetailedBookAnalyticsResponse>>(UiState.Idle)
+    val bookAnalyticsState: StateFlow<UiState<DetailedBookAnalyticsResponse>> = _bookAnalyticsState
 
     private val _currentBookAnalytics = MutableStateFlow<DetailedBookAnalyticsResponse?>(null)
     val currentBookAnalytics: StateFlow<DetailedBookAnalyticsResponse?> = _currentBookAnalytics
 
     private val _authorAnalyticsState =
-        MutableStateFlow<AuthorAnalyticsUiState>(AuthorAnalyticsUiState.Idle)
-    val authorAnalyticsState: StateFlow<AuthorAnalyticsUiState> = _authorAnalyticsState
+        MutableStateFlow<UiState<AuthorAnalyticsResponse>>(UiState.Idle)
+    val authorAnalyticsState: StateFlow<UiState<AuthorAnalyticsResponse>> = _authorAnalyticsState
 
     private val _currentAuthorAnalytics = MutableStateFlow<AuthorAnalyticsResponse?>(null)
     val currentAuthorAnalytics: StateFlow<AuthorAnalyticsResponse?> = _currentAuthorAnalytics
@@ -60,60 +47,49 @@ class AnalyticsViewModel(
 
     fun loadDetailedBookAnalytics(bookId: String) {
         viewModelScope.launch {
-            _bookAnalyticsState.value = BookAnalyticsUiState.Loading
+            _bookAnalyticsState.value = UiState.Loading
             try {
                 val result = getDetailedBookAnalyticsUseCase(bookId)
                 result
                     .onSuccess { analytics ->
                         _currentBookAnalytics.value = analytics
-                        _bookAnalyticsState.value = BookAnalyticsUiState.Success(analytics)
+                        _bookAnalyticsState.value = UiState.Success(analytics)
                     }
                     .onFailure { e ->
                         val errorMessage = e.message ?: "Failed to load book analytics"
-                        _bookAnalyticsState.value = BookAnalyticsUiState.Error(errorMessage)
-                        GlobalToastHandler.showError("Error: $errorMessage")
+                        _bookAnalyticsState.value = UiState.Error(errorMessage, e)
+                        GlobalToastHandler.showError(e)
                     }
             } catch (e: Exception) {
                 val errorMessage = "Network error: ${e.message}"
-                _bookAnalyticsState.value = BookAnalyticsUiState.Error(errorMessage)
-                GlobalToastHandler.showError(errorMessage)
+                _bookAnalyticsState.value = UiState.Error(errorMessage, e)
+                GlobalToastHandler.showError(e)
             }
         }
     }
 
     fun loadAuthorAnalytics(dateRange: String? = null) {
         viewModelScope.launch {
-            _authorAnalyticsState.value = AuthorAnalyticsUiState.Loading
+            _authorAnalyticsState.value = UiState.Loading
             try {
                 val result = getAuthorAnalyticsUseCase(dateRange)
                 result
                     .onSuccess { analytics ->
                         _currentAuthorAnalytics.value = analytics
-                        _authorAnalyticsState.value = AuthorAnalyticsUiState.Success(analytics)
+                        _authorAnalyticsState.value = UiState.Success(analytics)
                     }
                     .onFailure { e ->
                         val errorMessage = e.message ?: "Failed to load author analytics"
-                        _authorAnalyticsState.value = AuthorAnalyticsUiState.Error(errorMessage)
-                        GlobalToastHandler.showError("Error: $errorMessage")
+                        _authorAnalyticsState.value = UiState.Error(errorMessage, e)
+                        GlobalToastHandler.showError(e)
                     }
             } catch (e: Exception) {
                 val errorMessage = "Network error: ${e.message}"
-                _authorAnalyticsState.value = AuthorAnalyticsUiState.Error(errorMessage)
-                GlobalToastHandler.showError(errorMessage)
+                _authorAnalyticsState.value = UiState.Error(errorMessage, e)
+                GlobalToastHandler.showError(e)
             }
         }
     }
-
-    fun clearBookAnalyticsState() {
-        _bookAnalyticsState.value = BookAnalyticsUiState.Idle
-        _currentBookAnalytics.value = null
-    }
-
-    fun clearAuthorAnalyticsState() {
-        _authorAnalyticsState.value = AuthorAnalyticsUiState.Idle
-        _currentAuthorAnalytics.value = null
-    }
-
     fun loadBookPerformanceComparison() {
         viewModelScope.launch {
             try {
@@ -131,14 +107,6 @@ class AnalyticsViewModel(
                 GlobalToastHandler.showError("Error loading book performance comparison: ${e.message}")
             }
         }
-    }
-
-    fun calculateApprovalRate(approved: Int, total: Int): Double {
-        return if (total > 0) (approved.toDouble() / total * 100) else 0.0
-    }
-
-    fun calculateRejectionRate(rejected: Int, total: Int): Double {
-        return if (total > 0) (rejected.toDouble() / total * 100) else 0.0
     }
 
     fun getRatingDistributionList(ratingDistribution: RatingDistributionResponse): List<Pair<Int, Int>> {

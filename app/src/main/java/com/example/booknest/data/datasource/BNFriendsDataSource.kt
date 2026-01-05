@@ -29,14 +29,6 @@ class BNFriendsDataSource(private val friendsService: FriendsService) : FriendsD
         return requestBodyUnit(friendsService.unfriendUser(friendId))
     }
 
-    override suspend fun blockUser(userId: String): Result<FriendRequestResponse> {
-        return requestBody(friendsService.blockUser(userId))
-    }
-
-    override suspend fun unblockUser(userId: String): Result<Unit> {
-        return requestBodyUnit(friendsService.unblockUser(userId))
-    }
-
     override suspend fun getFriends(): Result<List<UserResponse>> {
         return requestBody(friendsService.getFriends())
     }
@@ -64,24 +56,6 @@ class BNFriendsDataSource(private val friendsService: FriendsService) : FriendsD
             }
         } else {
             Result.failure(Throwable(response.errorBody()?.string() ?: "Failed to search users"))
-        }
-    }
-
-    override suspend fun getFriendSuggestions(limit: Int?): Result<List<UserResponse>> {
-        val response = friendsService.getFriendSuggestions(limit)
-        return if (response.isSuccessful) {
-            val body = response.body()
-            if (body != null) {
-                Result.success(body.map { it.user })
-            } else {
-                Result.success(emptyList())
-            }
-        } else {
-            Result.failure(
-                Throwable(
-                    response.errorBody()?.string() ?: "Failed to get friend suggestions"
-                )
-            )
         }
     }
 

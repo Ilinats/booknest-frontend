@@ -1,0 +1,620 @@
+package com.example.booknest.ui.applications.components.content
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import com.example.booknest.data.session.SessionManager
+import com.example.booknest.domain.model.response.ApplicationResponse
+import com.example.booknest.navigation.Screen
+import com.example.booknest.ui.applications.components.detail.BookSummaryHeader
+import com.example.booknest.ui.applications.components.detail.BulkActionsBar
+import com.example.booknest.ui.applications.components.detail.SortFilterBar
+import com.example.booknest.ui.applications.components.list.ApplicationStatsSection
+import com.example.booknest.ui.applications.components.list.AuthorApprovedTabInfoCard
+import com.example.booknest.ui.applications.components.list.EnhancedApplicationCard
+import com.example.booknest.ui.applications.components.list.EnhancedApprovedApplicationCard
+import com.example.booknest.ui.applications.components.list.RejectedApplicationCard
+import com.example.booknest.ui.applications.components.lottery.LotterySelectionCard
+import com.example.booknest.ui.applications.components.review.ReviewCard
+import com.example.booknest.ui.applications.components.statistics.StatisticsTabContent
+import com.example.booknest.ui.applications.dialogs.RunLotteryDialog
+import com.example.booknest.ui.applications.models.ApplicationStats
+import com.example.booknest.ui.applications.models.SortOption
+import com.example.booknest.ui.components.BackButton
+import com.example.booknest.viewmodel.ApplicationViewModel
+import com.example.booknest.viewmodel.BookViewModel
+import com.example.booknest.viewmodel.ReviewViewModel
+import org.koin.androidx.compose.getViewModel
+import org.koin.compose.koinInject
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BookApplicationDetailContent(
+    navController: NavController,
+    sessionManager: SessionManager = koinInject(),
+    bookId: String,
+    applicationViewModel: ApplicationViewModel = getViewModel(),
+    bookViewModel: BookViewModel = getViewModel(),
+    reviewViewModel: ReviewViewModel = getViewModel()
+) {
+    val bookApplications by applicationViewModel.bookApplications.collectAsState()
+    val isLoading by applicationViewModel.isLoading.collectAsState()
+    val bookDetails by bookViewModel.bookDetails.collectAsState()
+    val bookReviews by reviewViewModel.bookReviews.collectAsState()
+
+    var selectedTab by remember { mutableStateOf(0) }
+    val tabs = listOf("All", "Pending", "Approved", "Rejected", "Reviews", "Statistics")
+
+    val book = bookDetails ?: bookApplications.firstOrNull()?.book
+
+    val isLotteryBook = book?.selectionMethod?.let { method ->
+        method.lowercase().trim() == "lottery" || method.lowercase().trim() == "random_selection"
+    } ?: false
+
+    val lotteryDeadlinePassed = book?.applicationDeadline?.let { deadline ->
+        try {
+            val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
+            inputFormat.timeZone = TimeZone.getTimeZone("UTC")
+            val deadlineDate = inputFormat.parse(deadline)
+            deadlineDate?.before(Date()) ?: false
+        } catch (e: Exception) {
+            false
+        }
+    } ?: false
+    val lotteryHasPending = bookApplications.any { it.status == "pending" }
+    val lotteryHasProcessed = bookApplications.any { it.status in listOf("approved", "rejected") }
+    var showLotteryDialog by remember { mutableStateOf(false) }
+
+    var selectedApplicationIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var isSelectionMode by remember { mutableStateOf(false) }
+
+    var sortOption by remember { mutableStateOf<SortOption>(SortOption.DATE_DESC) }
+    var showSortMenu by remember { mutableStateOf(false) }
+
+    LaunchedEffect(bookId) {
+        bookViewModel.getBookDetails(bookId)
+        applicationViewModel.loadBookApplications(bookId)
+        reviewViewModel.loadBookReviews(bookId)
+    }
+
+    LaunchedEffect(selectedTab) {
+        if (selectedTab != 1 && isSelectionMode) {
+            isSelectionMode = false
+            selectedApplicationIds = emptySet()
+        }
+    }
+
+    val applicationsWithReviews = remember(bookApplications, bookReviews) {
+        bookApplications.map { application ->
+            val review =
+                application.review ?: bookReviews.find { it.applicationId == application.id }
+            application.copy(review = review)
+        }
+    }
+
+    val applicationStats = remember(applicationsWithReviews) {
+        val total = applicationsWithReviews.size
+        val pending = applicationsWithReviews.count { it.status == "pending" }
+        val approved = applicationsWithReviews.count { it.status == "approved" }
+        val rejected = applicationsWithReviews.count { it.status == "rejected" }
+        val withdrawn = applicationsWithReviews.count { it.status == "withdrawn" }
+        ApplicationStats(
+            total = total,
+            pending = pending,
+            approved = approved,
+            rejected = rejected,
+            withdrawn = withdrawn
+        )
+    }
+
+    val filteredApplications: List<ApplicationResponse> =
+        remember(selectedTab, applicationsWithReviews, sortOption) {
+            val filtered = when (selectedTab) {
+                0 -> applicationsWithReviews
+                1 -> applicationsWithReviews.filter { it.status == "pending" }
+                2 -> applicationsWithReviews.filter { it.status == "approved" }
+                3 -> applicationsWithReviews.filter { it.status == "rejected" }
+                else -> applicationsWithReviews
+            }
+
+            when (sortOption) {
+                SortOption.DATE_DESC -> filtered.sortedByDescending {
+                    try {
+                        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault()).parse(
+                            it.appliedAt
+                        )?.time ?: 0L
+                    } catch (e: Exception) {
+                        0L
+                    }
+                }
+
+                SortOption.DATE_ASC -> filtered.sortedBy {
+                    try {
+                        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault()).parse(
+                            it.appliedAt
+                        )?.time ?: 0L
+                    } catch (e: Exception) {
+                        0L
+                    }
+                }
+
+                SortOption.RATING_DESC -> filtered.sortedByDescending {
+                    try {
+                        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault()).parse(
+                            it.appliedAt
+                        )?.time ?: 0L
+                    } catch (e: Exception) {
+                        0L
+                    }
+                }
+
+                SortOption.READING_STATUS -> filtered.sortedBy { it.readingStatus ?: "" }
+            }
+        }
+
+    val approvedCount = applicationStats.approved
+
+    Scaffold(
+        topBar = {
+            Surface(
+                shadowElevation = 4.dp,
+                tonalElevation = 2.dp,
+                color = MaterialTheme.colorScheme.surface
+            ) {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text(
+                                book?.title ?: "Book Details",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 20.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                "Status: ${
+                                    book?.status?.lowercase()
+                                        ?.replaceFirstChar { it.uppercase() } ?: "Unknown"
+                                }",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+                    navigationIcon = {
+                        BackButton(onClick = { navController.popBackStack() })
+                    },
+                    actions = {
+                        IconButton(onClick = {
+                            book?.id?.let {
+                                navController.navigate(Screen.BookEdit.createRoute(it))
+                            }
+                        }) {
+                            Icon(Icons.Filled.Edit, contentDescription = "Edit Book")
+                        }
+                        IconButton(onClick = { }) {
+                            Icon(Icons.Filled.Share, contentDescription = "Share")
+                        }
+                        IconButton(onClick = {
+                            bookId.let {
+                                navController.navigate("book_analytics/$it")
+                            }
+                        }) {
+                            Icon(Icons.Filled.Info, contentDescription = "Analytics")
+                        }
+                    }
+                )
+            }
+        }
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            contentPadding = PaddingValues(bottom = 80.dp),
+            verticalArrangement = Arrangement.spacedBy(0.dp)
+        ) {
+            item {
+                BookSummaryHeader(
+                    book = book,
+                    approvedCount = approvedCount,
+                    totalSlots = book?.totalCopies ?: 0
+                )
+            }
+
+            item {
+                ApplicationStatsSection(stats = applicationStats)
+            }
+
+            if (isLotteryBook) {
+                item {
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+                item {
+                    LotterySelectionCard(
+                        isLotteryBook = isLotteryBook,
+                        deadlinePassed = lotteryDeadlinePassed,
+                        hasPendingApplications = lotteryHasPending,
+                        hasProcessedApplications = lotteryHasProcessed,
+                        pendingCount = applicationStats.pending,
+                        availableCopies = book?.availableCopies ?: 0,
+                        onRunLottery = { showLotteryDialog = true }
+                    )
+                }
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            item {
+                ScrollableTabRow(
+                    selectedTabIndex = selectedTab,
+                    modifier = Modifier.fillMaxWidth(),
+                    edgePadding = 0.dp
+                ) {
+                    tabs.forEachIndexed { index, title ->
+                        Tab(
+                            selected = selectedTab == index,
+                            onClick = {
+                                selectedTab = index
+                                selectedApplicationIds = emptySet()
+                                if (index != 1) {
+                                    isSelectionMode = false
+                                }
+                            },
+                            text = {
+                                Text(
+                                    title + when (index) {
+                                        0 -> " (${applicationStats.total})"
+                                        1 -> " (${applicationStats.pending})"
+                                        2 -> " (${applicationStats.approved})"
+                                        3 -> " (${applicationStats.rejected})"
+                                        4 -> " (${applicationsWithReviews.count { it.review != null }})"
+                                        else -> ""
+                                    },
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        )
+                    }
+                }
+            }
+
+            if (isSelectionMode && selectedApplicationIds.isNotEmpty() && selectedTab == 1) {
+                item {
+                    val totalSlots = book?.totalCopies ?: 0
+                    val availableSlots = totalSlots - approvedCount
+                    val canApprove = selectedApplicationIds.size <= availableSlots
+
+                    BulkActionsBar(
+                        selectedCount = selectedApplicationIds.size,
+                        availableSlots = availableSlots,
+                        onApproveSelected = {
+                            applicationViewModel.bulkActionApplications(
+                                selectedApplicationIds.toList(),
+                                "approved"
+                            )
+                            selectedApplicationIds = emptySet()
+                            isSelectionMode = false
+                        },
+                        onRejectSelected = {
+                            applicationViewModel.bulkActionApplications(
+                                selectedApplicationIds.toList(),
+                                "rejected"
+                            )
+                            selectedApplicationIds = emptySet()
+                            isSelectionMode = false
+                        },
+                        onMarkSentSelected = {
+                            selectedApplicationIds.forEach { id ->
+                                applicationViewModel.markCopySent(id)
+                            }
+                            selectedApplicationIds = emptySet()
+                            isSelectionMode = false
+                        },
+                        onCancelSelection = {
+                            selectedApplicationIds = emptySet()
+                            isSelectionMode = false
+                        },
+                        showMarkSent = selectedTab == 2 && selectedApplicationIds.any { appId ->
+                            val app = filteredApplications.find { it.id == appId }
+                            val isCopySent = !app?.copySentAt.isNullOrBlank()
+                            val isDigital = app?.book?.distributionType?.lowercase() == "digital"
+                            !isCopySent && !isDigital
+                        },
+                        canApprove = canApprove
+                    )
+                }
+            }
+
+            if (selectedTab != 4 && selectedTab != 5) {
+                item {
+                    SortFilterBar(
+                        sortOption = sortOption,
+                        onSortOptionChange = { option: SortOption -> sortOption = option },
+                        showSortMenu = showSortMenu,
+                        onShowSortMenuChange = { show: Boolean -> showSortMenu = show },
+                        onToggleSelectionMode = {
+                            if (selectedTab == 1) {
+                                isSelectionMode = !isSelectionMode
+                                if (!isSelectionMode) selectedApplicationIds = emptySet()
+                            }
+                        },
+                        isSelectionMode = isSelectionMode,
+                        enabled = selectedTab == 1
+                    )
+                }
+            }
+
+            when (selectedTab) {
+                0 -> {
+                    if (isLoading && filteredApplications.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        }
+                    } else {
+                        items(
+                            filteredApplications.size,
+                            key = { filteredApplications[it].id }) { index ->
+                            val application = filteredApplications[index]
+                            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                                val appId = application.id
+                                EnhancedApplicationCard(
+                                    application = application,
+                                    isSelected = selectedApplicationIds.contains(appId),
+                                    isSelectionMode = isSelectionMode,
+                                    onToggleSelection = {
+                                        selectedApplicationIds =
+                                            if (selectedApplicationIds.contains(appId)) {
+                                                selectedApplicationIds - appId
+                                            } else {
+                                                selectedApplicationIds + appId
+                                            }
+                                    },
+                                    navController = navController,
+                                    onApprove = { app, notes ->
+                                        applicationViewModel.approveApplication(
+                                            app.id,
+                                            notes
+                                        )
+                                    },
+                                    onReject = { app, notes ->
+                                        applicationViewModel.rejectApplication(
+                                            app.id,
+                                            notes
+                                        )
+                                    },
+                                    onMarkSent = null,
+                                    isLotteryBook = isLotteryBook
+                                )
+                            }
+                        }
+                    }
+                }
+
+                1 -> {
+                    val totalSlots = book?.totalCopies ?: 0
+                    val availableSlots = totalSlots - approvedCount
+
+                    if (isLoading && filteredApplications.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        }
+                    } else {
+                        items(
+                            filteredApplications.size,
+                            key = { filteredApplications[it].id }) { index ->
+                            val application = filteredApplications[index]
+                            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                                val appId = application.id
+                                val canSelectMore = selectedApplicationIds.size < availableSlots
+
+                                EnhancedApplicationCard(
+                                    application = application,
+                                    isSelected = selectedApplicationIds.contains(appId),
+                                    isSelectionMode = isSelectionMode,
+                                    onToggleSelection = {
+                                        if (selectedApplicationIds.contains(appId)) {
+                                            selectedApplicationIds = selectedApplicationIds - appId
+                                        } else {
+                                            if (canSelectMore) {
+                                                selectedApplicationIds =
+                                                    selectedApplicationIds + appId
+                                            }
+                                        }
+                                    },
+                                    navController = navController,
+                                    onApprove = { app, notes ->
+                                        applicationViewModel.approveApplication(
+                                            app.id,
+                                            notes
+                                        )
+                                    },
+                                    onReject = { app, notes ->
+                                        applicationViewModel.rejectApplication(
+                                            app.id,
+                                            notes
+                                        )
+                                    },
+                                    onMarkSent = null,
+                                    isLotteryBook = isLotteryBook
+                                )
+                            }
+                        }
+                    }
+                }
+
+                2 -> {
+                    val requiresPhysicalCopy =
+                        book?.distributionType?.lowercase() in listOf("physical", "both")
+                    if (requiresPhysicalCopy) {
+                        item {
+                            AuthorApprovedTabInfoCard()
+                        }
+                    }
+                    if (isLoading && filteredApplications.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        }
+                    } else {
+                        items(
+                            filteredApplications.size,
+                            key = { filteredApplications[it].id }) { index ->
+                            val application = filteredApplications[index]
+                            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                                val appId = application.id
+                                EnhancedApprovedApplicationCard(
+                                    application = application,
+                                    isSelected = selectedApplicationIds.contains(appId),
+                                    isSelectionMode = isSelectionMode,
+                                    onToggleSelection = {
+                                        selectedApplicationIds =
+                                            if (selectedApplicationIds.contains(appId)) {
+                                                selectedApplicationIds - appId
+                                            } else {
+                                                selectedApplicationIds + appId
+                                            }
+                                    },
+                                    navController = navController,
+                                    onMarkSent = { app -> applicationViewModel.markCopySent(app.id) }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                3 -> {
+                    if (isLoading && filteredApplications.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        }
+                    } else {
+                        items(
+                            filteredApplications.size,
+                            key = { filteredApplications[it].id }) { index ->
+                            val application = filteredApplications[index]
+                            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                                RejectedApplicationCard(
+                                    application = application,
+                                    navController = navController
+                                )
+                            }
+                        }
+                    }
+                }
+
+                4 -> {
+                    val reviewsApplications = applicationsWithReviews.filter { it.review != null }
+                    item {
+                        Text(
+                            text = "Submitted Reviews",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)
+                        )
+                    }
+                    if (isLoading && reviewsApplications.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(200.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        }
+                    } else if (reviewsApplications.isEmpty()) {
+                        item {
+                            Text(
+                                text = "No reviews submitted yet",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                            )
+                        }
+                    } else {
+                        items(
+                            reviewsApplications.size,
+                            key = { reviewsApplications[it].id }
+                        ) { index ->
+                            ReviewCard(
+                                application = reviewsApplications[index],
+                                navController = navController
+                            )
+                        }
+                    }
+                }
+
+                5 -> {
+                    item {
+                        StatisticsTabContent(
+                            bookId = bookId,
+                            sessionManager = sessionManager
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showLotteryDialog) {
+        RunLotteryDialog(
+            availableCopies = book?.availableCopies ?: 0,
+            pendingCount = applicationStats.pending,
+            onConfirm = {
+                applicationViewModel.runLottery(bookId)
+                showLotteryDialog = false
+            },
+            onDismiss = { showLotteryDialog = false }
+        )
+    }
+}
+

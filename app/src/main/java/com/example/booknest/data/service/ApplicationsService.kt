@@ -40,7 +40,7 @@ interface ApplicationsService {
         @Path(PathConstants.APPLICATION_ID) applicationId: String
     ): Response<ApplicationResponse>
 
-    @PUT(Applications.BY_ID)
+    @PATCH(Applications.BY_ID)
     suspend fun updateApplication(
         @Path(PathConstants.APPLICATION_ID) applicationId: String,
         @Body application: UpdateApplicationRequest
@@ -57,12 +57,12 @@ interface ApplicationsService {
         @Path(PathConstants.APPLICATION_ID) applicationId: String
     ): Response<Unit>
 
-    @PUT(Applications.MARK_RECEIVED)
+    @PATCH(Applications.MARK_RECEIVED)
     suspend fun markCopyReceived(
         @Path(PathConstants.APPLICATION_ID) applicationId: String
     ): Response<ApplicationResponse>
 
-    @PUT(Applications.READING_STATUS)
+    @PATCH(Applications.READING_STATUS)
     suspend fun updateReadingStatus(
         @Path(PathConstants.APPLICATION_ID) applicationId: String,
         @Body status: UpdateReadingStatusRequest
@@ -82,7 +82,7 @@ interface ApplicationsService {
         @Body action: BulkActionRequest
     ): Response<BulkActionResponse>
 
-    @PUT(Applications.MARK_SENT)
+    @PATCH(Applications.MARK_SENT)
     suspend fun markCopySent(
         @Path(PathConstants.APPLICATION_ID) applicationId: String
     ): Response<ApplicationResponse>

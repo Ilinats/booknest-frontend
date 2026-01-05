@@ -302,8 +302,4 @@ class NotificationViewModel(
             }
         }
     }
-
-    fun clearError() {
-        _error.value = null
-    }
 }

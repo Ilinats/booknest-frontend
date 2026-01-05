@@ -65,29 +65,5 @@ class BNNotificationsDataSource(private val notificationsService: NotificationsS
     override suspend fun registerDeviceToken(request: RegisterDeviceTokenRequest): Result<DeviceTokenResponse> {
         return requestBody(notificationsService.registerDeviceToken(request))
     }
-
-    override suspend fun getDeviceTokens(): Result<List<DeviceTokenResponse>> {
-        return requestBody(notificationsService.getDeviceTokens())
-    }
-
-    override suspend fun updateDeviceToken(
-        token: String,
-        request: UpdateDeviceTokenRequest
-    ): Result<DeviceTokenResponse> {
-        return requestBody(notificationsService.updateDeviceToken(token, request))
-    }
-
-    override suspend fun deleteDeviceToken(token: String): Result<Unit> {
-        val response = notificationsService.deleteDeviceToken(token)
-        return if (response.isSuccessful) {
-            Result.success(Unit)
-        } else {
-            Result.failure(
-                Throwable(
-                    response.errorBody()?.string() ?: "Failed to delete device token"
-                )
-            )
-        }
-    }
 }
 

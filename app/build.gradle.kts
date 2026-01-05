@@ -18,9 +18,6 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        
-        // Google OAuth credentials
-        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"300466679791-ed4b905e3dth0hjf7kv7lkl2atti5k1i.apps.googleusercontent.com\"")
     }
 
     buildFeatures {
@@ -76,7 +73,6 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation("com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter:1.0.0")
 
-    // Koin DI (mirrors Womeno example style)
     implementation(platform("io.insert-koin:koin-bom:3.5.6"))
     implementation("io.insert-koin:koin-core")
     implementation("io.insert-koin:koin-android")
@@ -85,11 +81,9 @@ dependencies {
     implementation("com.google.android.gms:play-services-auth:20.7.0")
     implementation("com.google.android.gms:play-services-auth-api-phone:18.0.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
-    
-    // WebView for link previews (TikTok, YouTube embeds)
+
     implementation("androidx.webkit:webkit:1.9.0")
-    
-    // HTML parsing for meta tags (website previews)
+
     implementation("org.jsoup:jsoup:1.17.2")
     
     implementation(platform("com.google.firebase:firebase-bom:34.5.0"))

@@ -38,14 +38,6 @@ class BNReviewsDataSource(private val reviewsService: ReviewsService) : ReviewsD
         return requestPaginatedBody(reviewsService.getFeaturedReviews())
     }
 
-    override suspend fun featureReview(reviewId: String): Result<ReviewResponse> {
-        return requestBody(reviewsService.featureReview(reviewId))
-    }
-
-    override suspend fun unfeatureReview(reviewId: String): Result<ReviewResponse> {
-        return requestBody(reviewsService.unfeatureReview(reviewId))
-    }
-
     override suspend fun getAuthorLatestReviews(limit: Int?): Result<List<ReviewResponse>> {
         return requestBody(reviewsService.getAuthorLatestReviews(limit))
     }

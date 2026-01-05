@@ -21,6 +21,7 @@ import com.example.booknest.domain.model.response.UserActivityResponse
 import com.example.booknest.domain.model.response.UserProfileResponse
 import com.example.booknest.domain.model.response.UserStatsDataResponse
 import com.example.booknest.domain.model.response.UserStatsResponse
+import com.example.booknest.domain.repository.AuthRepository
 import com.example.booknest.domain.repository.ProfileRepository
 import com.example.booknest.domain.usecase.books.BrowseBooksUseCase
 import com.example.booknest.domain.usecase.files.UploadProfileImageUseCase
@@ -29,6 +30,7 @@ import com.example.booknest.domain.usecase.profile.GetMyActivityUseCase
 import com.example.booknest.domain.usecase.profile.GetMyProfileUseCase
 import com.example.booknest.domain.usecase.profile.GetMyStatsUseCase
 import com.example.booknest.domain.usecase.profile.GetUserProfileUseCase
+import com.example.booknest.domain.usecase.profile.GetCurrentUserUseCase
 import android.content.Context
 import android.net.Uri
 import kotlinx.coroutines.Dispatchers
@@ -46,9 +48,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import org.koin.core.context.GlobalContext
 import com.example.booknest.ui.toast.GlobalToastHandler
-import com.example.booknest.data.service.ProfilesService
+import com.example.booknest.ui.state.UiState
+import com.example.booknest.navigation.NavigationEvent
+import com.example.booknest.navigation.Screen
 
 class ProfileViewModel(
     private val sessionManager: SessionManager,
@@ -56,10 +59,12 @@ class ProfileViewModel(
     private val getAuthorStatsUseCase: GetAuthorStatsUseCase,
     private val getMyProfileUseCase: GetMyProfileUseCase,
     private val getUserProfileUseCase: GetUserProfileUseCase,
+    private val getCurrentUserUseCase: GetCurrentUserUseCase,
     private val getMyActivityUseCase: GetMyActivityUseCase,
     private val profileRepository: ProfileRepository,
     private val browseBooksUseCase: BrowseBooksUseCase,
     private val uploadProfileImageUseCase: UploadProfileImageUseCase,
+    private val authRepository: AuthRepository,
     private val context: Context? = null
 ) : ViewModel() {
 
@@ -76,8 +81,8 @@ class ProfileViewModel(
     private val _currentProfile = MutableStateFlow<UserProfileResponse?>(null)
     val currentProfile: StateFlow<UserProfileResponse?> = _currentProfile.asStateFlow()
 
-    private val _profileState = MutableStateFlow<ProfileUiState>(ProfileUiState.Idle)
-    val profileState: StateFlow<ProfileUiState> = _profileState.asStateFlow()
+    private val _profileState = MutableStateFlow<UiState<UserProfileResponse>>(UiState.Idle)
+    val profileState: StateFlow<UiState<UserProfileResponse>> = _profileState.asStateFlow()
 
     private val _myActivity = MutableStateFlow<List<UserActivityResponse>>(emptyList())
     val myActivity: StateFlow<List<UserActivityResponse>> = _myActivity.asStateFlow()
@@ -91,8 +96,8 @@ class ProfileViewModel(
     private val _activityStats = MutableStateFlow<ActivityStatsResponse?>(null)
     val activityStats: StateFlow<ActivityStatsResponse?> = _activityStats.asStateFlow()
 
-    private val _statsState = MutableStateFlow<StatsUiState>(StatsUiState.Idle)
-    val statsState: StateFlow<StatsUiState> = _statsState.asStateFlow()
+    private val _statsState = MutableStateFlow<UiState<UserStatsResponse>>(UiState.Idle)
+    val statsState: StateFlow<UiState<UserStatsResponse>> = _statsState.asStateFlow()
 
     private val _currentStats = MutableStateFlow<UserStatsResponse?>(null)
     val currentStats: StateFlow<UserStatsResponse?> = _currentStats.asStateFlow()
@@ -100,8 +105,8 @@ class ProfileViewModel(
     private val _publicProfile = MutableStateFlow<PublicUserProfileResponse?>(null)
     val publicProfile: StateFlow<PublicUserProfileResponse?> = _publicProfile.asStateFlow()
 
-    private val _profileEditState = MutableStateFlow<ProfileEditUiState>(ProfileEditUiState.Idle)
-    val profileEditState: StateFlow<ProfileEditUiState> = _profileEditState.asStateFlow()
+    private val _profileEditState = MutableStateFlow<UiState<Unit>>(UiState.Idle)
+    val profileEditState: StateFlow<UiState<Unit>> = _profileEditState.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -109,6 +114,11 @@ class ProfileViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    private val _navigationEvent = MutableSharedFlow<NavigationEvent>(replay = 0)
+    val navigationEvent: SharedFlow<NavigationEvent> = _navigationEvent.asSharedFlow()
+
+    private val _avatarRemovalState = MutableStateFlow<UiState<Unit>>(UiState.Idle)
+    val avatarRemovalState: StateFlow<UiState<Unit>> = _avatarRemovalState.asStateFlow()
 
     private val _authorBooks = MutableStateFlow<List<RecommendedBookResponse>>(emptyList())
     val authorBooks: StateFlow<List<RecommendedBookResponse>> = _authorBooks.asStateFlow()
@@ -124,7 +134,7 @@ class ProfileViewModel(
                 return@launch
             }
 
-            _profileState.value = ProfileUiState.Loading
+            _profileState.value = UiState.Loading
             try {
                 _isLoading.value = true
                 _error.value = null
@@ -152,7 +162,7 @@ class ProfileViewModel(
 
     fun loadUserProfile(username: String) {
         viewModelScope.launch {
-            _profileState.value = ProfileUiState.Loading
+            _profileState.value = UiState.Loading
             try {
                 _isLoading.value = true
                 _error.value = null
@@ -162,57 +172,13 @@ class ProfileViewModel(
                     .onSuccess { publicProfile ->
                         _publicProfile.value = publicProfile
                         val combinedProfile = publicProfile.toFullProfile()
-                        _profileState.value = ProfileUiState.Success(combinedProfile)
+                        _profileState.value = UiState.Success(combinedProfile)
                     }
                     .onFailure { e ->
                         handleProfileError(e.message ?: "Failed to load profile")
                     }
             } catch (e: Exception) {
                 handleProfileError(e.message ?: "Unknown error occurred")
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
-    fun loadMyActivity() {
-        viewModelScope.launch {
-            try {
-                _isLoading.value = true
-                _error.value = null
-
-                val result = getMyActivityUseCase()
-                result
-                    .onSuccess { activities ->
-                        _myActivity.value = activities
-                    }
-                    .onFailure { e ->
-                        _error.value = e.message ?: "Failed to load activity"
-                    }
-            } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
-    fun loadMyPublicActivity() {
-        viewModelScope.launch {
-            try {
-                _isLoading.value = true
-                _error.value = null
-
-                val result = getMyActivityUseCase(publicOnly = true)
-                result
-                    .onSuccess { activities ->
-                        _myPublicActivity.value = activities
-                    }
-                    .onFailure { e ->
-                        _error.value = e.message ?: "Failed to load public activity"
-                    }
-            } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
             } finally {
                 _isLoading.value = false
             }
@@ -269,37 +235,15 @@ class ProfileViewModel(
         }
     }
 
-    fun loadActivityStats() {
-        viewModelScope.launch {
-            try {
-                _isLoading.value = true
-                _error.value = null
-
-                val result = profileRepository.getMyActivityStats()
-                result
-                    .onSuccess { stats ->
-                        _activityStats.value = stats
-                    }
-                    .onFailure { e ->
-                        _error.value = e.message ?: "Failed to load activity stats"
-                    }
-            } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
     fun loadMyStats() {
         viewModelScope.launch {
-            _statsState.value = StatsUiState.Loading
+            _statsState.value = UiState.Loading
             try {
                 val result = getMyStatsUseCase()
                 result
                     .onSuccess { stats ->
                         _currentStats.value = stats
-                        _statsState.value = StatsUiState.Success(stats)
+                        _statsState.value = UiState.Success(stats)
                     }
                     .onFailure { e ->
                         handleStatsError(e.message ?: "Failed to load stats")
@@ -312,7 +256,7 @@ class ProfileViewModel(
 
     fun loadAuthorStats(authorId: String) {
         viewModelScope.launch {
-            _statsState.value = StatsUiState.Loading
+            _statsState.value = UiState.Loading
             try {
                 val result = getAuthorStatsUseCase(authorId)
                 result
@@ -322,7 +266,7 @@ class ProfileViewModel(
                             stats = stats.stats
                         )
                         _currentStats.value = userStats
-                        _statsState.value = StatsUiState.Success(userStats)
+                        _statsState.value = UiState.Success(userStats)
                     }
                     .onFailure { e ->
                         handleStatsError(e.message ?: "Failed to load stats")
@@ -367,7 +311,7 @@ class ProfileViewModel(
         avatarUrl: String? = null
     ) {
         viewModelScope.launch {
-            _profileEditState.value = ProfileEditUiState.Loading
+            _profileEditState.value = UiState.Loading
             try {
                 val request = UpdateProfileRequest(
                     username = username?.takeIf { it.isNotBlank() },
@@ -381,7 +325,7 @@ class ProfileViewModel(
                 result
                     .onSuccess { profile ->
                         onProfileLoaded(profile)
-                        _profileEditState.value = ProfileEditUiState.Success
+                        _profileEditState.value = UiState.Success(Unit)
                         GlobalToastHandler.showSuccess("Profile updated successfully")
                     }
                     .onFailure { e ->
@@ -501,43 +445,6 @@ class ProfileViewModel(
         }
     }
 
-    fun updateUserProfile(
-        firstName: String? = null,
-        lastName: String? = null,
-        birthDate: String? = null,
-        bio: String? = null,
-        avatarUrl: String? = null
-    ) {
-        viewModelScope.launch {
-            _profileEditState.value = ProfileEditUiState.Loading
-            try {
-                val request = UpdateUserProfileRequest(
-                    firstName = firstName,
-                    lastName = lastName,
-                    birthDate = birthDate,
-                    bio = bio,
-                    avatarUrl = avatarUrl
-                )
-                val result = profileRepository.updateUserProfile("", request)
-                result
-                    .onSuccess {
-                        loadMyProfile()
-                        _profileEditState.value = ProfileEditUiState.Success
-                        GlobalToastHandler.showSuccess("Account settings updated successfully")
-                    }
-                    .onFailure { e ->
-                        handleProfileEditError(e.message ?: "Failed to update account settings")
-                    }
-            } catch (e: Exception) {
-                handleProfileEditError(e.message ?: "Unknown error occurred")
-            }
-        }
-    }
-
-    fun clearError() {
-        _error.value = null
-    }
-
     fun loadAddresses() {
         viewModelScope.launch {
             try {
@@ -655,7 +562,7 @@ class ProfileViewModel(
         }
     }
 
-    fun uploadProfileImage(context: Context, imageUri: Uri, onSuccess: (String) -> Unit) {
+    fun uploadProfileImage(context: Context, imageUri: Uri) {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
@@ -694,20 +601,16 @@ class ProfileViewModel(
                     val result = uploadProfileImageUseCase(multipartBody)
                     result
                         .onSuccess { avatarUrl ->
-                            onSuccess(avatarUrl)
                             GlobalToastHandler.showSuccess("Image uploaded successfully")
                             loadMyProfile()
-                            try {
-                                val profilesService = org.koin.core.context.GlobalContext.get()
-                                    .get<com.example.booknest.data.service.ProfilesService>()
-                                val response = profilesService.getMe()
-                                if (response.isSuccessful) {
-                                    response.body()?.let { user ->
-                                        sessionManager.updateUser(user)
-                                    }
+                            // Update current user using UseCase
+                            getCurrentUserUseCase()
+                                .onSuccess { user ->
+                                    sessionManager.updateUser(user)
                                 }
-                            } catch (e: Exception) {
-                            }
+                                .onFailure { e ->
+                                    // Error already handled by GlobalToastHandler in UseCase if needed
+                                }
                         }
                         .onFailure { e ->
                             emitErrorMessage(e.message ?: "Failed to upload image")
@@ -730,9 +633,10 @@ class ProfileViewModel(
         }
     }
 
-    fun removeAvatar(onSuccess: () -> Unit, onError: (String) -> Unit) {
+    fun removeAvatar() {
         viewModelScope.launch {
             try {
+                _avatarRemovalState.value = UiState.Loading
                 _isLoading.value = true
                 _error.value = null
 
@@ -742,24 +646,24 @@ class ProfileViewModel(
                         sessionManager.updateUser(user)
                         loadMyProfile()
                         GlobalToastHandler.showSuccess("Avatar removed successfully")
-                        onSuccess()
+                        _avatarRemovalState.value = UiState.Success(Unit)
                     }
                     .onFailure { e ->
                         val errorMsg = e.message ?: "Failed to remove avatar"
+                        _avatarRemovalState.value = UiState.Error(errorMsg)
                         emitErrorMessage(errorMsg)
-                        onError(errorMsg)
                     }
             } catch (e: Exception) {
                 val errorMsg = e.message ?: "Unknown error occurred"
+                _avatarRemovalState.value = UiState.Error(errorMsg)
                 emitErrorMessage(errorMsg)
-                onError(errorMsg)
             } finally {
                 _isLoading.value = false
             }
         }
     }
 
-    fun deleteAccount(onSuccess: () -> Unit, onError: (String) -> Unit) {
+    fun deleteAccount() {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
@@ -771,21 +675,27 @@ class ProfileViewModel(
                         android.util.Log.d("ProfileViewModel", "Delete account success")
                         GlobalToastHandler.showSuccess("Account deleted successfully")
                         android.util.Log.d("ProfileViewModel", "Calling logout from viewModelScope")
-                        sessionManager.logout()
-                        android.util.Log.d("ProfileViewModel", "Logout completed, calling onSuccess callback")
-                        onSuccess()
+                        sessionManager.logout(authRepository)
+                        android.util.Log.d("ProfileViewModel", "Logout completed, emitting navigation event")
+                        
+                        // Emit navigation event to navigate to landing screen
+                        _navigationEvent.emit(
+                            NavigationEvent.NavigateAndClearStack(Screen.Landing.route)
+                        )
                     }
                     .onFailure { e ->
-                        android.util.Log.e("ProfileViewModel", "Delete account failure: ${e.message}", e)
+                        android.util.Log.e(
+                            "ProfileViewModel",
+                            "Delete account failure: ${e.message}",
+                            e
+                        )
                         val errorMsg = e.message ?: "Failed to delete account"
                         emitErrorMessage(errorMsg)
-                        onError(errorMsg)
                     }
             } catch (e: Exception) {
                 android.util.Log.e("ProfileViewModel", "Delete account exception", e)
                 val errorMsg = e.message ?: "Unknown error occurred"
                 emitErrorMessage(errorMsg)
-                onError(errorMsg)
             } finally {
                 _isLoading.value = false
             }
@@ -882,22 +792,22 @@ class ProfileViewModel(
         println("DEBUG: onProfileLoaded called with profile: username=${profile.username}, firstName=${profile.firstName}, lastName=${profile.lastName}")
         _myProfile.value = profile
         _currentProfile.value = profile
-        _profileState.value = ProfileUiState.Success(profile)
+        _profileState.value = UiState.Success(profile)
         println("DEBUG: Profile state updated to Success")
     }
 
     private suspend fun handleProfileError(message: String) {
-        _profileState.value = ProfileUiState.Error(message)
+        _profileState.value = UiState.Error(message)
         emitErrorMessage(message)
     }
 
     private suspend fun handleProfileEditError(message: String) {
-        _profileEditState.value = ProfileEditUiState.Error(message)
+        _profileEditState.value = UiState.Error(message)
         emitErrorMessage(message)
     }
 
     private suspend fun handleStatsError(message: String) {
-        _statsState.value = StatsUiState.Error(message)
+        _statsState.value = UiState.Error(message)
         emitErrorMessage(message)
     }
 
@@ -905,25 +815,4 @@ class ProfileViewModel(
         _error.value = message
         GlobalToastHandler.showError(message)
     }
-}
-
-sealed class ProfileUiState {
-    object Idle : ProfileUiState()
-    object Loading : ProfileUiState()
-    data class Success(val profile: UserProfileResponse) : ProfileUiState()
-    data class Error(val message: String) : ProfileUiState()
-}
-
-sealed class ProfileEditUiState {
-    object Idle : ProfileEditUiState()
-    object Loading : ProfileEditUiState()
-    object Success : ProfileEditUiState()
-    data class Error(val message: String) : ProfileEditUiState()
-}
-
-sealed class StatsUiState {
-    object Idle : StatsUiState()
-    object Loading : StatsUiState()
-    data class Success(val stats: UserStatsResponse) : StatsUiState()
-    data class Error(val message: String) : StatsUiState()
 }

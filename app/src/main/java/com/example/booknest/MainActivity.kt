@@ -22,7 +22,6 @@ import com.example.booknest.viewmodel.SignupViewModel
 import com.example.booknest.viewmodel.NotificationViewModel
 import com.example.booknest.utils.FCMTokenManager
 import com.example.booknest.ui.download.GlobalDownloadHandler
-import com.example.booknest.ui.error.GlobalErrorHandler
 import com.example.booknest.ui.toast.GlobalToastHandler
 import android.Manifest
 import android.content.pm.PackageManager
@@ -103,7 +102,6 @@ class MainActivity : ComponentActivity() {
                         loginViewModel = loginViewModel,
                         sessionManager = sessionManager
                     )
-                    GlobalErrorHandler()
                     GlobalDownloadHandler()
                     GlobalToastHandler()
                 }

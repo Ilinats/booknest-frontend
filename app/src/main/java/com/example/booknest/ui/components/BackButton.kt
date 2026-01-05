@@ -12,13 +12,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 @Composable
 fun BackButton(
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    tint: Color? = null
 ) {
+    val iconTint = tint ?: MaterialTheme.colorScheme.onSurfaceVariant
+    
     IconButton(
         onClick = onClick,
         modifier = modifier.size(40.dp)
@@ -31,7 +35,7 @@ fun BackButton(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Back",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = iconTint,
                 modifier = Modifier.size(20.dp)
             )
         }

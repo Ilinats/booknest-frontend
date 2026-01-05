@@ -7,6 +7,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.example.booknest.data.datasource.extractErrorMessage
+import com.example.booknest.data.error.BNError
 import com.example.booknest.ui.components.Toast
 import com.example.booknest.ui.components.ToastMessage
 import com.example.booknest.ui.components.ToastType
@@ -32,6 +34,45 @@ object GlobalToastHandler {
 
     fun showError(message: String) {
         toastScope.launch {
+            _toastMessage.emit(ToastMessage(message, ToastType.ERROR))
+        }
+    }
+
+    fun showError(exception: Throwable) {
+        toastScope.launch {
+            val message = when (exception) {
+                is BNError.Generic -> {
+                    val msg = exception.messageString ?: exception.error ?: "An error occurred"
+                    if (msg.startsWith("[") && msg.endsWith("]")) {
+                        try {
+                            val messages = msg.removeSurrounding("[", "]")
+                                .split(",")
+                                .map { it.trim().removeSurrounding("\"") }
+                                .filter { it.isNotBlank() }
+                            if (messages.isNotEmpty()) {
+                                messages.joinToString(", ")
+                            } else {
+                                "An error occurred"
+                            }
+                        } catch (e: Exception) {
+                            msg
+                        }
+                    } else {
+                        msg
+                    }
+                }
+
+                is BNError.Network -> exception.messageString
+                    ?: "Network error. Please check your connection."
+
+                is BNError.Unauthorized -> exception.messageString
+                    ?: "You are not authorized to perform this action."
+
+                else -> {
+                    val errorMsg = exception.message ?: "An error occurred"
+                    extractErrorMessage(errorMsg)
+                }
+            }
             _toastMessage.emit(ToastMessage(message, ToastType.ERROR))
         }
     }

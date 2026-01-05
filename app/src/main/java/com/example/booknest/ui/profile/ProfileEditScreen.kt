@@ -26,7 +26,6 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.data.service.AuthService
-import com.example.booknest.viewmodel.ProfileEditUiState
 import com.example.booknest.viewmodel.ProfileViewModel
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
@@ -44,6 +43,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import com.example.booknest.navigation.Screen
+import com.example.booknest.ui.state.UiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,11 +87,7 @@ fun ProfileEditScreen(
         uri?.let {
             selectedImageUri = it
             isUploadingImage = true
-            profileViewModel.uploadProfileImage(context, it) { uploadedUrl ->
-                avatarUrl = uploadedUrl
-                shouldRemoveAvatar = false
-                isUploadingImage = false
-            }
+            profileViewModel.uploadProfileImage(context, it)
         }
     }
 
@@ -100,6 +96,15 @@ fun ProfileEditScreen(
     }
 
     val myProfile by profileViewModel.myProfile.collectAsState()
+
+    // Observe avatar upload completion
+    LaunchedEffect(myProfile) {
+        if (isUploadingImage && myProfile?.avatarUrl?.isNotBlank() == true) {
+            avatarUrl = myProfile?.avatarUrl ?: ""
+            shouldRemoveAvatar = false
+            isUploadingImage = false
+        }
+    }
 
     var profileLoadedOnce by remember { mutableStateOf(false) }
 
@@ -246,7 +251,7 @@ fun ProfileEditScreen(
 
     LaunchedEffect(editState) {
         when (editState) {
-            is ProfileEditUiState.Success -> {
+            is UiState.Success -> {
                 initialFirstName = firstName.trim()
                 initialLastName = lastName.trim()
                 initialUsername = username.trim()
@@ -299,49 +304,7 @@ fun ProfileEditScreen(
 
                             if (isFormValid) {
                                 if (shouldRemoveAvatar) {
-                                    profileViewModel.removeAvatar(
-                                        onSuccess = {
-                                            shouldRemoveAvatar = false
-                                            avatarUrl = ""
-                                            initialAvatarUrl = ""
-
-                                            val hasOtherChanges =
-                                                firstName.trim() != (initialFirstName?.trim()
-                                                    ?: "") ||
-                                                        lastName.trim() != (initialLastName?.trim()
-                                                    ?: "") ||
-                                                        username.trim() != (initialUsername?.trim()
-                                                    ?: "") ||
-                                                        bio.trim() != (initialBio?.trim() ?: "")
-
-                                            if (hasOtherChanges) {
-                                                val usernameToUpdate =
-                                                    if (username.trim() != (initialUsername?.trim()
-                                                            ?: "") && username.trim().isNotBlank()
-                                                    ) {
-                                                        username.trim()
-                                                    } else {
-                                                        null
-                                                    }
-                                                profileViewModel.updateProfile(
-                                                    username = usernameToUpdate,
-                                                    firstName = firstName.takeIf { it.isNotBlank() },
-                                                    lastName = lastName.takeIf { it.isNotBlank() },
-                                                    bio = bio.takeIf { it.isNotBlank() }
-                                                )
-                                            } else {
-                                                initialFirstName = firstName.trim()
-                                                initialLastName = lastName.trim()
-                                                initialUsername = username.trim()
-                                                initialBio = bio.trim()
-                                            }
-                                        },
-                                        onError = { errorMsg ->
-                                            com.example.booknest.ui.error.GlobalErrorHandler.showError(
-                                                errorMsg
-                                            )
-                                        }
-                                    )
+                                    profileViewModel.removeAvatar()
                                 } else {
                                     val usernameToUpdate =
                                         if (username.trim() != (initialUsername?.trim()
@@ -366,9 +329,9 @@ fun ProfileEditScreen(
                                 }
                             }
                         },
-                        enabled = hasChanges && isFormValid && editState !is ProfileEditUiState.Loading
+                        enabled = hasChanges && isFormValid && editState !is UiState.Loading
                     ) {
-                        if (editState is ProfileEditUiState.Loading) {
+                        if (editState is UiState.Loading) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
                                 strokeWidth = 2.dp
@@ -1005,16 +968,8 @@ fun ProfileEditScreen(
                                 if (!isDeleting) {
                                     isDeleting = true
                                     scope.launch {
-                                        profileViewModel.deleteAccount(
-                                            onSuccess = {
-                                                android.util.Log.d("ProfileEditScreen", "onSuccess callback called - logout already handled in ViewModel")
-                                                showDeleteAccountDialog = false
-                                            },
-                                            onError = { error ->
-                                                isDeleting = false
-                                                showDeleteAccountDialog = false
-                                            }
-                                        )
+                                        profileViewModel.deleteAccount()
+                                        showDeleteAccountDialog = false
                                     }
                                 }
                             },
@@ -1043,7 +998,7 @@ fun ProfileEditScreen(
             }
 
             val currentEditState = editState
-            if (currentEditState is ProfileEditUiState.Error) {
+            if (currentEditState is UiState.Error) {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1065,7 +1020,7 @@ fun ProfileEditScreen(
                             tint = MaterialTheme.colorScheme.onErrorContainer
                         )
                         Text(
-                            text = currentEditState.message,
+                            text = (currentEditState as UiState.Error).message,
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
                     }
@@ -1081,48 +1036,7 @@ fun ProfileEditScreen(
 
                     if (isFormValid) {
                         if (shouldRemoveAvatar) {
-                            profileViewModel.removeAvatar(
-                                onSuccess = {
-                                    shouldRemoveAvatar = false
-                                    avatarUrl = ""
-                                    initialAvatarUrl = ""
-
-                                    val hasOtherChanges =
-                                        firstName.trim() != (initialFirstName?.trim() ?: "") ||
-                                                lastName.trim() != (initialLastName?.trim()
-                                            ?: "") ||
-                                                username.trim() != (initialUsername?.trim()
-                                            ?: "") ||
-                                                bio.trim() != (initialBio?.trim() ?: "")
-
-                                    if (hasOtherChanges) {
-                                        val usernameToUpdate =
-                                            if (username.trim() != (initialUsername?.trim()
-                                                    ?: "") && username.trim().isNotBlank()
-                                            ) {
-                                                username.trim()
-                                            } else {
-                                                null
-                                            }
-                                        profileViewModel.updateProfile(
-                                            username = usernameToUpdate,
-                                            firstName = firstName.takeIf { it.isNotBlank() },
-                                            lastName = lastName.takeIf { it.isNotBlank() },
-                                            bio = bio.takeIf { it.isNotBlank() }
-                                        )
-                                    } else {
-                                        initialFirstName = firstName.trim()
-                                        initialLastName = lastName.trim()
-                                        initialUsername = username.trim()
-                                        initialBio = bio.trim()
-                                    }
-                                },
-                                onError = { errorMsg ->
-                                    com.example.booknest.ui.error.GlobalErrorHandler.showError(
-                                        errorMsg
-                                    )
-                                }
-                            )
+                            profileViewModel.removeAvatar()
                         } else {
                             val usernameToUpdate = if (username.trim() != (initialUsername?.trim()
                                     ?: "") && username.trim().isNotBlank()
@@ -1147,9 +1061,9 @@ fun ProfileEditScreen(
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = hasChanges && isFormValid && editState !is ProfileEditUiState.Loading
+                enabled = hasChanges && isFormValid && editState !is UiState.Loading
             ) {
-                if (editState is ProfileEditUiState.Loading) {
+                if (editState is UiState.Loading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(16.dp),
                         strokeWidth = 2.dp

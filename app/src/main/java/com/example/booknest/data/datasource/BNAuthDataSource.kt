@@ -6,7 +6,6 @@ import com.example.booknest.data.service.AuthService
 import com.example.booknest.data.service.ProfilesService
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.dataStore
-import com.example.booknest.domain.model.request.GoogleAuthRequest
 import com.example.booknest.domain.model.request.LoginRequest
 import com.example.booknest.domain.model.request.RefreshTokenRequest
 import com.example.booknest.domain.model.request.RegisterRequest
@@ -15,7 +14,6 @@ import com.example.booknest.domain.model.request.ResendVerificationRequest
 import com.example.booknest.domain.model.request.ResetPasswordRequest
 import com.example.booknest.domain.model.request.VerifyEmailRequest
 import com.example.booknest.domain.model.response.AuthTokenResponse
-import com.example.booknest.domain.model.response.GoogleAuthDataResponse
 import com.example.booknest.domain.model.response.LoginDataResponse
 import com.example.booknest.domain.model.response.RegisterResponse
 import com.example.booknest.domain.model.response.UserResponse
@@ -97,11 +95,13 @@ class BNAuthDataSource(
         return requestBody(authService.refresh(RefreshTokenRequest(refreshToken)))
     }
 
-    override suspend fun googleLogin(
-        idToken: String,
-        userType: String
-    ): Result<GoogleAuthDataResponse> {
-        return requestBody(authService.googleLogin(GoogleAuthRequest(idToken, userType)))
+    override suspend fun logout(refreshToken: String): Result<Unit> {
+        val response = authService.logout(RefreshTokenRequest(refreshToken))
+        return if (response.isSuccessful) {
+            Result.success(Unit)
+        } else {
+            Result.success(Unit)
+        }
     }
 
     override suspend fun verifyEmail(code: String): Result<UserResponse> {
