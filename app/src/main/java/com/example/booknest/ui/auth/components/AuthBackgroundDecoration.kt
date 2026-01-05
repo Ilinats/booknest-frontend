@@ -15,7 +15,6 @@ fun AuthBackgroundDecoration(
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier) {
-        // Top left circles
         Box(
             modifier = Modifier
                 .align(Alignment.TopStart)
@@ -32,8 +31,7 @@ fun AuthBackgroundDecoration(
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.secondary)
         )
-        
-        // Bottom right circles
+
         Box(
             modifier = Modifier
                 .align(Alignment.BottomEnd)

@@ -57,7 +57,6 @@ fun LoginScreen(
 
     var hasInteracted by remember { mutableStateOf(false) }
 
-    // Handle navigation events from ViewModel
     LaunchedEffect(Unit) {
         viewModel.navigationEvent.collectLatest { event ->
             when (event) {
@@ -84,8 +83,6 @@ fun LoginScreen(
             }
         }
     }
-
-    // Error handling is done via GlobalToastHandler in ViewModel
 
     Box(
         modifier = Modifier

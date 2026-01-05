@@ -83,7 +83,6 @@ fun AuthorMainScreen(
                 currentRoute?.startsWith(Screen.BookEdit.route.substringBefore("/")) != true &&
                 !viewingOtherProfile
 
-    // Use ViewModel to fetch user instead of direct service call
     LaunchedEffect(isLoggedIn) {
         if (isLoggedIn == true && currentUser == null) {
             mainViewModel.fetchCurrentUser()

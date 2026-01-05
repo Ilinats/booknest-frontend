@@ -1,10 +1,5 @@
 package com.example.booknest.ui.state
 
-/**
- * Unified UI state sealed class for consistent state management across ViewModels.
- * 
- * @param T The type of data returned on success
- */
 sealed class UiState<out T> {
     object Idle : UiState<Nothing>()
 

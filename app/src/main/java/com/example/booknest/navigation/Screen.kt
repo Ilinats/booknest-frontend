@@ -87,4 +87,18 @@ sealed class Screen(val route: String) {
     }
 
     object Notifications : Screen("notifications")
+
+    object Browse : Screen("browse") {
+        fun createRoute(searchQuery: String? = null) =
+            if (searchQuery != null && searchQuery.isNotBlank()) {
+                val encodedQuery = android.net.Uri.encode(searchQuery)
+                "browse/$encodedQuery"
+            } else {
+                "browse"
+            }
+    }
+
+    object Books : Screen("books/{category}") {
+        fun createRoute(category: String) = "books/$category"
+    }
 }

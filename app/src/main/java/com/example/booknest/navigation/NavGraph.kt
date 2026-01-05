@@ -12,25 +12,27 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.example.booknest.data.session.SessionManager
-import com.example.booknest.ui.account.AccountTypeScreen
-import com.example.booknest.ui.account.GenresScreen
-import com.example.booknest.ui.account.LandingScreen
-import com.example.booknest.ui.account.SplashScreen
-import com.example.booknest.ui.account.SocialMediaScreen
-import com.example.booknest.ui.account.LoginScreen
-import com.example.booknest.ui.account.PersonalInfoScreen
-import com.example.booknest.ui.account.ProfileDetailsScreen
+import com.example.booknest.ui.onboarding.AccountTypeScreen
+import com.example.booknest.ui.onboarding.GenresScreen
+import com.example.booknest.ui.auth.LandingScreen
+import com.example.booknest.ui.auth.SplashScreen
+import com.example.booknest.ui.onboarding.SocialMediaScreen
+import com.example.booknest.ui.auth.LoginScreen
+import com.example.booknest.ui.onboarding.PersonalInfoScreen
+import com.example.booknest.ui.onboarding.ProfileDetailsScreen
 import com.example.booknest.ui.auth.EmailVerificationScreen
-import com.example.booknest.ui.author.AuthorMainScreen
+import com.example.booknest.ui.main.AuthorMainScreen
 import com.example.booknest.ui.books.BookDetailsScreen
 import com.example.booknest.ui.main.MainScreen
 import com.example.booknest.ui.profile.ProfileEditScreen
 import com.example.booknest.ui.profile.ProfileScreen
-import com.example.booknest.ui.profile.StatsScreen
+import com.example.booknest.ui.account.StatsScreen
 import com.example.booknest.ui.analytics.AuthorAnalyticsScreen
 import com.example.booknest.ui.analytics.BookAnalyticsScreen
 import com.example.booknest.viewmodel.LoginViewModel
+import com.example.booknest.viewmodel.MainViewModel
 import com.example.booknest.viewmodel.SignupViewModel
+import org.koin.compose.koinInject
 
 @Composable
 fun NavGraph(
@@ -79,7 +81,7 @@ fun NavGraph(
             com.example.booknest.ui.auth.PasswordResetScreen(navController, sessionManager, email)
         }
         composable(
-            route = "email_verification?email={email}",
+            route = "${Screen.EmailVerification.route}?email={email}",
             arguments = listOf(navArgument("email") {
                 type = NavType.StringType
                 nullable = true
@@ -112,12 +114,14 @@ fun NavGraph(
             SocialMediaScreen(navController, sessionManager)
         }
         composable(Screen.Main.route) {
+            val mainViewModel: MainViewModel = koinInject()
             val currentUser by sessionManager.currentUser.collectAsState()
             val isLoggedIn by sessionManager.isLoggedIn.collectAsState()
             var storedUserType by androidx.compose.runtime.remember {
                 androidx.compose.runtime.mutableStateOf<String?>(null)
             }
 
+            // Fetch user type from DataStore if needed
             androidx.compose.runtime.LaunchedEffect(isLoggedIn, currentUser?.id) {
                 if (isLoggedIn == true) {
                     if (currentUser == null && storedUserType == null) {
@@ -128,25 +132,10 @@ fun NavGraph(
                         }
                     }
 
+                    // Use ViewModel to fetch user data instead of direct service call
                     if (currentUser == null) {
-                        try {
-                            println("DEBUG NavGraph: Fetching user data...")
-                            val profilesService = org.koin.core.context.GlobalContext.get()
-                                .get<com.example.booknest.data.service.ProfilesService>()
-                            val response = profilesService.getMe()
-                            if (response.isSuccessful) {
-                                response.body()?.let { user ->
-                                    println("DEBUG NavGraph: Got user, userType=${user.userType}, id=${user.id}")
-                                    sessionManager.updateUser(user)
-                                    println("DEBUG NavGraph: Updated user in SessionManager, userType=${user.userType}")
-                                }
-                            } else {
-                                println("DEBUG NavGraph: Failed to fetch user, response code=${response.code()}")
-                            }
-                        } catch (e: Exception) {
-                            println("DEBUG NavGraph: Exception fetching user: ${e.message}")
-                            e.printStackTrace()
-                        }
+                        println("DEBUG NavGraph: Fetching user data via ViewModel...")
+                        mainViewModel.fetchCurrentUser()
                     }
                 }
             }
@@ -159,9 +148,10 @@ fun NavGraph(
             }
 
             if (isAuthor) {
-                AuthorMainScreen(sessionManager)
+                AuthorMainScreen(sessionManager, mainViewModel)
             } else {
-                MainScreen(sessionManager)
+                val authRepository: com.example.booknest.domain.repository.AuthRepository = org.koin.compose.koinInject()
+                MainScreen(sessionManager, authRepository, mainViewModel)
             }
         }
 
@@ -174,7 +164,7 @@ fun NavGraph(
         }
 
         composable(
-            route = "series_books/{seriesId}?seriesName={seriesName}",
+            route = "${Screen.SeriesBooks.route}?seriesName={seriesName}",
             arguments = listOf(
                 navArgument("seriesId") { type = NavType.StringType },
                 navArgument("seriesName") {
@@ -230,7 +220,7 @@ fun NavGraph(
         }
 
         composable(
-            route = "user_reviews/{userId}?userName={userName}",
+            route = "${Screen.UserReviews.route}?userName={userName}",
             arguments = listOf(
                 navArgument("userId") { type = NavType.StringType },
                 navArgument("userName") {
