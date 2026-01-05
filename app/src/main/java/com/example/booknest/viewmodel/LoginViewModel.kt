@@ -4,27 +4,39 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.usecase.auth.LoginUseCase
+import com.example.booknest.domain.usecase.profile.GetCurrentUserUseCase
+import com.example.booknest.navigation.NavigationEvent
+import com.example.booknest.navigation.Screen
+import com.example.booknest.ui.toast.GlobalToastHandler
+import com.example.booknest.ui.state.UiState
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 
-sealed class LoginUiState {
-    object Idle : LoginUiState()
-    object Loading : LoginUiState()
-    data class Success(val message: String?) : LoginUiState()
-    data class Error(val error: String) : LoginUiState()
-}
+/**
+ * Login result data
+ */
+data class LoginResult(
+    val message: String? = null
+)
 
 class LoginViewModel(
     private val loginUseCase: LoginUseCase,
+    private val getCurrentUserUseCase: GetCurrentUserUseCase,
     private val sessionManager: SessionManager
 ) : ViewModel() {
-    private val _loginState = MutableStateFlow<LoginUiState>(LoginUiState.Idle)
-    val loginState: StateFlow<LoginUiState> = _loginState
+    private val _loginState = MutableStateFlow<UiState<LoginResult>>(UiState.Idle)
+    val loginState: StateFlow<UiState<LoginResult>> = _loginState
 
-    fun loginUser(identifier: String, password: String, onLoginComplete: (Boolean) -> Unit) {
+    private val _navigationEvent = MutableSharedFlow<NavigationEvent>(replay = 0)
+    val navigationEvent: SharedFlow<NavigationEvent> = _navigationEvent.asSharedFlow()
+
+    fun loginUser(identifier: String, password: String) {
         viewModelScope.launch {
-            _loginState.value = LoginUiState.Loading
+            _loginState.value = UiState.Loading
             try {
                 val result = loginUseCase(identifier, password)
                 result
@@ -36,45 +48,39 @@ class LoginViewModel(
                                 refreshToken = loginResponse.refreshToken
                             )
 
-                            try {
-                                val profilesService = org.koin.core.context.GlobalContext.get()
-                                    .get<com.example.booknest.data.service.ProfilesService>()
-                                val userResponse = profilesService.getMe()
-                                if (userResponse.isSuccessful) {
-                                    userResponse.body()?.let { user ->
-                                        println("DEBUG LoginViewModel: Got user after login, userType=${user.userType}")
-                                        sessionManager.updateUser(user)
-                                    }
-                                } else {
-                                    println("DEBUG LoginViewModel: Failed to fetch user, response code=${userResponse.code()}")
+                            // Use GetCurrentUserUseCase instead of direct service injection
+                            getCurrentUserUseCase()
+                                .onSuccess { user ->
+                                    println("DEBUG LoginViewModel: Got user after login, userType=${user.userType}")
+                                    sessionManager.updateUser(user)
+                                    _loginState.value = UiState.Success(LoginResult("Logged in successfully!"))
+                                    // Emit navigation event instead of callback
+                                    _navigationEvent.emit(
+                                        NavigationEvent.NavigateAndClearStack(Screen.Main.route)
+                                    )
                                 }
-                            } catch (e: Exception) {
-                                println("DEBUG LoginViewModel: Exception fetching user after login: ${e.message}")
-                                e.printStackTrace()
-                            }
-
-                            _loginState.value = LoginUiState.Success(
-                                "Logged in successfully!"
-                            )
-                            onLoginComplete(true)
+                                .onFailure { throwable ->
+                                    println("DEBUG LoginViewModel: Failed to fetch user: ${throwable.message}")
+                                    val errorMessage = throwable.message ?: "Failed to fetch user data"
+                                    _loginState.value = UiState.Error(errorMessage, throwable)
+                                    GlobalToastHandler.showError(throwable)
+                                }
                         } else {
-                            _loginState.value =
-                                LoginUiState.Error("Login failed: empty access token")
-                            onLoginComplete(false)
+                            val errorMessage = "Login failed: empty access token"
+                            _loginState.value = UiState.Error(errorMessage)
+                            GlobalToastHandler.showError(errorMessage)
                         }
                     }
                     .onFailure { throwable ->
-                        _loginState.value = LoginUiState.Error(throwable.message ?: "Login failed")
-                        onLoginComplete(false)
+                        val errorMessage = throwable.message ?: "Login failed"
+                        _loginState.value = UiState.Error(errorMessage, throwable)
+                        GlobalToastHandler.showError(throwable)
                     }
             } catch (e: Exception) {
-                _loginState.value = LoginUiState.Error("Network error: ${e.localizedMessage}")
-                onLoginComplete(false)
+                val errorMessage = "Network error: ${e.localizedMessage}"
+                _loginState.value = UiState.Error(errorMessage, e)
+                GlobalToastHandler.showError(e)
             }
         }
-    }
-
-    fun resetState() {
-        _loginState.value = LoginUiState.Idle
     }
 }

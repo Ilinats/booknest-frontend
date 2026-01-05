@@ -207,30 +207,6 @@ class FileViewModel(
         }
     }
 
-    fun deleteDownloadedBook(file: File) {
-        viewModelScope.launch {
-            val success = downloadManager.deleteDownloadedBook(file)
-            if (success) {
-                _uiState.value = _uiState.value.copy(
-                    downloadedBooks = downloadManager.getDownloadedBooks(),
-                    successMessage = "Book deleted successfully"
-                )
-            } else {
-                _uiState.value = _uiState.value.copy(
-                    error = "Failed to delete book"
-                )
-            }
-        }
-    }
-
-    fun loadDownloadedBooks() {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                downloadedBooks = downloadManager.getDownloadedBooks()
-            )
-        }
-    }
-
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
     }
@@ -241,13 +217,5 @@ class FileViewModel(
 
     fun clearDownloadingMessage() {
         _uiState.value = _uiState.value.copy(downloadingMessage = null)
-    }
-
-    fun isBookDownloaded(bookId: String): Boolean {
-        return downloadManager.isBookDownloaded(bookId)
-    }
-
-    fun getDownloadedBook(bookId: String): File? {
-        return downloadManager.getDownloadedBook(bookId)
     }
 }

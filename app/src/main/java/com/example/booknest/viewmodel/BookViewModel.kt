@@ -4,12 +4,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.booknest.domain.model.response.BookResponse
 import com.example.booknest.domain.model.response.RecommendedBookResponse
+import com.example.booknest.domain.model.response.ReviewResponse
 import com.example.booknest.domain.model.response.TrendingBookResponse
 import com.example.booknest.domain.usecase.books.BrowseBooksUseCase
 import com.example.booknest.domain.usecase.books.GetBookDetailsUseCase
 import com.example.booknest.domain.usecase.books.GetNewReleasesUseCase
 import com.example.booknest.domain.usecase.books.GetRecommendedBooksUseCase
+import com.example.booknest.domain.usecase.books.GetTrendingBooksUseCase
 import com.example.booknest.domain.usecase.books.SearchBooksUseCase
+import com.example.booknest.ui.toast.GlobalToastHandler
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,7 +25,8 @@ class BookViewModel(
     private val getNewReleasesUseCase: GetNewReleasesUseCase,
     private val browseBooksUseCase: BrowseBooksUseCase,
     private val searchBooksUseCase: SearchBooksUseCase,
-    private val getBookDetailsUseCase: GetBookDetailsUseCase
+    private val getBookDetailsUseCase: GetBookDetailsUseCase,
+    private val getTrendingBooksUseCase: GetTrendingBooksUseCase
 ) : ViewModel() {
 
     private val _books = MutableStateFlow<List<RecommendedBookResponse>>(emptyList())
@@ -61,10 +65,6 @@ class BookViewModel(
                     }
                 }
         }
-    }
-
-    fun onSearchQueryChanged(query: String) {
-        _searchQuery.value = query
     }
 
     fun getRecommendedBooks() {
@@ -257,10 +257,6 @@ class BookViewModel(
         }
     }
 
-    fun clearBookDetails() {
-        _bookDetails.value = null
-    }
-
     fun searchForHomeScreen(query: String, take: Int = 20) {
         viewModelScope.launch {
             try {
@@ -286,18 +282,73 @@ class BookViewModel(
         _homeSearchResults.value = emptyList()
     }
 
+    /**
+     * Finds a book in all cached sources (books, featuredBooks, recommendedBooks, newReleases, homeSearchResults).
+     * Returns a BookResponse if found, null otherwise.
+     */
+    fun findBookInCache(bookId: String): BookResponse? {
+        val allBooks = _books.value +
+                _featuredBooks.value +
+                _recommendedBooks.value +
+                _newReleases.value +
+                _homeSearchResults.value
+
+        val foundBook = allBooks.find { it.id == bookId }
+        return foundBook?.let { cachedBook ->
+            BookResponse(
+                id = cachedBook.id,
+                title = cachedBook.title,
+                authorName = cachedBook.resolvedAuthorName,
+                coverImageUrl = cachedBook.coverImageUrl,
+                rating = cachedBook.rating,
+                seriesName = cachedBook.seriesName,
+                seriesOrder = cachedBook.seriesOrder,
+                publishedAt = cachedBook.publishedAt,
+                applicationDeadline = cachedBook.applicationDeadline,
+                availableCopies = cachedBook.availableCopies,
+                totalCopies = cachedBook.totalCopies,
+                genres = cachedBook.genres,
+                distributionType = cachedBook.distributionType,
+                author = cachedBook.author,
+                authorId = cachedBook.author?.id,
+                fullDescription = null, // Not available in RecommendedBookResponse
+                shortDescription = null, // Not available in RecommendedBookResponse
+                pageCount = null, // Not available in RecommendedBookResponse
+                ageRating = null, // Not available in RecommendedBookResponse
+                seriesId = null, // Not available in RecommendedBookResponse
+                series = null // Not available in RecommendedBookResponse
+            )
+        }
+    }
+
+    /**
+     * Calculates the effective rating for a book.
+     * If the book has a rating, use it. Otherwise, calculate average from reviews.
+     */
+    fun calculateRating(bookRating: Double?, reviews: List<ReviewResponse>): Double {
+        return if (bookRating == null || bookRating == 0.0) {
+            if (reviews.isNotEmpty()) {
+                reviews.map { it.rating.toDouble() }.average()
+            } else {
+                0.0
+            }
+        } else {
+            bookRating
+        }
+    }
+
     fun getTrendingBooks() {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
-                val booksService = org.koin.core.context.GlobalContext.get()
-                    .get<com.example.booknest.data.service.BooksService>()
-                val response = booksService.getTrendingBooks(10)
-                if (response.isSuccessful && response.body() != null) {
-                    _trendingBooks.value = response.body()!!
+                val result = getTrendingBooksUseCase(10)
+                result.onSuccess { trendingBooks ->
+                    _trendingBooks.value = trendingBooks
+                }.onFailure { exception ->
+                    GlobalToastHandler.showError(exception)
                 }
             } catch (e: Exception) {
-                println("Trending books error: ${e.message}")
+                GlobalToastHandler.showError(e)
             } finally {
                 _isLoading.value = false
             }

@@ -191,29 +191,6 @@ class ApplicationViewModel(
             }
         }
     }
-
-    fun updateApplication(applicationId: String, message: String) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            try {
-                val request = UpdateApplicationRequest(applicationMessage = message)
-                val result = applicationsRepository.updateApplication(applicationId, request)
-                result
-                    .onSuccess {
-                        GlobalToastHandler.showSuccess("Application updated successfully!")
-                        loadMyApplications()
-                    }
-                    .onFailure { e ->
-                        GlobalToastHandler.showError(e.message ?: "Failed to update application")
-                    }
-            } catch (e: Exception) {
-                GlobalToastHandler.showError("Error updating application: ${e.message}")
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
     fun withdrawApplication(applicationId: String) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -239,7 +216,8 @@ class ApplicationViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val result = applicationsRepository.markCopyReceived(applicationId)
+                val trimmedId = applicationId.trim()
+                val result = applicationsRepository.markCopyReceived(trimmedId)
                 result
                     .onSuccess {
                         GlobalToastHandler.showSuccess("Copy marked as received!")
@@ -449,30 +427,6 @@ class ApplicationViewModel(
             } finally {
                 _isLoading.value = false
             }
-        }
-    }
-
-    fun clearApplicationCheck() {
-        _applicationCheck.value = null
-    }
-
-    fun mapStringToApplicationStatus(status: String?): ApplicationStatus {
-        return when (status?.lowercase()) {
-            "pending" -> ApplicationStatus.PENDING
-            "approved" -> ApplicationStatus.APPROVED
-            "rejected" -> ApplicationStatus.REJECTED
-            "withdrawn" -> ApplicationStatus.WITHDRAWN
-            else -> ApplicationStatus.PENDING
-        }
-    }
-
-    fun mapStringToReadingStatus(status: String?): ReadingStatus {
-        return when (status?.lowercase()) {
-            "not_started" -> ReadingStatus.NOT_STARTED
-            "currently_reading" -> ReadingStatus.CURRENTLY_READING
-            "for_review" -> ReadingStatus.FOR_REVIEW
-            "reviewed" -> ReadingStatus.FOR_REVIEW
-            else -> ReadingStatus.NOT_STARTED
         }
     }
 }

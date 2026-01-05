@@ -40,6 +40,9 @@ class FriendViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    private val _friendshipStatuses = MutableStateFlow<Map<String, FriendshipStatusResponse?>>(emptyMap())
+    val friendshipStatuses: StateFlow<Map<String, FriendshipStatusResponse?>> = _friendshipStatuses.asStateFlow()
+
     fun loadFriends() {
         viewModelScope.launch {
             try {
@@ -279,75 +282,14 @@ class FriendViewModel(
         }
     }
 
-    fun blockUser(userId: String) {
-        viewModelScope.launch {
-            try {
-                _isLoading.value = true
-                _error.value = null
-                val result = friendsRepository.blockUser(userId)
-                result
-                    .onSuccess {
-                        loadFriends()
-                    }
-                    .onFailure { e ->
-                        _error.value = e.message ?: "Failed to block user"
-                    }
-            } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
-    fun unblockUser(userId: String) {
-        viewModelScope.launch {
-            try {
-                _isLoading.value = true
-                _error.value = null
-                val result = friendsRepository.unblockUser(userId)
-                result
-                    .onSuccess {
-                        loadFriends()
-                    }
-                    .onFailure { e ->
-                        _error.value = e.message ?: "Failed to unblock user"
-                    }
-            } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
-    fun getFriendshipStatus(userId: String, onResult: (FriendshipStatusResponse?) -> Unit) {
+    fun getFriendshipStatus(userId: String) {
         viewModelScope.launch {
             try {
                 val result = friendsRepository.getFriendshipStatus(userId)
-                onResult(result.getOrNull())
+                _friendshipStatuses.value = _friendshipStatuses.value + (userId to result.getOrNull())
             } catch (e: Exception) {
-                onResult(null)
+                _friendshipStatuses.value = _friendshipStatuses.value + (userId to null)
             }
         }
-    }
-
-    fun loadFriendSuggestions(onResult: (List<UserResponse>) -> Unit) {
-        viewModelScope.launch {
-            try {
-                val result = friendsRepository.getFriendSuggestions(10)
-                result.onSuccess { suggestions ->
-                    onResult(suggestions)
-                }.onFailure {
-                    onResult(emptyList())
-                }
-            } catch (e: Exception) {
-                onResult(emptyList())
-            }
-        }
-    }
-
-    fun clearError() {
-        _error.value = null
     }
 }

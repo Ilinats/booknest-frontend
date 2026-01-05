@@ -23,10 +23,17 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import com.example.booknest.domain.model.request.AddressDto
+import com.example.booknest.navigation.NavigationEvent
+import com.example.booknest.navigation.Screen
+import com.example.booknest.ui.toast.GlobalToastHandler
+import com.example.booknest.ui.state.UiState
 
 @Serializable
 data class SignupData(
@@ -44,12 +51,12 @@ data class SignupData(
     var genres: List<String>? = null
 )
 
-sealed class SignupUiState {
-    object Idle : SignupUiState()
-    object Loading : SignupUiState()
-    data class Success(val message: String?) : SignupUiState()
-    data class Error(val error: String) : SignupUiState()
-}
+/**
+ * Signup result data
+ */
+data class SignupResult(
+    val message: String? = null
+)
 
 class SignupViewModel(
     private val sessionManager: SessionManager,
@@ -61,14 +68,17 @@ class SignupViewModel(
     var signupData = SignupData()
     var pendingImageUri: Uri? = null
 
-    private val _signupState = MutableStateFlow<SignupUiState>(SignupUiState.Idle)
-    val signupState: StateFlow<SignupUiState> = _signupState
+    private val _signupState = MutableStateFlow<UiState<SignupResult>>(UiState.Idle)
+    val signupState: StateFlow<UiState<SignupResult>> = _signupState
 
     private val _availableGenres = MutableStateFlow<List<GenreResponse>>(emptyList())
     val availableGenres: StateFlow<List<GenreResponse>> = _availableGenres
 
     private val _imageUploadState = MutableStateFlow<ImageUploadState>(ImageUploadState.Idle)
     val imageUploadState: StateFlow<ImageUploadState> = _imageUploadState
+
+    private val _navigationEvent = MutableSharedFlow<NavigationEvent>(replay = 0)
+    val navigationEvent: SharedFlow<NavigationEvent> = _navigationEvent.asSharedFlow()
 
     init {
         fetchAvailableGenres()
@@ -95,7 +105,12 @@ class SignupViewModel(
 
     fun updatePersonalInfo(first: String, last: String, email: String, password: String) {
         signupData =
-            signupData.copy(firstName = first, lastName = last, email = email.trim(), password = password)
+            signupData.copy(
+                firstName = first,
+                lastName = last,
+                email = email.trim(),
+                password = password
+            )
     }
 
     fun updateUsername(username: String) {
@@ -138,13 +153,13 @@ class SignupViewModel(
         signupData = signupData.copy(genres = genres)
     }
 
-    fun submitSignup(onComplete: (Boolean, String?) -> Unit) {
+    fun submitSignup() {
         viewModelScope.launch {
-            _signupState.value = SignupUiState.Loading
+            _signupState.value = UiState.Loading
             try {
                 val email = signupData.email?.trim()?.takeIf { it.isNotBlank() }
                     ?: throw IllegalArgumentException("Email is required")
-                
+
                 val result = registerUseCase(
                     username = signupData.username ?: "",
                     email = email,
@@ -168,29 +183,38 @@ class SignupViewModel(
                     )
                     sessionManager.updateUser(response.user)
 
-                    _signupState.value = SignupUiState.Success("Registration successful!")
-                    onComplete(true, null)
+                    _signupState.value = UiState.Success(SignupResult("Registration successful!"))
+                    
+                    // Emit navigation event instead of callback
+                    val userEmail = signupData.email
+                    _navigationEvent.emit(
+                        NavigationEvent.NavigateTo(
+                            route = Screen.EmailVerification.createRoute(userEmail),
+                            popUpTo = Screen.ProfileDetails.route,
+                            inclusive = true
+                        )
+                    )
                 }.onFailure { exception ->
                     val errorMsg = exception.message ?: "Registration failed"
-                    _signupState.value = SignupUiState.Error(errorMsg)
-                    onComplete(false, errorMsg)
+                    _signupState.value = UiState.Error(errorMsg, exception)
+                    GlobalToastHandler.showError(exception)
                 }
             } catch (e: Exception) {
-                _signupState.value = SignupUiState.Error("Network error: ${e.localizedMessage}")
-                onComplete(false, e.localizedMessage)
+                val errorMsg = "Network error: ${e.localizedMessage}"
+                _signupState.value = UiState.Error(errorMsg, e)
+                GlobalToastHandler.showError(e)
             }
         }
     }
 
-    fun saveGenres(onComplete: (Boolean, String?) -> Unit) {
+    fun saveGenres() {
         viewModelScope.launch {
             val selectedGenreNames = signupData.genres ?: emptyList()
             if (selectedGenreNames.isEmpty()) {
-                onComplete(true, "No genres selected to save.")
+                // No genres to save, this is fine - just return
                 return@launch
             }
 
-            val defaultPreferenceLevel = 3
             var allSucceeded = true
             var firstErrorMessage: String? = null
 
@@ -224,18 +248,18 @@ class SignupViewModel(
                     }
                 }
 
-                if (allSucceeded) {
-                    onComplete(true, "All genre preferences saved successfully.")
-                } else {
-                    onComplete(false, firstErrorMessage ?: "Failed to save some genre preferences.")
+                if (!allSucceeded) {
+                    val errorMsg = firstErrorMessage ?: "Failed to save some genre preferences."
+                    GlobalToastHandler.showError(errorMsg)
                 }
             } catch (e: Exception) {
-                onComplete(false, "Network error while saving genres: ${e.localizedMessage}")
+                val errorMsg = "Network error while saving genres: ${e.localizedMessage}"
+                GlobalToastHandler.showError(e)
             }
         }
     }
 
-    fun uploadProfileImage(context: Context, imageUri: Uri, onSuccess: (String) -> Unit) {
+    fun uploadProfileImage(context: Context, imageUri: Uri) {
         viewModelScope.launch {
             try {
                 _imageUploadState.value = ImageUploadState.Uploading
@@ -244,6 +268,7 @@ class SignupViewModel(
                     uriToFile(context, imageUri)
                 } ?: run {
                     _imageUploadState.value = ImageUploadState.Error("Failed to process image file")
+                    GlobalToastHandler.showError("Failed to process image file")
                     return@launch
                 }
 
@@ -255,13 +280,14 @@ class SignupViewModel(
                     val result = uploadProfileImageUseCase(multipartBody)
                     result
                         .onSuccess { avatarUrl ->
-                            onSuccess(avatarUrl)
                             _imageUploadState.value = ImageUploadState.Success(avatarUrl)
+                            // Update signupData with the uploaded URL
+                            signupData = signupData.copy(profilePicture = avatarUrl)
                         }
                         .onFailure { e ->
-                            _imageUploadState.value = ImageUploadState.Error(
-                                e.message ?: "Failed to upload image"
-                            )
+                            val errorMsg = e.message ?: "Failed to upload image"
+                            _imageUploadState.value = ImageUploadState.Error(errorMsg)
+                            GlobalToastHandler.showError(e)
                         }
                 } finally {
                     withContext(Dispatchers.IO) {
@@ -274,8 +300,9 @@ class SignupViewModel(
                     }
                 }
             } catch (e: Exception) {
-                _imageUploadState.value =
-                    ImageUploadState.Error(e.message ?: "Unknown error occurred")
+                val errorMsg = e.message ?: "Unknown error occurred"
+                _imageUploadState.value = ImageUploadState.Error(errorMsg)
+                GlobalToastHandler.showError(e)
             }
         }
     }
@@ -293,10 +320,6 @@ class SignupViewModel(
         } catch (e: Exception) {
             null
         }
-    }
-
-    fun resetState() {
-        _signupState.value = SignupUiState.Idle
     }
 }
 

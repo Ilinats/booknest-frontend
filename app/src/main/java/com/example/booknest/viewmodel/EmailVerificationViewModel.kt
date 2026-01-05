@@ -118,21 +118,3 @@ class EmailVerificationViewModel(
         }
     }
 }
-
-class EmailVerificationViewModelFactory(
-    private val verifyEmailUseCase: VerifyEmailUseCase,
-    private val resendVerificationCodeUseCase: ResendVerificationCodeUseCase,
-    private val userEmail: String? = null
-) : androidx.lifecycle.ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(EmailVerificationViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return EmailVerificationViewModel(
-                verifyEmailUseCase = verifyEmailUseCase,
-                resendVerificationCodeUseCase = resendVerificationCodeUseCase,
-                userEmail = userEmail
-            ) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
-    }
-}
