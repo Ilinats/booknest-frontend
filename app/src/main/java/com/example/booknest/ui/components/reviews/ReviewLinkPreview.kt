@@ -1,8 +1,9 @@
-package com.example.booknest.ui.components
+package com.example.booknest.ui.components.reviews
 
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.net.Uri
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.background
@@ -241,7 +242,7 @@ fun YouTubeEmbedWebView(
                 settings.allowContentAccess = true
                 settings.allowUniversalAccessFromFileURLs = true
                 settings.allowFileAccessFromFileURLs = true
-                settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                 settings.mediaPlaybackRequiresUserGesture = false
                 settings.loadWithOverviewMode = true
                 settings.useWideViewPort = true
@@ -310,7 +311,7 @@ fun VideoEmbedView(
                             settings.allowUniversalAccessFromFileURLs = true
                             settings.allowFileAccessFromFileURLs = true
                             settings.mixedContentMode =
-                                android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                                WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                             settings.mediaPlaybackRequiresUserGesture = false
                             settings.loadWithOverviewMode = true
                             settings.useWideViewPort = true
