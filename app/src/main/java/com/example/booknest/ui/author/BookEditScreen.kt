@@ -102,35 +102,30 @@ fun BookEditScreen(
     var initialCoverImageUrl by remember { mutableStateOf<String?>(null) }
     var initialBookFileUrl by remember { mutableStateOf<String?>(null) }
 
-    // Observe cover image removal state
     LaunchedEffect(coverImageRemovalState) {
         when (coverImageRemovalState) {
-            is com.example.booknest.ui.state.UiState.Success -> {
+            is UiState.Success -> {
                 coverImageUrl = null
                 shouldRemoveCoverImage = false
                 initialCoverImageUrl = null
             }
-            is com.example.booknest.ui.state.UiState.Error -> {
-                // Error already handled by GlobalToastHandler in ViewModel
+            is UiState.Error -> {
             }
             else -> {}
         }
     }
 
-    // Observe cover image upload state
     LaunchedEffect(coverImageUploadState) {
         val state = coverImageUploadState
         when (state) {
-            is com.example.booknest.ui.state.UiState.Success -> {
-                // Only update if this is for the current book
+            is UiState.Success -> {
                 val (stateBookId, stateCoverUrl) = state.data
                 if (stateBookId == bookId) {
                     coverImageUrl = stateCoverUrl
                     shouldRemoveCoverImage = false
                 }
             }
-            is com.example.booknest.ui.state.UiState.Error -> {
-                // Error already handled by GlobalToastHandler in ViewModel
+            is UiState.Error -> {
             }
             else -> {}
         }
@@ -612,7 +607,6 @@ fun BookEditScreen(
                                 try {
                                     if (shouldRemoveCoverImage) {
                                         authorViewModel.removeBookCoverImage(bookId)
-                                        // Wait for removal to complete
                                         kotlinx.coroutines.delay(500)
                                     }
 
@@ -620,7 +614,6 @@ fun BookEditScreen(
 
                                     coverImageUri?.let { uri ->
                                         authorViewModel.uploadBookCoverImage(bookId, uri, context)
-                                        // Wait for upload to complete
                                         kotlinx.coroutines.delay(500)
                                     }
 
@@ -632,7 +625,6 @@ fun BookEditScreen(
                                             onSuccess = { },
                                             onError = { }
                                         )
-                                        // Wait for upload to complete
                                         kotlinx.coroutines.delay(500)
                                     }
 

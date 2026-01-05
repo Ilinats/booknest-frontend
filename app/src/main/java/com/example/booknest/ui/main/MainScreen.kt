@@ -55,10 +55,12 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import com.example.booknest.data.session.SessionManager
+import com.example.booknest.domain.repository.AuthRepository
 import com.example.booknest.navigation.BottomBarScreen
 import com.example.booknest.navigation.HomeNavGraph
 import com.example.booknest.navigation.Screen
 import com.example.booknest.domain.model.response.UserResponse
+import com.example.booknest.viewmodel.MainViewModel
 import com.example.booknest.viewmodel.NotificationViewModel
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.getViewModel
@@ -66,7 +68,11 @@ import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(sessionManager: SessionManager = koinInject()) {
+fun MainScreen(
+    sessionManager: SessionManager = koinInject(),
+    authRepository: AuthRepository = koinInject(),
+    mainViewModel: MainViewModel = getViewModel()
+) {
     val navController = rememberNavController()
     val currentUser by sessionManager.currentUser.collectAsState()
 
@@ -79,21 +85,7 @@ fun MainScreen(sessionManager: SessionManager = koinInject()) {
             kotlinx.coroutines.delay(300)
         }
         if (isLoggedIn == true && currentUser == null) {
-            val token = sessionManager.getToken()
-            if (token.isNotEmpty()) {
-            try {
-                val profilesService = org.koin.core.context.GlobalContext.get()
-                    .get<com.example.booknest.data.service.ProfilesService>()
-                val response = profilesService.getMe()
-                if (response.isSuccessful) {
-                    response.body()?.let { user ->
-                        sessionManager.updateUser(user)
-                    }
-                }
-            } catch (e: Exception) {
-                println("DEBUG: Failed to fetch user: ${e.message}")
-                }
-            }
+            mainViewModel.fetchCurrentUser()
         }
     }
 
@@ -139,16 +131,8 @@ fun MainScreen(sessionManager: SessionManager = koinInject()) {
 
             if (isMainScreen) {
                 notificationViewModel.loadUnreadCount()
-                try {
-                    val profilesService = org.koin.core.context.GlobalContext.get()
-                        .get<com.example.booknest.data.service.ProfilesService>()
-                    val response = profilesService.getMe()
-                    if (response.isSuccessful) {
-                        response.body()?.let { user ->
-                            sessionManager.updateUser(user)
-                        }
-                    }
-                } catch (e: Exception) {
+                if (currentUser == null) {
+                    mainViewModel.fetchCurrentUser()
                 }
             }
         }
@@ -182,6 +166,7 @@ fun MainScreen(sessionManager: SessionManager = koinInject()) {
                     onSignOut = {
                     },
                     sessionManager = sessionManager,
+                    authRepository = authRepository,
                     unreadCount = unreadCount
                 )
             }
@@ -268,6 +253,7 @@ private fun MainTopBar(
     onFavoriteGenresClick: () -> Unit,
     onSignOut: () -> Unit,
     sessionManager: SessionManager,
+    authRepository: AuthRepository,
     unreadCount: Int = 0
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
@@ -364,7 +350,7 @@ private fun MainTopBar(
                             onClick = {
                                 menuExpanded = false
                                 coroutineScope.launch {
-                                    sessionManager.logout()
+                                    sessionManager.logout(authRepository)
                                     onSignOut()
                                 }
                             }

@@ -1,7 +1,6 @@
-package com.example.booknest.ui.books
+package com.example.booknest.ui.books.components.list
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -37,7 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import coil.compose.rememberAsyncImagePainter
+import coil.compose.AsyncImage
 import com.example.booknest.domain.model.response.RecommendedBookResponse
 import com.example.booknest.navigation.Screen
 import java.text.SimpleDateFormat
@@ -86,13 +85,15 @@ fun BookItem(
                     .fillMaxWidth()
                     .padding(vertical = 6.dp),
             ) {
-                Surface(
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 20.dp),
-                    shadowElevation = 3.dp,
+                    elevation = CardDefaults.cardElevation(3.dp),
                     shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
                 ) {
                     Row(
                         modifier = Modifier
@@ -235,8 +236,8 @@ fun BookItem(
                     contentAlignment = Alignment.Center
                 ) {
                     if (!book.coverImageUrl.isNullOrBlank()) {
-                        Image(
-                            painter = rememberAsyncImagePainter(book.coverImageUrl),
+                        AsyncImage(
+                            model = book.coverImageUrl,
                             contentDescription = book.title,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -269,8 +270,8 @@ fun BookItem(
                     contentAlignment = Alignment.Center
                 ) {
                     if (!book.coverImageUrl.isNullOrBlank()) {
-                        Image(
-                            painter = rememberAsyncImagePainter(book.coverImageUrl),
+                        AsyncImage(
+                            model = book.coverImageUrl,
                             contentDescription = book.title,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -445,8 +446,8 @@ fun SimpleBookItem(
                 contentAlignment = Alignment.Center
             ) {
                 if (!book.coverImageUrl.isNullOrBlank()) {
-                    Image(
-                        painter = rememberAsyncImagePainter(book.coverImageUrl),
+                    AsyncImage(
+                        model = book.coverImageUrl,
                         contentDescription = book.title,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -495,3 +496,4 @@ fun SimpleBookItem(
         }
     }
 }
+
