@@ -54,16 +54,13 @@ interface ProfilesService {
         @Body profile: UpdateUserProfileRequest
     ): Response<UserResponse>
 
-    @GET(Profiles.SOCIAL_MEDIA_OPTIONS)
-    suspend fun getSocialMediaOptions(): Response<SocialMediaOptionsResponse>
-
-    @PUT(Profiles.SOCIAL_MEDIA)
+    @PATCH(Profiles.SOCIAL_MEDIA)
     suspend fun updateSocialMedia(@Body request: UpdateSocialMediaRequest): Response<UserProfileResponse>
 
-    @PUT(Profiles.PRIVACY)
+    @PATCH(Profiles.PRIVACY)
     suspend fun updatePrivacySettings(@Body request: UpdatePrivacyRequest): Response<UserProfileResponse>
 
-    @PUT(Profiles.NOTIFICATIONS)
+    @PATCH(Profiles.NOTIFICATIONS)
     suspend fun updateNotificationSettings(@Body request: UpdateNotificationSettingsRequest): Response<UserProfileResponse>
 
     @GET(Profiles.USER)
@@ -103,7 +100,7 @@ interface ProfilesService {
     @POST(Profiles.ADDRESSES)
     suspend fun addAddress(@Body address: CreateAddressRequest): Response<ReaderAddressResponse>
 
-    @PUT(Profiles.ADDRESS_ID)
+    @PATCH(Profiles.ADDRESS_ID)
     suspend fun updateAddress(
         @Path(PathConstants.ADDRESS_ID) addressId: String,
         @Body address: UpdateAddressRequest
@@ -121,13 +118,6 @@ interface ProfilesService {
     suspend fun getAuthorStats(
         @Path(PathConstants.AUTHOR_ID) authorId: String
     ): Response<AuthorStatsResponse>
-
-    @GET(Users.SEARCH)
-    suspend fun searchUsers(
-        @Query(QueryConstants.QUERY) query: String,
-        @Query(QueryConstants.LIMIT) limit: Int?
-    ): Response<UserSearchResultResponse>
-
     @Multipart
     @POST(Users.UPLOAD_AVATAR)
     suspend fun uploadAvatar(

@@ -11,6 +11,7 @@ import com.example.booknest.domain.model.response.DetailedBookAnalyticsResponse
 import com.example.booknest.domain.model.response.DownloadBookResponse
 import com.example.booknest.domain.model.response.RecommendedBookResponse
 import com.example.booknest.domain.model.response.ReviewResponse
+import com.example.booknest.domain.model.response.TrendingBookResponse
 import com.example.booknest.domain.model.response.UploadBookFileResponse
 import com.example.booknest.domain.repository.BooksRepository
 import okhttp3.MultipartBody
@@ -65,6 +66,10 @@ class BNBooksRepository(private val booksDataSource: BooksDataSource) : BooksRep
 
     override suspend fun getRecommendedBooks(take: Int?): Result<List<RecommendedBookResponse>> {
         return resultBody(booksDataSource.getRecommendedBooks(take))
+    }
+
+    override suspend fun getTrendingBooks(limit: Int?): Result<List<TrendingBookResponse>> {
+        return booksDataSource.getTrendingBooks(limit)
     }
 
     override suspend fun getBookDetails(bookId: String): Result<BookResponse> {

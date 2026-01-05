@@ -41,16 +41,6 @@ interface FriendsService {
         @Path(PathConstants.FRIEND_ID) friendId: String
     ): Response<Unit>
 
-    @POST(Friends.BLOCK)
-    suspend fun blockUser(
-        @Path(PathConstants.USER_ID) userId: String
-    ): Response<FriendRequestResponse>
-
-    @DELETE(Friends.UNBLOCK)
-    suspend fun unblockUser(
-        @Path(PathConstants.USER_ID) userId: String
-    ): Response<Unit>
-
     @GET(Friends.LIST)
     suspend fun getFriends(): Response<List<UserResponse>>
 
@@ -68,11 +58,6 @@ interface FriendsService {
     @GET(Friends.SEARCH)
     suspend fun searchUsers(
         @Query(QueryConstants.QUERY) query: String,
-        @Query(QueryConstants.LIMIT) limit: Int?
-    ): Response<List<UserSearchResultItemResponse>>
-
-    @GET(Friends.SUGGESTIONS)
-    suspend fun getFriendSuggestions(
         @Query(QueryConstants.LIMIT) limit: Int?
     ): Response<List<UserSearchResultItemResponse>>
 

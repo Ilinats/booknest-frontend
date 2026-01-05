@@ -11,13 +11,10 @@ interface FriendsRepository {
     suspend fun declineFriendRequest(requesterId: String): Result<Unit>
     suspend fun cancelFriendRequest(addresseeId: String): Result<Unit>
     suspend fun unfriendUser(friendId: String): Result<Unit>
-    suspend fun blockUser(userId: String): Result<FriendRequestResponse>
-    suspend fun unblockUser(userId: String): Result<Unit>
     suspend fun getFriends(): Result<List<UserResponse>>
     suspend fun getSentFriendRequests(): Result<List<UserResponse>>
     suspend fun getReceivedFriendRequests(): Result<List<UserResponse>>
     suspend fun getFriendshipStatus(userId: String): Result<FriendshipStatusResponse>
     suspend fun searchUsers(query: String, limit: Int? = 20): Result<List<UserResponse>>
-    suspend fun getFriendSuggestions(limit: Int? = 10): Result<List<UserResponse>>
     suspend fun getFriendsActivity(limit: Int? = 50): Result<List<UserActivityResponse>>
 }

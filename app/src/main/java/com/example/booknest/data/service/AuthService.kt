@@ -1,7 +1,6 @@
 package com.example.booknest.data.service
 
 import com.example.booknest.data.constants.Auth
-import com.example.booknest.domain.model.request.GoogleAuthRequest
 import com.example.booknest.domain.model.request.LoginRequest
 import com.example.booknest.domain.model.request.RefreshTokenRequest
 import com.example.booknest.domain.model.request.RegisterRequest
@@ -10,7 +9,6 @@ import com.example.booknest.domain.model.request.ResendVerificationRequest
 import com.example.booknest.domain.model.request.ResetPasswordRequest
 import com.example.booknest.domain.model.request.VerifyEmailRequest
 import com.example.booknest.domain.model.response.AuthTokenResponse
-import com.example.booknest.domain.model.response.GoogleAuthDataResponse
 import com.example.booknest.domain.model.response.LoginResponse
 import com.example.booknest.domain.model.response.MessageResponse
 import com.example.booknest.domain.model.response.VerifyEmailDataResponse
@@ -37,8 +35,8 @@ interface AuthService {
     @POST(Auth.REFRESH)
     suspend fun refresh(@Body body: RefreshTokenRequest): Response<AuthTokenResponse>
 
-    @POST(Auth.GOOGLE)
-    suspend fun googleLogin(@Body body: GoogleAuthRequest): Response<GoogleAuthDataResponse>
+    @POST(Auth.LOGOUT)
+    suspend fun logout(@Body body: RefreshTokenRequest): Response<MessageResponse>
 
     @POST(Auth.VERIFY_EMAIL)
     suspend fun verifyEmail(@Body body: VerifyEmailRequest): Response<VerifyEmailDataResponse>

@@ -48,19 +48,5 @@ interface NotificationsService {
 
     @POST(DeviceTokens.REGISTER)
     suspend fun registerDeviceToken(@Body request: RegisterDeviceTokenRequest): Response<DeviceTokenResponse>
-
-    @GET(DeviceTokens.LIST)
-    suspend fun getDeviceTokens(): Response<List<DeviceTokenResponse>>
-
-    @PUT(DeviceTokens.UPDATE)
-    suspend fun updateDeviceToken(
-        @Path(PathConstants.TOKEN) token: String,
-        @Body request: UpdateDeviceTokenRequest
-    ): Response<DeviceTokenResponse>
-
-    @DELETE(DeviceTokens.DELETE)
-    suspend fun deleteDeviceToken(
-        @Path(PathConstants.TOKEN) token: String
-    ): Response<MessageResponse>
 }
 

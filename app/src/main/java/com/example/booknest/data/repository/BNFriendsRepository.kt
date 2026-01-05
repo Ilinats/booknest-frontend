@@ -30,14 +30,6 @@ class BNFriendsRepository(private val friendsDataSource: FriendsDataSource) : Fr
         return resultBody(friendsDataSource.unfriendUser(friendId))
     }
 
-    override suspend fun blockUser(userId: String): Result<FriendRequestResponse> {
-        return resultBody(friendsDataSource.blockUser(userId))
-    }
-
-    override suspend fun unblockUser(userId: String): Result<Unit> {
-        return resultBody(friendsDataSource.unblockUser(userId))
-    }
-
     override suspend fun getFriends(): Result<List<UserResponse>> {
         return resultBody(friendsDataSource.getFriends())
     }
@@ -56,10 +48,6 @@ class BNFriendsRepository(private val friendsDataSource: FriendsDataSource) : Fr
 
     override suspend fun searchUsers(query: String, limit: Int?): Result<List<UserResponse>> {
         return resultBody(friendsDataSource.searchUsers(query, limit))
-    }
-
-    override suspend fun getFriendSuggestions(limit: Int?): Result<List<UserResponse>> {
-        return resultBody(friendsDataSource.getFriendSuggestions(limit))
     }
 
     override suspend fun getFriendsActivity(limit: Int?): Result<List<UserActivityResponse>> {

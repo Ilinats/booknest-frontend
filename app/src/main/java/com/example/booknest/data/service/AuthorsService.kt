@@ -26,10 +26,6 @@ interface AuthorsService {
 
     @GET(Authors.FOLLOWING)
     suspend fun getFollowedAuthors(): Response<List<AuthorFollowResponse>>
-
-    @GET(Authors.FOLLOWING_WITH_STATS)
-    suspend fun getFollowedAuthorsWithStats(): Response<List<AuthorFollowWithStatsResponse>>
-
     @GET(Authors.FOLLOWERS)
     suspend fun getAuthorFollowers(
         @Path(PathConstants.AUTHOR_ID) authorId: String

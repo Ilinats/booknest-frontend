@@ -24,6 +24,10 @@ import okhttp3.MultipartBody
 
 class BNProfilesDataSource(private val profilesService: ProfilesService) : ProfilesDataSource {
 
+    override suspend fun getMe(): Result<UserResponse> {
+        return requestBody(profilesService.getMe())
+    }
+
     override suspend fun getMyProfile(): Result<UserProfileResponse> {
         val statsResult = requestBody(profilesService.getMyStats())
         val profileResult = requestBody(profilesService.getMyProfile())
@@ -152,10 +156,6 @@ class BNProfilesDataSource(private val profilesService: ProfilesService) : Profi
         return requestBody(profilesService.updateUserProfile(userId, profile))
     }
 
-    override suspend fun getSocialMediaOptions(): Result<SocialMediaOptionsResponse> {
-        return requestBody(profilesService.getSocialMediaOptions())
-    }
-
     override suspend fun updateSocialMedia(request: UpdateSocialMediaRequest): Result<UserProfileResponse> {
         return requestBody(profilesService.updateSocialMedia(request))
     }
@@ -226,10 +226,6 @@ class BNProfilesDataSource(private val profilesService: ProfilesService) : Profi
         return requestBody(profilesService.getAuthorStats(authorId))
     }
 
-    override suspend fun searchUsers(query: String, limit: Int?): Result<UserSearchResultResponse> {
-        return requestBody(profilesService.searchUsers(query, limit))
-    }
-
     override suspend fun uploadAvatar(avatarPart: MultipartBody.Part): Result<UploadAvatarResponse> {
         return requestBody(profilesService.uploadAvatar(avatarPart))
     }
@@ -247,9 +243,8 @@ class BNProfilesDataSource(private val profilesService: ProfilesService) : Profi
             android.util.Log.d("BNProfilesDataSource", "Delete account response: code=${response.code()}, isSuccessful=${response.isSuccessful}")
             
             if (response.isSuccessful && response.code() == 200) {
-                // Read and close the response body
                 try {
-                    responseBody?.string() // Read the body to consume it
+                    responseBody?.string()
                 } catch (e: Exception) {
                     android.util.Log.w("BNProfilesDataSource", "Error reading response body", e)
                 }
@@ -274,11 +269,9 @@ class BNProfilesDataSource(private val profilesService: ProfilesService) : Profi
             android.util.Log.e("BNProfilesDataSource", "Exception deleting account: ${ex.message}", ex)
             Result.failure(Throwable(ex.message ?: "Failed to delete account: ${ex.javaClass.simpleName}"))
         } finally {
-            // Ensure response body is closed
             try {
                 responseBody?.close()
             } catch (e: Exception) {
-                // Ignore
             }
         }
     }

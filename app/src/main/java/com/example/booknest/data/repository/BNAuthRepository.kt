@@ -7,7 +7,6 @@ import com.example.booknest.domain.model.request.RegisterRequest
 import com.example.booknest.domain.model.request.RequestPasswordResetRequest
 import com.example.booknest.domain.model.request.ResetPasswordRequest
 import com.example.booknest.domain.model.response.AuthTokenResponse
-import com.example.booknest.domain.model.response.GoogleAuthDataResponse
 import com.example.booknest.domain.model.response.LoginDataResponse
 import com.example.booknest.domain.model.response.RegisterResponse
 import com.example.booknest.domain.model.response.UserResponse
@@ -31,11 +30,8 @@ class BNAuthRepository(private val authDataSource: AuthDataSource) : AuthReposit
         )
     }
 
-    override suspend fun googleLogin(
-        idToken: String,
-        userType: String
-    ): Result<GoogleAuthDataResponse> {
-        return resultBody(authDataSource.googleLogin(idToken, userType))
+    override suspend fun logout(refreshToken: String): Result<Unit> {
+        return authDataSource.logout(refreshToken)
     }
 
     override suspend fun verifyEmail(code: String): Result<UserResponse> {

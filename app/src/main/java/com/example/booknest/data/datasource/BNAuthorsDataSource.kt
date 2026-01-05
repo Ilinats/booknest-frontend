@@ -19,10 +19,6 @@ class BNAuthorsDataSource(private val authorsService: AuthorsService) : AuthorsD
         return requestBody(authorsService.getFollowedAuthors())
     }
 
-    override suspend fun getFollowedAuthorsWithStats(): Result<List<AuthorFollowWithStatsResponse>> {
-        return requestBody(authorsService.getFollowedAuthorsWithStats())
-    }
-
     override suspend fun getAuthorFollowers(authorId: String): Result<List<AuthorFollowResponse>> {
         return requestBody(authorsService.getAuthorFollowers(authorId))
     }

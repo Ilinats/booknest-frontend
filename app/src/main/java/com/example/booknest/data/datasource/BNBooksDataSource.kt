@@ -10,6 +10,7 @@ import com.example.booknest.domain.model.response.DetailedBookAnalyticsResponse
 import com.example.booknest.domain.model.response.DownloadBookResponse
 import com.example.booknest.domain.model.response.RecommendedBookResponse
 import com.example.booknest.domain.model.response.ReviewResponse
+import com.example.booknest.domain.model.response.TrendingBookResponse
 import com.example.booknest.domain.model.response.UploadBookFileResponse
 import com.example.booknest.domain.model.response.UploadBookCoverResponse
 import okhttp3.MediaType.Companion.toMediaType
@@ -66,6 +67,10 @@ class BNBooksDataSource(private val booksService: BooksService) : BooksDataSourc
 
     override suspend fun getRecommendedBooks(take: Int?): Result<List<RecommendedBookResponse>> {
         return requestPaginatedBody(booksService.getRecommendedBooks(take))
+    }
+
+    override suspend fun getTrendingBooks(limit: Int?): Result<List<TrendingBookResponse>> {
+        return requestBody(booksService.getTrendingBooks(limit))
     }
 
     override suspend fun getBookDetails(bookId: String): Result<BookResponse> {

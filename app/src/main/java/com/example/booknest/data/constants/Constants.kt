@@ -13,10 +13,3 @@ object Header {
     const val AUTHORIZATION = "Authorization"
     const val BEARER = "Bearer"
 }
-
-object DataStoreKeys {
-    const val TOKEN = "token"
-    const val REFRESH_TOKEN = "refresh_token"
-    const val USER_DATA = "user_data"
-}
-

@@ -27,7 +27,6 @@ data class UserResponse(
     val bio: String? = null,
     val avatarUrl: String? = null,
     val profilePictureUrl: String? = null,
-    val googleId: String? = null,
     val address: UserAddressResponse? = null,
     val createdAt: String? = null
 )

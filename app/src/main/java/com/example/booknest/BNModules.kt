@@ -9,7 +9,6 @@ import com.example.booknest.data.datasource.BNApplicationsDataSource
 import com.example.booknest.data.datasource.BNAuthDataSource
 import com.example.booknest.data.datasource.BNAuthorsDataSource
 import com.example.booknest.data.datasource.BNBooksDataSource
-import com.example.booknest.data.datasource.BNFilesDataSource
 import com.example.booknest.data.datasource.BNFriendsDataSource
 import com.example.booknest.data.datasource.BNGenresDataSource
 import com.example.booknest.data.datasource.BNNotificationsDataSource
@@ -17,7 +16,6 @@ import com.example.booknest.data.datasource.BNProfilesDataSource
 import com.example.booknest.data.datasource.BNReviewsDataSource
 import com.example.booknest.data.datasource.BNSeriesDataSource
 import com.example.booknest.data.datasource.BooksDataSource
-import com.example.booknest.data.datasource.FilesDataSource
 import com.example.booknest.data.datasource.FriendsDataSource
 import com.example.booknest.data.datasource.GenresDataSource
 import com.example.booknest.data.datasource.NotificationsDataSource
@@ -28,7 +26,6 @@ import com.example.booknest.data.repository.BNApplicationsRepository
 import com.example.booknest.data.repository.BNAuthRepository
 import com.example.booknest.data.repository.BNAuthorFollowRepository
 import com.example.booknest.data.repository.BNBooksRepository
-import com.example.booknest.data.repository.BNFilesRepository
 import com.example.booknest.data.repository.BNFriendsRepository
 import com.example.booknest.data.repository.BNGenresRepository
 import com.example.booknest.data.repository.BNNotificationsRepository
@@ -39,7 +36,6 @@ import com.example.booknest.data.service.ApplicationsService
 import com.example.booknest.data.service.AuthService
 import com.example.booknest.data.service.AuthorsService
 import com.example.booknest.data.service.BooksService
-import com.example.booknest.data.service.FilesService
 import com.example.booknest.data.service.FriendsService
 import com.example.booknest.data.service.GenresService
 import com.example.booknest.data.service.NotificationsService
@@ -55,7 +51,6 @@ import com.example.booknest.domain.repository.ApplicationsRepository
 import com.example.booknest.domain.repository.AuthRepository
 import com.example.booknest.domain.repository.AuthorFollowRepository
 import com.example.booknest.domain.repository.BooksRepository
-import com.example.booknest.domain.repository.FilesRepository
 import com.example.booknest.domain.repository.FriendsRepository
 import com.example.booknest.domain.repository.GenresRepository
 import com.example.booknest.domain.repository.NotificationsRepository
@@ -79,6 +74,7 @@ import com.example.booknest.domain.usecase.books.BrowseBooksUseCase
 import com.example.booknest.domain.usecase.books.GetBookDetailsUseCase
 import com.example.booknest.domain.usecase.books.GetNewReleasesUseCase
 import com.example.booknest.domain.usecase.books.GetRecommendedBooksUseCase
+import com.example.booknest.domain.usecase.books.GetTrendingBooksUseCase
 import com.example.booknest.domain.usecase.books.SearchBooksUseCase
 import com.example.booknest.domain.usecase.files.GetBookDownloadUrlUseCase
 import com.example.booknest.domain.usecase.files.UploadBookFileUseCase
@@ -89,6 +85,7 @@ import com.example.booknest.domain.usecase.genres.GetGenresUseCase
 import com.example.booknest.domain.usecase.genres.SaveUserGenrePreferenceUseCase
 import com.example.booknest.domain.usecase.notifications.GetNotificationsUseCase
 import com.example.booknest.domain.usecase.profile.GetAuthorStatsUseCase
+import com.example.booknest.domain.usecase.profile.GetCurrentUserUseCase
 import com.example.booknest.domain.usecase.profile.GetMyActivityUseCase
 import com.example.booknest.domain.usecase.profile.GetMyProfileUseCase
 import com.example.booknest.domain.usecase.profile.GetMyStatsUseCase
@@ -101,9 +98,9 @@ import com.example.booknest.viewmodel.BookViewModel
 import com.example.booknest.viewmodel.EmailVerificationViewModel
 import com.example.booknest.viewmodel.FavoriteGenresViewModel
 import com.example.booknest.viewmodel.FileViewModel
-import com.example.booknest.viewmodel.GoogleAuthViewModel
 import com.example.booknest.viewmodel.FriendViewModel
 import com.example.booknest.viewmodel.LoginViewModel
+import com.example.booknest.viewmodel.MainViewModel
 import com.example.booknest.viewmodel.NotificationViewModel
 import com.example.booknest.viewmodel.PasswordResetViewModel
 import com.example.booknest.viewmodel.ProfileViewModel
@@ -120,6 +117,7 @@ import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 import retrofit2.Retrofit
 import java.util.concurrent.TimeUnit
+import coil.ImageLoader
 
 val appModule = module {
 
@@ -140,6 +138,13 @@ val appModule = module {
             .connectTimeout(RetrofitConstants.TIME, TimeUnit.SECONDS)
             .readTimeout(RetrofitConstants.TIME, TimeUnit.SECONDS)
             .writeTimeout(RetrofitConstants.TIME, TimeUnit.SECONDS)
+            .build()
+    }
+
+    single {
+        ImageLoader.Builder(androidContext())
+            .okHttpClient(get<OkHttpClient>())
+            .respectCacheHeaders(false)
             .build()
     }
 
@@ -169,7 +174,6 @@ val appModule = module {
     single<FriendsService> { get<Retrofit>().create(FriendsService::class.java) }
     single<AuthorsService> { get<Retrofit>().create(AuthorsService::class.java) }
     single<NotificationsService> { get<Retrofit>().create(NotificationsService::class.java) }
-    single<FilesService> { get<Retrofit>().create(FilesService::class.java) }
     single<SeriesService> { get<Retrofit>().create(SeriesService::class.java) }
 
     factory<AuthDataSource> { BNAuthDataSource(get(), get(), androidContext()) }
@@ -181,7 +185,6 @@ val appModule = module {
     factory<FriendsDataSource> { BNFriendsDataSource(get()) }
     factory<AuthorsDataSource> { BNAuthorsDataSource(get()) }
     factory<NotificationsDataSource> { BNNotificationsDataSource(get()) }
-    factory<FilesDataSource> { BNFilesDataSource(get()) }
     factory<SeriesDataSource> { BNSeriesDataSource(get()) }
 
     factory<AuthRepository> { BNAuthRepository(get()) }
@@ -193,7 +196,6 @@ val appModule = module {
     factory<FriendsRepository> { BNFriendsRepository(get()) }
     factory<AuthorFollowRepository> { BNAuthorFollowRepository(get()) }
     factory<NotificationsRepository> { BNNotificationsRepository(get()) }
-    factory<FilesRepository> { BNFilesRepository(get()) }
     factory<SeriesRepository> { BNSeriesRepository(get()) }
 
     factory { LoginUseCase(get()) }
@@ -208,6 +210,7 @@ val appModule = module {
     factory { BrowseBooksUseCase(get()) }
     factory { SearchBooksUseCase(get()) }
     factory { GetBookDetailsUseCase(get()) }
+    factory { GetTrendingBooksUseCase(get()) }
 
     factory { GetMyBooksUseCase(get()) }
     factory { GetMySeriesUseCase(get()) }
@@ -218,6 +221,7 @@ val appModule = module {
 
     factory { GetMyApplicationsUseCase(get()) }
 
+    factory { GetCurrentUserUseCase(get()) }
     factory { GetMyProfileUseCase(get()) }
     factory { GetUserProfileUseCase(get()) }
     factory { GetMyStatsUseCase(get()) }
@@ -239,6 +243,7 @@ val appModule = module {
     viewModel {
         LoginViewModel(
             loginUseCase = get(),
+            getCurrentUserUseCase = get(),
             sessionManager = get()
         )
     }
@@ -273,7 +278,8 @@ val appModule = module {
             getNewReleasesUseCase = get(),
             browseBooksUseCase = get(),
             searchBooksUseCase = get(),
-            getBookDetailsUseCase = get()
+            getBookDetailsUseCase = get(),
+            getTrendingBooksUseCase = get()
         )
     }
 
@@ -298,10 +304,12 @@ val appModule = module {
             getAuthorStatsUseCase = get(),
             getMyProfileUseCase = get(),
             getUserProfileUseCase = get(),
+            getCurrentUserUseCase = get(),
             getMyActivityUseCase = get(),
             profileRepository = get(),
             browseBooksUseCase = get(),
-            uploadProfileImageUseCase = get()
+            uploadProfileImageUseCase = get(),
+            authRepository = get()
         )
     }
 
@@ -358,6 +366,13 @@ val appModule = module {
     }
 
     viewModel {
+        MainViewModel(
+            getCurrentUserUseCase = get(),
+            sessionManager = get()
+        )
+    }
+
+    viewModel {
         FileViewModel(
             context = androidContext(),
             uploadBookFileUseCase = get(),
@@ -365,12 +380,6 @@ val appModule = module {
         )
     }
 
-    viewModel {
-        GoogleAuthViewModel(
-            authRepository = get(),
-            sessionManager = get()
-        )
-    }
 
     viewModel {
         SeriesViewModel(
