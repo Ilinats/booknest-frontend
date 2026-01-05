@@ -42,6 +42,9 @@ class AuthorFollowViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    private val _followingStatus = MutableStateFlow<Map<String, Boolean>>(emptyMap())
+    val followingStatus: StateFlow<Map<String, Boolean>> = _followingStatus.asStateFlow()
+
     fun isAuthorLoading(authorId: String): Boolean {
         return _loadingAuthors.value.contains(authorId)
     }
@@ -58,27 +61,6 @@ class AuthorFollowViewModel(
                     }
                     .onFailure { e ->
                         _error.value = e.message ?: "Failed to load followed authors"
-                    }
-            } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
-    fun loadFollowedAuthorsWithStats() {
-        viewModelScope.launch {
-            try {
-                _isLoading.value = true
-                _error.value = null
-                val result = authorFollowRepository.getFollowedAuthorsWithStats()
-                result
-                    .onSuccess { authors ->
-                        _followedAuthorsWithStats.value = authors
-                    }
-                    .onFailure { e ->
-                        _error.value = e.message ?: "Failed to load followed authors with stats"
                     }
             } catch (e: Exception) {
                 _error.value = e.message ?: "Unknown error occurred"
@@ -201,17 +183,18 @@ class AuthorFollowViewModel(
         }
     }
 
-    fun checkIfFollowingAuthor(authorId: String, onResult: (Boolean) -> Unit) {
+    fun checkIfFollowingAuthor(authorId: String) {
         viewModelScope.launch {
             try {
                 val result = authorFollowRepository.checkIfFollowingAuthor(authorId)
                 result.onSuccess { followMap ->
-                    onResult(followMap["isFollowing"] == true)
+                    val isFollowing = followMap["isFollowing"] == true
+                    _followingStatus.value = _followingStatus.value + (authorId to isFollowing)
                 }.onFailure {
-                    onResult(false)
+                    _followingStatus.value = _followingStatus.value + (authorId to false)
                 }
             } catch (e: Exception) {
-                onResult(false)
+                _followingStatus.value = _followingStatus.value + (authorId to false)
             }
         }
     }

@@ -1,8 +1,7 @@
-package com.example.booknest.ui.author
+package com.example.booknest.ui.main
 
-import androidx.compose.foundation.layout.PaddingValues
+import android.net.Uri
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -12,9 +11,9 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.ui.draw.shadow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -33,26 +32,32 @@ import com.example.booknest.data.session.SessionManager
 import com.example.booknest.navigation.AuthorBottomBarScreen
 import com.example.booknest.navigation.Screen
 import com.example.booknest.ui.applications.BookApplicationDetailScreen
+import com.example.booknest.ui.profile.ProfileEditScreen
+import com.example.booknest.ui.profile.ProfileScreen
+import com.example.booknest.ui.account.StatsScreen
+import com.example.booknest.ui.account.PrivacySettingsScreen
+import com.example.booknest.ui.account.SocialMediaManagementScreen
+import com.example.booknest.ui.analytics.AuthorAnalyticsScreen
+import com.example.booknest.ui.analytics.BookAnalyticsScreen
+import com.example.booknest.ui.books.BookDetailsScreen
+import com.example.booknest.ui.books.SeriesBooksScreen
+import com.example.booknest.ui.auth.PasswordResetScreen
 import com.example.booknest.ui.author.AuthorHomeScreen
 import com.example.booknest.ui.author.AuthorProfileScreen
 import com.example.booknest.ui.author.BookCreationWizard
 import com.example.booknest.ui.author.BookEditScreen
 import com.example.booknest.ui.author.MyBooksScreen
 import com.example.booknest.ui.author.SeriesManagementScreen
-import com.example.booknest.ui.profile.ProfileEditScreen
-import com.example.booknest.ui.profile.ProfileScreen
-import com.example.booknest.ui.profile.StatsScreen
-import com.example.booknest.ui.profile.PrivacySettingsScreen
-import com.example.booknest.ui.profile.SocialMediaManagementScreen
-import com.example.booknest.ui.analytics.AuthorAnalyticsScreen
-import com.example.booknest.ui.analytics.BookAnalyticsScreen
-import com.example.booknest.ui.books.BookDetailsScreen
-import com.example.booknest.ui.books.SeriesBooksScreen
-import com.example.booknest.ui.auth.PasswordResetScreen
+import com.example.booknest.ui.reviews.UserReviewsScreen
+import com.example.booknest.viewmodel.MainViewModel
+import org.koin.androidx.compose.getViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AuthorMainScreen(sessionManager: SessionManager) {
+fun AuthorMainScreen(
+    sessionManager: SessionManager,
+    mainViewModel: MainViewModel = getViewModel()
+) {
     val navController = rememberNavController()
     val currentUser by sessionManager.currentUser.collectAsState()
     val isLoggedIn by sessionManager.isLoggedIn.collectAsState()
@@ -78,20 +83,10 @@ fun AuthorMainScreen(sessionManager: SessionManager) {
                 currentRoute?.startsWith(Screen.BookEdit.route.substringBefore("/")) != true &&
                 !viewingOtherProfile
 
-    androidx.compose.runtime.LaunchedEffect(isLoggedIn) {
+    // Use ViewModel to fetch user instead of direct service call
+    LaunchedEffect(isLoggedIn) {
         if (isLoggedIn == true && currentUser == null) {
-            try {
-                val profilesService = org.koin.core.context.GlobalContext.get()
-                    .get<com.example.booknest.data.service.ProfilesService>()
-                val response = profilesService.getMe()
-                if (response.isSuccessful) {
-                    response.body()?.let { user ->
-                        sessionManager.updateUser(user)
-                    }
-                }
-            } catch (e: Exception) {
-                println("DEBUG: Failed to fetch user in AuthorMainScreen: ${e.message}")
-            }
+            mainViewModel.fetchCurrentUser()
         }
     }
 
@@ -301,12 +296,12 @@ fun AuthorNavGraph(
             val encodedUserName = backStackEntry.arguments?.getString("userName")
             val userName = encodedUserName?.let {
                 try {
-                    android.net.Uri.decode(it)
+                    Uri.decode(it)
                 } catch (e: Exception) {
                     it
                 }
             }
-            com.example.booknest.ui.reviews.UserReviewsScreen(navController, userId, userName)
+            UserReviewsScreen(navController, userId, userName)
         }
 
         composable(
