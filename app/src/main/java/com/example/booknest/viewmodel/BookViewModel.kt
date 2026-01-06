@@ -128,7 +128,7 @@ class BookViewModel(
         maxAvgRating: Double? = null,
         skip: Int? = null,
         take: Int? = null,
-        status: String? = "active",
+        status: String? = null,
         applicationStatus: String? = null,
         deadlineFilter: String? = null,
         sortBy: String? = null,

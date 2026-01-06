@@ -525,7 +525,11 @@ fun BookCreationWizard(
 
     if (showPublishDialog && createdBookId != null) {
         androidx.compose.material3.AlertDialog(
-            onDismissRequest = { },
+            onDismissRequest = {
+                showPublishDialog = false
+                authorViewModel.clearBookCreationState()
+                navController.popBackStack()
+            },
             title = { Text("Book Created Successfully!") },
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
             text = {

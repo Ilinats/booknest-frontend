@@ -20,6 +20,7 @@ import com.example.booknest.domain.model.response.ApplicationResponse
 import com.example.booknest.navigation.Screen
 import com.example.booknest.ui.applications.components.detail.BookSummaryHeader
 import com.example.booknest.ui.applications.components.detail.BulkActionsBar
+import com.example.booknest.ui.applications.components.detail.OverdueReviewsCard
 import com.example.booknest.ui.applications.components.detail.SortFilterBar
 import com.example.booknest.ui.applications.components.list.ApplicationStatsSection
 import com.example.booknest.ui.applications.components.list.AuthorApprovedTabInfoCard
@@ -57,6 +58,7 @@ fun BookApplicationDetailContent(
     val isLoading by applicationViewModel.isLoading.collectAsState()
     val bookDetails by bookViewModel.bookDetails.collectAsState()
     val bookReviews by reviewViewModel.bookReviews.collectAsState()
+    val allOverdueReviews by applicationViewModel.overdueReviews.collectAsState()
 
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("All", "Pending", "Approved", "Rejected", "Reviews", "Statistics")
@@ -91,6 +93,7 @@ fun BookApplicationDetailContent(
         bookViewModel.getBookDetails(bookId)
         applicationViewModel.loadBookApplications(bookId)
         reviewViewModel.loadBookReviews(bookId)
+        applicationViewModel.loadOverdueReviews()
     }
 
     LaunchedEffect(selectedTab) {
@@ -121,6 +124,12 @@ fun BookApplicationDetailContent(
             rejected = rejected,
             withdrawn = withdrawn
         )
+    }
+
+    val overdueReviews = remember(allOverdueReviews, bookId) {
+        allOverdueReviews.filter { application ->
+            application.bookId == bookId || application.book?.id == bookId
+        }
     }
 
     val filteredApplications: List<ApplicationResponse> =
@@ -239,6 +248,18 @@ fun BookApplicationDetailContent(
 
             item {
                 ApplicationStatsSection(stats = applicationStats)
+            }
+
+            if (overdueReviews.isNotEmpty()) {
+                item {
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+                item {
+                    OverdueReviewsCard(
+                        overdueCount = overdueReviews.size,
+                        overdueApplications = overdueReviews
+                    )
+                }
             }
 
             if (isLotteryBook) {
