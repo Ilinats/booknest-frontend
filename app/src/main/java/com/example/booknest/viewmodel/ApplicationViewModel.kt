@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import com.example.booknest.ui.toast.GlobalToastHandler
 
@@ -49,6 +50,9 @@ class ApplicationViewModel(
 
     private val _bookApplications = MutableStateFlow<List<ApplicationResponse>>(emptyList())
     val bookApplications: StateFlow<List<ApplicationResponse>> = _bookApplications
+
+    private val _overdueReviews = MutableStateFlow<List<ApplicationResponse>>(emptyList())
+    val overdueReviews: StateFlow<List<ApplicationResponse>> = _overdueReviews.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
@@ -426,6 +430,24 @@ class ApplicationViewModel(
                 GlobalToastHandler.showError("Error running lottery: ${e.message}")
             } finally {
                 _isLoading.value = false
+            }
+        }
+    }
+
+    fun loadOverdueReviews() {
+        viewModelScope.launch {
+            try {
+                val result = applicationsRepository.getOverdueReviews()
+                result
+                    .onSuccess { applications ->
+                        _overdueReviews.value = applications
+                    }
+                    .onFailure { e ->
+                        // Silently fail - don't show error toast for this
+                        _overdueReviews.value = emptyList()
+                    }
+            } catch (e: Exception) {
+                _overdueReviews.value = emptyList()
             }
         }
     }

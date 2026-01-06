@@ -232,6 +232,7 @@ class AuthorViewModel(
     ) {
         viewModelScope.launch(kotlinx.coroutines.NonCancellable) {
             try {
+                _bookFileUploadState.value = UiState.Loading
                 val mimeType = withContext(kotlinx.coroutines.Dispatchers.IO) {
                     context.contentResolver.getType(fileUri)
                 }
@@ -239,13 +240,16 @@ class AuthorViewModel(
                 val file = withContext(kotlinx.coroutines.Dispatchers.IO) {
                     uriToFileForBook(context, fileUri, mimeType)
                 } ?: run {
-                    onError("File type not allowed. Allowed types: pdf, epub")
+                    val errorMsg = "File type not allowed. Allowed types: pdf, epub"
+                    _bookFileUploadState.value = UiState.Error(errorMsg)
+                    onError(errorMsg)
                     return@launch
                 }
 
                 val uploadManager = com.example.booknest.utils.FileUploadManager(context)
                 val validationResult = uploadManager.validateBookFile(file)
                 if (validationResult is com.example.booknest.utils.FileUploadManager.ValidationResult.Error) {
+                    _bookFileUploadState.value = UiState.Error(validationResult.message)
                     onError(validationResult.message)
                     return@launch
                 }
@@ -255,6 +259,7 @@ class AuthorViewModel(
 
                 result
                     .onSuccess {
+                        _bookFileUploadState.value = UiState.Success(bookId)
                         onSuccess()
                         withContext(kotlinx.coroutines.Dispatchers.IO) {
                             try {
@@ -265,14 +270,18 @@ class AuthorViewModel(
                     }
                     .onFailure { e ->
                         if (e !is kotlinx.coroutines.CancellationException) {
-                            onError(e.message ?: "Failed to upload file")
+                            val errorMsg = e.message ?: "Failed to upload file"
+                            _bookFileUploadState.value = UiState.Error(errorMsg)
+                            onError(errorMsg)
                         }
                     }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
                 if (e !is kotlinx.coroutines.CancellationException) {
-                    onError(e.message ?: "Error uploading file")
+                    val errorMsg = e.message ?: "Error uploading file"
+                    _bookFileUploadState.value = UiState.Error(errorMsg)
+                    onError(errorMsg)
                 }
             }
         }
@@ -516,6 +525,7 @@ class AuthorViewModel(
 
     fun clearBookCreationState() {
         _bookCreationState.value = UiState.Idle
+        _bookFileUploadState.value = UiState.Idle
     }
 
     fun reloadHomeScreenData() {

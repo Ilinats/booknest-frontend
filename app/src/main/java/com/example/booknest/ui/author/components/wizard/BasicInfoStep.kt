@@ -252,8 +252,9 @@ private fun validateFullDescription(description: String): String? {
 }
 
 private fun validatePageCount(pageCount: String): String? {
-    return if (pageCount.isNotBlank()) {
-        val parsed = pageCount.toIntOrNull()
+    val trimmed = pageCount.trim()
+    return if (trimmed.isNotBlank()) {
+        val parsed = trimmed.toIntOrNull()
         parsed?.let { pages ->
             val result = when {
                 pages < 1 -> "Page count must be at least 1"
@@ -261,7 +262,7 @@ private fun validatePageCount(pageCount: String): String? {
                 else -> null
             }
             result
-        } ?: "Please enter a valid number"
+        }
     } else {
         null
     }

@@ -2,6 +2,8 @@ package com.example.booknest.ui.author.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -159,6 +161,7 @@ fun ProfileHeaderSection(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SocialMediaSection(socialMedia: SocialMediaResponse?) {
     socialMedia?.let { social ->
@@ -172,10 +175,10 @@ fun SocialMediaSection(socialMedia: SocialMediaResponse?) {
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Row(
+                FlowRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     social.instagram?.takeIf { it.isNotBlank() }?.let { url ->
                         SocialMediaLinkChip(
