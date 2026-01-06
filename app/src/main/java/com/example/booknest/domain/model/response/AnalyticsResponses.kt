@@ -78,7 +78,7 @@ data class ReviewPerformanceResponse(
 @Serializable
 data class RecentReviewResponse(
     val id: String,
-    val rating: Int,
+    val rating: Double,
     val reviewType: String,
     val reviewContent: String? = null,
     val wordCount: Int,

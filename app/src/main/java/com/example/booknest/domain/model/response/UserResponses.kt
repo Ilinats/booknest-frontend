@@ -77,7 +77,7 @@ data class UserProfileResponse(
     val reviewsPrivacy: String? = null,
     val notificationsEnabled: Boolean = true,
     val emailNotifications: Boolean = true,
-    val notificationPreferences: NotificationPreferencesResponse? = null,
+    val notificationPreferences: List<String>? = null,
     val addresses: List<ReaderAddressResponse>? = null
 )
 
@@ -98,12 +98,7 @@ data class CustomSocialLinkResponse(
 
 @Serializable
 data class NotificationPreferencesResponse(
-    val friendRequests: Boolean? = null,
-    val friendRequestAccepted: Boolean? = null,
-    val applicationApproved: Boolean? = null,
-    val applicationRejected: Boolean? = null,
-    val reviewDeadlineReminders: Boolean? = null,
-    val authorBookPublished: Boolean? = null
+    val notificationTypes: List<String>? = null
 )
 
 @Serializable
@@ -159,7 +154,7 @@ data class PublicProfileResponse(
     val reviewsPrivacy: String? = null,
     val notificationsEnabled: Boolean = true,
     val emailNotifications: Boolean = true,
-    val notificationPreferences: NotificationPreferencesResponse? = null,
+    val notificationPreferences: List<String>? = null,
     val addresses: List<ReaderAddressResponse>? = null
 ) {
     fun toUserProfileResponse(user: UserResponse): UserProfileResponse {

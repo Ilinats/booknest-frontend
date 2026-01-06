@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.model.request.CreateAddressRequest
 import com.example.booknest.domain.model.request.CustomSocialLink
-import com.example.booknest.domain.model.request.NotificationPreferencesRequest
+import com.example.booknest.domain.model.enums.NotificationType
 import com.example.booknest.domain.model.request.UpdateAddressRequest
 import com.example.booknest.domain.model.request.UpdateNotificationSettingsRequest
 import com.example.booknest.domain.model.request.UpdatePrivacyRequest
@@ -16,7 +16,6 @@ import com.example.booknest.domain.model.response.ActivityStatsResponse
 import com.example.booknest.domain.model.response.PublicUserProfileResponse
 import com.example.booknest.domain.model.response.RecommendedBookResponse
 import com.example.booknest.domain.model.response.SocialMediaResponse
-import com.example.booknest.domain.model.response.NotificationPreferencesResponse
 import com.example.booknest.domain.model.response.UserActivityResponse
 import com.example.booknest.domain.model.response.UserProfileResponse
 import com.example.booknest.domain.model.response.UserStatsDataResponse
@@ -406,27 +405,17 @@ class ProfileViewModel(
     fun updateNotificationSettings(
         notificationsEnabled: Boolean? = null,
         emailNotifications: Boolean? = null,
-        notificationPreferences: NotificationPreferencesResponse? = null
+        notificationPreferences: List<String>? = null
     ) {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
                 _error.value = null
-
-                val preferencesRequest = notificationPreferences?.let {
-                    NotificationPreferencesRequest(
-                        friendRequests = it.friendRequests,
-                        friendRequestAccepted = it.friendRequestAccepted,
-                        applicationApproved = it.applicationApproved,
-                        applicationRejected = it.applicationRejected,
-                        reviewDeadlineReminders = it.reviewDeadlineReminders,
-                        authorBookPublished = it.authorBookPublished
-                    )
-                }
+                
                 val request = UpdateNotificationSettingsRequest(
                     notificationsEnabled = notificationsEnabled,
                     emailNotifications = emailNotifications,
-                    notificationPreferences = preferencesRequest
+                    notificationPreferences = notificationPreferences
                 )
                 val result = profileRepository.updateNotificationSettings(request)
                 result
@@ -443,6 +432,33 @@ class ProfileViewModel(
                 _isLoading.value = false
             }
         }
+    }
+    
+    fun convertNotificationTypesToBooleans(types: List<String>?): Map<String, Boolean> {
+        if (types == null) {
+            return mapOf(
+                NotificationType.FRIEND_REQUEST_RECEIVED to true,
+                NotificationType.FRIEND_REQUEST_ACCEPTED to true,
+                NotificationType.FRIEND_REQUEST_DECLINED to true,
+                NotificationType.APPLICATION_APPROVED to true,
+                NotificationType.APPLICATION_REJECTED to true,
+                NotificationType.REVIEW_DEADLINE_REMINDER to true,
+                NotificationType.AUTHOR_BOOK_PUBLISHED to true
+            )
+        }
+        return mapOf(
+            NotificationType.FRIEND_REQUEST_RECEIVED to types.contains(NotificationType.FRIEND_REQUEST_RECEIVED),
+            NotificationType.FRIEND_REQUEST_ACCEPTED to types.contains(NotificationType.FRIEND_REQUEST_ACCEPTED),
+            NotificationType.FRIEND_REQUEST_DECLINED to types.contains(NotificationType.FRIEND_REQUEST_DECLINED),
+            NotificationType.APPLICATION_APPROVED to types.contains(NotificationType.APPLICATION_APPROVED),
+            NotificationType.APPLICATION_REJECTED to types.contains(NotificationType.APPLICATION_REJECTED),
+            NotificationType.REVIEW_DEADLINE_REMINDER to types.contains(NotificationType.REVIEW_DEADLINE_REMINDER),
+            NotificationType.AUTHOR_BOOK_PUBLISHED to types.contains(NotificationType.AUTHOR_BOOK_PUBLISHED)
+        )
+    }
+    
+    fun convertBooleansToNotificationTypes(prefs: Map<String, Boolean>): List<String> {
+        return prefs.filter { it.value }.keys.toList()
     }
 
     fun loadAddresses() {
@@ -603,13 +619,11 @@ class ProfileViewModel(
                         .onSuccess { avatarUrl ->
                             GlobalToastHandler.showSuccess("Image uploaded successfully")
                             loadMyProfile()
-                            // Update current user using UseCase
                             getCurrentUserUseCase()
                                 .onSuccess { user ->
                                     sessionManager.updateUser(user)
                                 }
                                 .onFailure { e ->
-                                    // Error already handled by GlobalToastHandler in UseCase if needed
                                 }
                         }
                         .onFailure { e ->
@@ -677,8 +691,7 @@ class ProfileViewModel(
                         android.util.Log.d("ProfileViewModel", "Calling logout from viewModelScope")
                         sessionManager.logout(authRepository)
                         android.util.Log.d("ProfileViewModel", "Logout completed, emitting navigation event")
-                        
-                        // Emit navigation event to navigate to landing screen
+
                         _navigationEvent.emit(
                             NavigationEvent.NavigateAndClearStack(Screen.Landing.route)
                         )

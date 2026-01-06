@@ -15,9 +15,20 @@ class TokenInterceptor(private val context: Context) : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
         return runBlocking {
-            val requestBuilder = chain.request().newBuilder()
+            val request = chain.request()
+            val requestUrl = request.url.toString()
+            val host = request.url.host
+            
+            // Skip adding token for S3 URLs (they don't accept Bearer tokens)
+            val isS3Url = host.contains("s3") || host.contains("amazonaws.com")
+            
+            if (isS3Url) {
+                return@runBlocking chain.proceed(request)
+            }
+            
+            val requestBuilder = request.newBuilder()
 
-            val token = if (chain.request().url.toString() == refreshTokenURL) {
+            val token = if (requestUrl == refreshTokenURL) {
                 SessionManager.getInstance(dataStore = context.dataStore).getRefreshToken()
             } else {
                 SessionManager.getInstance(dataStore = context.dataStore).getToken()

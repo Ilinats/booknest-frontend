@@ -48,17 +48,7 @@ data class UpdatePrivacyRequest(
 data class UpdateNotificationSettingsRequest(
     val notificationsEnabled: Boolean? = null,
     val emailNotifications: Boolean? = null,
-    val notificationPreferences: NotificationPreferencesRequest? = null
-)
-
-@Serializable
-data class NotificationPreferencesRequest(
-    val friendRequests: Boolean? = null,
-    val friendRequestAccepted: Boolean? = null,
-    val applicationApproved: Boolean? = null,
-    val applicationRejected: Boolean? = null,
-    val reviewDeadlineReminders: Boolean? = null,
-    val authorBookPublished: Boolean? = null
+    val notificationPreferences: List<String>? = null
 )
 
 @Serializable
