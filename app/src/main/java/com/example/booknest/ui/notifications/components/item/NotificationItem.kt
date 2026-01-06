@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.booknest.domain.model.enums.NotificationType
 import com.example.booknest.domain.model.response.NotificationResponse
 import com.example.booknest.ui.notifications.utils.formatNotificationTime
 
@@ -75,7 +76,7 @@ fun NotificationItem(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable(
-                            enabled = notification.type != "friend_request_received",
+                            enabled = notification.type != NotificationType.FRIEND_REQUEST_RECEIVED,
                             onClick = onNotificationClick
                         ),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -98,7 +99,7 @@ fun NotificationItem(
                             text = notification.body,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = if (notification.type == "friend_request_received") 2 else 3,
+                            maxLines = if (notification.type == NotificationType.FRIEND_REQUEST_RECEIVED) 2 else 3,
                             overflow = TextOverflow.Ellipsis
                         )
 
@@ -112,7 +113,7 @@ fun NotificationItem(
                     }
                 }
 
-                if (notification.type == "friend_request_received") {
+                if (notification.type == NotificationType.FRIEND_REQUEST_RECEIVED) {
                     Spacer(modifier = Modifier.height(12.dp))
                     NotificationActions(
                         notification = notification,
@@ -125,7 +126,7 @@ fun NotificationItem(
                 }
             }
 
-            if (notification.type != "friend_request_received") {
+            if (notification.type != NotificationType.FRIEND_REQUEST_RECEIVED) {
                 IconButton(
                     onClick = onDeleteClick,
                     modifier = Modifier

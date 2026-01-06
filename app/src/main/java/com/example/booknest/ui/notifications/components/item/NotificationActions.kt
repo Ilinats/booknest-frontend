@@ -19,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.booknest.domain.model.enums.NotificationType
 import com.example.booknest.domain.model.response.NotificationResponse
 
 @Composable
@@ -30,7 +31,7 @@ fun NotificationActions(
     onNotificationClick: () -> Unit,
     isProcessing: Boolean
 ) {
-    if (notification.type == "friend_request_received" && notification.relatedUserId != null) {
+    if (notification.type == NotificationType.FRIEND_REQUEST_RECEIVED && notification.relatedUserId != null) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
