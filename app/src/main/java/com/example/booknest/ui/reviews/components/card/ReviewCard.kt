@@ -72,7 +72,7 @@ fun ReviewCard(
                 )
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    repeat(review.rating) {
+                    repeat(review.rating.toInt()) {
                         Icon(
                             imageVector = Icons.Default.Star,
                             contentDescription = "Star",

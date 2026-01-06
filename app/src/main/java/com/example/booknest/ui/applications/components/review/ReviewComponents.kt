@@ -206,7 +206,7 @@ fun ReviewDetailDialog(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            repeat(r.rating) {
+                            repeat(r.rating.toInt()) {
                                 Icon(
                                     Icons.Default.Star,
                                     contentDescription = null,
@@ -214,7 +214,7 @@ fun ReviewDetailDialog(
                                     tint = Color(0xFFFFC107)
                                 )
                             }
-                            Text("(${r.rating}/5)")
+                            Text("(${String.format("%.2f", r.rating)}/5)")
                         }
                     }
 

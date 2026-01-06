@@ -124,7 +124,7 @@ class ReviewViewModel(
 
     fun createReview(
         applicationId: String,
-        rating: Int,
+        rating: Double,
         reviewType: ReviewType,
         reviewContent: String? = null,
         reviewUrls: List<String>? = null,
@@ -162,7 +162,7 @@ class ReviewViewModel(
 
     fun updateReview(
         reviewId: String,
-        rating: Int? = null,
+        rating: Double? = null,
         reviewType: ReviewType? = null,
         reviewContent: String? = null,
         reviewUrls: List<String>? = null,

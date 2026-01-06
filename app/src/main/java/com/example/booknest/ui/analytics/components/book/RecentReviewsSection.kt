@@ -85,7 +85,7 @@ fun RecentReviewItem(review: RecentReviewResponse) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    repeat(review.rating) {
+                    repeat(review.rating.toInt()) {
                         Icon(
                             Icons.Default.Star,
                             contentDescription = null,

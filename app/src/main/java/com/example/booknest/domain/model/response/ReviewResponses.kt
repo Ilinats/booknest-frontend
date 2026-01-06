@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 data class ReviewResponse(
     val id: String,
     val applicationId: String,
-    val rating: Int,
+    val rating: Double,
     val reviewType: String? = null,
     val reviewContent: String? = null,
     val reviewUrls: List<String>? = null,

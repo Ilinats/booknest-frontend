@@ -46,7 +46,7 @@ fun ReviewItem(
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    repeat(review.rating) {
+                    repeat(review.rating.toInt()) {
                         Icon(
                             Icons.Default.Star,
                             contentDescription = "Star",

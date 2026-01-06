@@ -112,7 +112,7 @@ fun ReviewCard(review: ReviewResponse) {
                             imageVector = Icons.Filled.Star,
                             contentDescription = "$star stars",
                             modifier = Modifier.size(16.dp),
-                            tint = if (star <= review.rating) Color.Yellow else MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = if (star <= review.rating.toInt()) Color.Yellow else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Spacer(modifier = Modifier.width(4.dp))
