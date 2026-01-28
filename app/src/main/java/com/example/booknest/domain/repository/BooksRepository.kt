@@ -38,7 +38,6 @@ interface BooksRepository {
         sortBy: String? = null
     ): Result<List<RecommendedBookResponse>>
 
-    suspend fun getFeaturedBooks(): Result<List<BookResponse>>
     suspend fun searchBooks(query: String, skip: Int? = null, take: Int? = null): Result<List<RecommendedBookResponse>>
     suspend fun getRecommendedBooks(take: Int? = null): Result<List<RecommendedBookResponse>>
     suspend fun getTrendingBooks(limit: Int? = null): Result<List<TrendingBookResponse>>

@@ -123,7 +123,6 @@ fun BookDetailsScreen(
 
     LaunchedEffect(
         bookViewModel.books,
-        bookViewModel.featuredBooks,
         bookViewModel.recommendedBooks,
         bookViewModel.newReleases,
         bookViewModel.homeSearchResults
@@ -181,7 +180,8 @@ fun BookDetailsScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
+                    .padding(paddingValues)
+                    .background(MaterialTheme.colorScheme.secondary),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()

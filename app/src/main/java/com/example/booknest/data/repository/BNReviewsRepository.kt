@@ -36,10 +36,6 @@ class BNReviewsRepository(private val reviewsDataSource: ReviewsDataSource) : Re
         return resultBody(reviewsDataSource.getUserReviews(userId))
     }
 
-    override suspend fun getFeaturedReviews(): Result<List<ReviewResponse>> {
-        return resultBody(reviewsDataSource.getFeaturedReviews())
-    }
-
     override suspend fun getAuthorLatestReviews(limit: Int?): Result<List<ReviewResponse>> {
         return resultBody(reviewsDataSource.getAuthorLatestReviews(limit))
     }

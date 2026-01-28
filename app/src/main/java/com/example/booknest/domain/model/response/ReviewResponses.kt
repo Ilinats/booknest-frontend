@@ -11,7 +11,6 @@ data class ReviewResponse(
     val reviewContent: String? = null,
     val reviewUrls: List<String>? = null,
     val isPublic: Boolean,
-    val isFeatured: Boolean,
     val wordCount: Int? = null,
     val createdAt: String,
     val updatedAt: String,

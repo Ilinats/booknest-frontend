@@ -32,9 +32,6 @@ class BookViewModel(
     private val _books = MutableStateFlow<List<RecommendedBookResponse>>(emptyList())
     val books: StateFlow<List<RecommendedBookResponse>> = _books
 
-    private val _featuredBooks = MutableStateFlow<List<RecommendedBookResponse>>(emptyList())
-    val featuredBooks: StateFlow<List<RecommendedBookResponse>> = _featuredBooks
-
     private val _bookDetails = MutableStateFlow<BookResponse?>(null)
     val bookDetails: StateFlow<BookResponse?> = _bookDetails
 
@@ -185,43 +182,6 @@ class BookViewModel(
     private val _lastFetchCount = MutableStateFlow(0)
     val lastFetchCount: StateFlow<Int> = _lastFetchCount
 
-    fun getFeaturedBooks() {
-        viewModelScope.launch {
-            try {
-                val result = browseBooksUseCase(
-                    query = null,
-                    genres = null,
-                    title = null,
-                    authorName = null,
-                    authorId = null,
-                    seriesName = null,
-                    seriesId = null,
-                    ageRating = null,
-                    distributionType = null,
-                    publishedFrom = null,
-                    publishedTo = null,
-                    createdFrom = null,
-                    createdTo = null,
-                    minAvgRating = null,
-                    maxAvgRating = null,
-                    skip = null,
-                    take = 10,
-                    status = "active"
-                )
-                result
-                    .onSuccess { books ->
-                        _featuredBooks.value = books
-                        println("Featured books loaded: ${books.size} books")
-                    }
-                    .onFailure { e ->
-                        println("Featured books error: ${e.message}")
-                    }
-            } catch (e: Exception) {
-                println("Featured books exception: ${e.message}")
-            }
-        }
-    }
-
     private fun searchBooks(query: String, skip: Int? = null, take: Int? = null) {
         viewModelScope.launch {
             try {
@@ -282,13 +242,8 @@ class BookViewModel(
         _homeSearchResults.value = emptyList()
     }
 
-    /**
-     * Finds a book in all cached sources (books, featuredBooks, recommendedBooks, newReleases, homeSearchResults).
-     * Returns a BookResponse if found, null otherwise.
-     */
     fun findBookInCache(bookId: String): BookResponse? {
         val allBooks = _books.value +
-                _featuredBooks.value +
                 _recommendedBooks.value +
                 _newReleases.value +
                 _homeSearchResults.value
@@ -311,20 +266,16 @@ class BookViewModel(
                 distributionType = cachedBook.distributionType,
                 author = cachedBook.author,
                 authorId = cachedBook.author?.id,
-                fullDescription = null, // Not available in RecommendedBookResponse
-                shortDescription = null, // Not available in RecommendedBookResponse
-                pageCount = null, // Not available in RecommendedBookResponse
-                ageRating = null, // Not available in RecommendedBookResponse
-                seriesId = null, // Not available in RecommendedBookResponse
-                series = null // Not available in RecommendedBookResponse
+                fullDescription = null,
+                shortDescription = null,
+                pageCount = null,
+                ageRating = null,
+                seriesId = null,
+                series = null
             )
         }
     }
 
-    /**
-     * Calculates the effective rating for a book.
-     * If the book has a rating, use it. Otherwise, calculate average from reviews.
-     */
     fun calculateRating(bookRating: Double?, reviews: List<ReviewResponse>): Double {
         return if (bookRating == null || bookRating == 0.0) {
             if (reviews.isNotEmpty()) {

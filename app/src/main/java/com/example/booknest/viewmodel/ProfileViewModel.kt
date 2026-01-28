@@ -24,12 +24,25 @@ import com.example.booknest.domain.repository.AuthRepository
 import com.example.booknest.domain.repository.ProfileRepository
 import com.example.booknest.domain.usecase.books.BrowseBooksUseCase
 import com.example.booknest.domain.usecase.files.UploadProfileImageUseCase
+import com.example.booknest.domain.usecase.profile.AddAddressUseCase
+import com.example.booknest.domain.usecase.profile.DeleteAccountUseCase
+import com.example.booknest.domain.usecase.profile.DeleteAddressUseCase
 import com.example.booknest.domain.usecase.profile.GetAuthorStatsUseCase
 import com.example.booknest.domain.usecase.profile.GetMyActivityUseCase
+import com.example.booknest.domain.usecase.profile.GetMyAddressesUseCase
 import com.example.booknest.domain.usecase.profile.GetMyProfileUseCase
+import com.example.booknest.domain.usecase.profile.GetMyRecentActivityUseCase
 import com.example.booknest.domain.usecase.profile.GetMyStatsUseCase
+import com.example.booknest.domain.usecase.profile.GetPublicUserProfileUseCase
 import com.example.booknest.domain.usecase.profile.GetUserProfileUseCase
+import com.example.booknest.domain.usecase.profile.GetUserRecentActivityUseCase
 import com.example.booknest.domain.usecase.profile.GetCurrentUserUseCase
+import com.example.booknest.domain.usecase.profile.RemoveAvatarUseCase
+import com.example.booknest.domain.usecase.profile.UpdateAddressUseCase
+import com.example.booknest.domain.usecase.profile.UpdateMyProfileUseCase
+import com.example.booknest.domain.usecase.profile.UpdateNotificationSettingsUseCase
+import com.example.booknest.domain.usecase.profile.UpdatePrivacySettingsUseCase
+import com.example.booknest.domain.usecase.profile.UpdateSocialMediaUseCase
 import android.content.Context
 import android.net.Uri
 import kotlinx.coroutines.Dispatchers
@@ -60,7 +73,19 @@ class ProfileViewModel(
     private val getUserProfileUseCase: GetUserProfileUseCase,
     private val getCurrentUserUseCase: GetCurrentUserUseCase,
     private val getMyActivityUseCase: GetMyActivityUseCase,
-    private val profileRepository: ProfileRepository,
+    private val getMyRecentActivityUseCase: GetMyRecentActivityUseCase,
+    private val getUserRecentActivityUseCase: GetUserRecentActivityUseCase,
+    private val getPublicUserProfileUseCase: GetPublicUserProfileUseCase,
+    private val updateMyProfileUseCase: UpdateMyProfileUseCase,
+    private val updateSocialMediaUseCase: UpdateSocialMediaUseCase,
+    private val updatePrivacySettingsUseCase: UpdatePrivacySettingsUseCase,
+    private val updateNotificationSettingsUseCase: UpdateNotificationSettingsUseCase,
+    private val getMyAddressesUseCase: GetMyAddressesUseCase,
+    private val addAddressUseCase: AddAddressUseCase,
+    private val updateAddressUseCase: UpdateAddressUseCase,
+    private val deleteAddressUseCase: DeleteAddressUseCase,
+    private val removeAvatarUseCase: RemoveAvatarUseCase,
+    private val deleteAccountUseCase: DeleteAccountUseCase,
     private val browseBooksUseCase: BrowseBooksUseCase,
     private val uploadProfileImageUseCase: UploadProfileImageUseCase,
     private val authRepository: AuthRepository,
@@ -190,7 +215,7 @@ class ProfileViewModel(
                 _isLoading.value = true
                 _error.value = null
 
-                val result = profileRepository.getMyRecentActivity(days = days, limit = 50)
+                val result = getMyRecentActivityUseCase(days = days, limit = 50)
                 result
                     .onSuccess { activities ->
                         _myRecentActivity.value = activities
@@ -213,7 +238,7 @@ class ProfileViewModel(
                 _error.value = null
 
                 val result =
-                    profileRepository.getUserRecentActivity(username, days = days, limit = 50)
+                    getUserRecentActivityUseCase(username, days = days, limit = 50)
                 result
                     .onSuccess { activities ->
                         _myRecentActivity.value = activities
@@ -282,7 +307,7 @@ class ProfileViewModel(
                 _isLoading.value = true
                 _error.value = null
 
-                val result = profileRepository.getPublicUserProfile(username)
+                val result = getPublicUserProfileUseCase(username)
                 result
                     .onSuccess { profile ->
                         _publicProfile.value = profile
@@ -320,7 +345,7 @@ class ProfileViewModel(
                     bio = bio?.takeIf { it.isNotBlank() },
                     avatarUrl = avatarUrl?.takeIf { it.isNotBlank() }
                 )
-                val result = profileRepository.updateMyProfile(request)
+                val result = updateMyProfileUseCase(request)
                 result
                     .onSuccess { profile ->
                         onProfileLoaded(profile)
@@ -350,7 +375,7 @@ class ProfileViewModel(
                     goodreads = socialMedia.goodreads,
                     custom = customLinks
                 )
-                val result = profileRepository.updateSocialMedia(request)
+                val result = updateSocialMediaUseCase(request)
                 result
                     .onSuccess { profile ->
                         onProfileLoaded(profile)
@@ -385,7 +410,7 @@ class ProfileViewModel(
                     readingListPrivacy = readingListPrivacy,
                     reviewsPrivacy = reviewsPrivacy
                 )
-                val result = profileRepository.updatePrivacySettings(request)
+                val result = updatePrivacySettingsUseCase(request)
                 result
                     .onSuccess { profile ->
                         onProfileLoaded(profile)
@@ -417,7 +442,7 @@ class ProfileViewModel(
                     emailNotifications = emailNotifications,
                     notificationPreferences = notificationPreferences
                 )
-                val result = profileRepository.updateNotificationSettings(request)
+                val result = updateNotificationSettingsUseCase(request)
                 result
                     .onSuccess { profile ->
                         onProfileLoaded(profile)
@@ -466,7 +491,7 @@ class ProfileViewModel(
             try {
                 _isLoading.value = true
                 _error.value = null
-                val result = profileRepository.getMyAddresses()
+                val result = getMyAddressesUseCase()
                 result
                     .onSuccess { addresses ->
                         _addresses.value = addresses
@@ -501,7 +526,7 @@ class ProfileViewModel(
                     country = country,
                     isPrimary = isPrimary
                 )
-                val result = profileRepository.addAddress(request)
+                val result = addAddressUseCase(request)
                 result
                     .onSuccess {
                         loadAddresses()
@@ -538,7 +563,7 @@ class ProfileViewModel(
                     country = country,
                     isPrimary = isPrimary
                 )
-                val result = profileRepository.updateAddress(addressId, request)
+                val result = updateAddressUseCase(addressId, request)
                 result
                     .onSuccess {
                         loadAddresses()
@@ -561,7 +586,7 @@ class ProfileViewModel(
                 _isLoading.value = true
                 _error.value = null
 
-                val result = profileRepository.deleteAddress(addressId)
+                val result = deleteAddressUseCase(addressId)
                 result
                     .onSuccess {
                         loadAddresses()
@@ -654,7 +679,7 @@ class ProfileViewModel(
                 _isLoading.value = true
                 _error.value = null
 
-                val result = profileRepository.removeAvatar()
+                val result = removeAvatarUseCase()
                 result
                     .onSuccess { user ->
                         sessionManager.updateUser(user)
@@ -683,7 +708,7 @@ class ProfileViewModel(
                 _isLoading.value = true
                 _error.value = null
 
-                val result = profileRepository.deleteAccount()
+                val result = deleteAccountUseCase()
                 result
                     .onSuccess {
                         android.util.Log.d("ProfileViewModel", "Delete account success")

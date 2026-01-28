@@ -8,14 +8,34 @@ import com.example.booknest.domain.model.response.FriendshipStatusResponse
 import com.example.booknest.domain.model.response.UserActivityResponse
 import com.example.booknest.domain.model.response.UserResponse
 import com.example.booknest.domain.repository.FriendsRepository
+import com.example.booknest.domain.usecase.friends.AcceptFriendRequestUseCase
+import com.example.booknest.domain.usecase.friends.CancelFriendRequestUseCase
+import com.example.booknest.domain.usecase.friends.DeclineFriendRequestUseCase
+import com.example.booknest.domain.usecase.friends.GetFriendsActivityUseCase
 import com.example.booknest.domain.usecase.friends.GetFriendsUseCase
+import com.example.booknest.domain.usecase.friends.GetFriendshipStatusUseCase
+import com.example.booknest.domain.usecase.friends.GetReceivedFriendRequestsUseCase
+import com.example.booknest.domain.usecase.friends.GetSentFriendRequestsUseCase
+import com.example.booknest.domain.usecase.friends.SearchUsersUseCase
+import com.example.booknest.domain.usecase.friends.SendFriendRequestUseCase
+import com.example.booknest.domain.usecase.friends.UnfriendUserUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class FriendViewModel(
-    private val friendsRepository: FriendsRepository,
+    private val getFriendsUseCase: GetFriendsUseCase,
+    private val getSentFriendRequestsUseCase: GetSentFriendRequestsUseCase,
+    private val getReceivedFriendRequestsUseCase: GetReceivedFriendRequestsUseCase,
+    private val getFriendsActivityUseCase: GetFriendsActivityUseCase,
+    private val searchUsersUseCase: SearchUsersUseCase,
+    private val sendFriendRequestUseCase: SendFriendRequestUseCase,
+    private val acceptFriendRequestUseCase: AcceptFriendRequestUseCase,
+    private val declineFriendRequestUseCase: DeclineFriendRequestUseCase,
+    private val cancelFriendRequestUseCase: CancelFriendRequestUseCase,
+    private val unfriendUserUseCase: UnfriendUserUseCase,
+    private val getFriendshipStatusUseCase: GetFriendshipStatusUseCase,
     private val sessionManager: SessionManager
 ) : ViewModel() {
 
@@ -48,7 +68,7 @@ class FriendViewModel(
             try {
                 _isLoading.value = true
                 _error.value = null
-                val result = friendsRepository.getFriends()
+                val result = getFriendsUseCase()
                 result
                     .onSuccess { friendsList ->
                         _friends.value = friendsList
@@ -69,7 +89,7 @@ class FriendViewModel(
             try {
                 _isLoading.value = true
                 _error.value = null
-                val result = friendsRepository.getSentFriendRequests()
+                val result = getSentFriendRequestsUseCase()
                 result
                     .onSuccess { requestsList ->
                         _sentRequests.value = requestsList
@@ -90,7 +110,7 @@ class FriendViewModel(
             try {
                 _isLoading.value = true
                 _error.value = null
-                val result = friendsRepository.getReceivedFriendRequests()
+                val result = getReceivedFriendRequestsUseCase()
                 result
                     .onSuccess { requestsList ->
                         _receivedRequests.value = requestsList
@@ -119,7 +139,7 @@ class FriendViewModel(
             try {
                 _isLoading.value = true
                 _error.value = null
-                val result = friendsRepository.getFriendsActivity()
+                val result = getFriendsActivityUseCase()
                 result
                     .onSuccess { activityList ->
                         android.util.Log.d(
@@ -159,7 +179,7 @@ class FriendViewModel(
             try {
                 _isLoading.value = true
                 _error.value = null
-                val result = friendsRepository.searchUsers(query)
+                val result = searchUsersUseCase(query)
                 result
                     .onSuccess { users ->
                         _searchResults.value = users
@@ -180,7 +200,7 @@ class FriendViewModel(
             try {
                 _isLoading.value = true
                 _error.value = null
-                val result = friendsRepository.sendFriendRequest(username)
+                val result = sendFriendRequestUseCase(username)
                 result
                     .onSuccess {
                         loadSentRequests()
@@ -201,7 +221,7 @@ class FriendViewModel(
             try {
                 _isLoading.value = true
                 _error.value = null
-                val result = friendsRepository.acceptFriendRequest(requesterId)
+                val result = acceptFriendRequestUseCase(requesterId)
                 result
                     .onSuccess {
                         loadFriends()
@@ -223,7 +243,7 @@ class FriendViewModel(
             try {
                 _isLoading.value = true
                 _error.value = null
-                val result = friendsRepository.declineFriendRequest(requesterId)
+                val result = declineFriendRequestUseCase(requesterId)
                 result
                     .onSuccess {
                         loadReceivedRequests()
@@ -244,7 +264,7 @@ class FriendViewModel(
             try {
                 _isLoading.value = true
                 _error.value = null
-                val result = friendsRepository.cancelFriendRequest(addresseeId)
+                val result = cancelFriendRequestUseCase(addresseeId)
                 result
                     .onSuccess {
                         loadSentRequests()
@@ -265,7 +285,7 @@ class FriendViewModel(
             try {
                 _isLoading.value = true
                 _error.value = null
-                val result = friendsRepository.unfriendUser(friendId)
+                val result = unfriendUserUseCase(friendId)
                 result
                     .onSuccess {
                         loadFriends()
@@ -285,7 +305,7 @@ class FriendViewModel(
     fun getFriendshipStatus(userId: String) {
         viewModelScope.launch {
             try {
-                val result = friendsRepository.getFriendshipStatus(userId)
+                val result = getFriendshipStatusUseCase(userId)
                 _friendshipStatuses.value = _friendshipStatuses.value + (userId to result.getOrNull())
             } catch (e: Exception) {
                 _friendshipStatuses.value = _friendshipStatuses.value + (userId to null)
