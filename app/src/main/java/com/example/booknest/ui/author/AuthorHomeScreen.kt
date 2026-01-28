@@ -114,7 +114,6 @@ fun AuthorHomeScreen(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            // Background decoration circles
             Box(
                 modifier = Modifier
                     .align(Alignment.TopStart)

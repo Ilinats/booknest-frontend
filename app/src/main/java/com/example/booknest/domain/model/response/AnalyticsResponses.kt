@@ -143,7 +143,6 @@ data class AuthorTrendsResponse(
 data class MonthlyDataResponse(
     val month: String, val count: Int? = null, val value: Int? = null, val percentage: Int? = null
 ) {
-    // Helper to get the numeric value, preferring count, then value, then percentage
     val numericValue: Int
         get() = count ?: value ?: percentage ?: 0
 }

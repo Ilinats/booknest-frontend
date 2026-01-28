@@ -16,9 +16,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 
-/**
- * Login result data
- */
 data class LoginResult(
     val message: String? = null
 )
@@ -48,13 +45,11 @@ class LoginViewModel(
                                 refreshToken = loginResponse.refreshToken
                             )
 
-                            // Use GetCurrentUserUseCase instead of direct service injection
                             getCurrentUserUseCase()
                                 .onSuccess { user ->
                                     println("DEBUG LoginViewModel: Got user after login, userType=${user.userType}")
                                     sessionManager.updateUser(user)
                                     _loginState.value = UiState.Success(LoginResult("Logged in successfully!"))
-                                    // Emit navigation event instead of callback
                                     _navigationEvent.emit(
                                         NavigationEvent.NavigateAndClearStack(Screen.Main.route)
                                     )

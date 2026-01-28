@@ -121,7 +121,6 @@ fun NavGraph(
                 androidx.compose.runtime.mutableStateOf<String?>(null)
             }
 
-            // Fetch user type from DataStore if needed
             androidx.compose.runtime.LaunchedEffect(isLoggedIn, currentUser?.id) {
                 if (isLoggedIn == true) {
                     if (currentUser == null && storedUserType == null) {
@@ -132,7 +131,6 @@ fun NavGraph(
                         }
                     }
 
-                    // Use ViewModel to fetch user data instead of direct service call
                     if (currentUser == null) {
                         println("DEBUG NavGraph: Fetching user data via ViewModel...")
                         mainViewModel.fetchCurrentUser()

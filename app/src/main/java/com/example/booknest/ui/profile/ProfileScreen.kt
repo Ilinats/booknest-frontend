@@ -279,7 +279,6 @@ fun ProfileContent(
         }
     }
 
-    // Update local state from ViewModel state flows
     LaunchedEffect(friendshipStatuses, profile.userId, profile.id) {
         if (!isOwnProfile) {
             val targetUserId = profile.userId ?: profile.id

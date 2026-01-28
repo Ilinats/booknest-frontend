@@ -322,7 +322,6 @@ private fun formatDateMyBooks(dateString: String?): String {
     }
 }
 
-// Extension function to safely get properties from dynamic objects
 private fun <T> Any?.getProperty(propertyName: String): T? {
     return try {
         val clazz = this?.javaClass

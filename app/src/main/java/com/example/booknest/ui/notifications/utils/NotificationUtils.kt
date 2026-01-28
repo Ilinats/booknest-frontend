@@ -74,8 +74,6 @@ fun handleNotificationNavigation(
         }
 
         else -> {
-            // Handle any unknown notification types by navigating to notifications screen
-            // or do nothing
         }
     }
 }
