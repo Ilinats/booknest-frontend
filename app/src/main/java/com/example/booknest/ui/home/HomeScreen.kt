@@ -1,0 +1,205 @@
+package com.example.booknest.ui.home
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import com.example.booknest.data.session.SessionManager
+import com.example.booknest.ui.components.BackgroundDecoration
+import com.example.booknest.ui.home.components.sections.BookSection
+import com.example.booknest.ui.home.components.sections.FriendsActivitySection
+import com.example.booknest.ui.home.components.sections.GreetingSection
+import com.example.booknest.ui.home.components.sections.QuickActionsSection
+import com.example.booknest.ui.home.components.sections.SearchSection
+import com.example.booknest.ui.home.components.sections.TrendingSection
+import com.example.booknest.viewmodel.ApplicationViewModel
+import com.example.booknest.viewmodel.AuthorFollowViewModel
+import com.example.booknest.viewmodel.BookViewModel
+import com.example.booknest.viewmodel.FriendViewModel
+import com.example.booknest.viewmodel.NotificationViewModel
+import org.koin.androidx.compose.getViewModel
+import org.koin.compose.koinInject
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HomeScreen(
+    navController: NavController,
+    sessionManager: SessionManager = koinInject(),
+    bookViewModel: BookViewModel = getViewModel(),
+    friendViewModel: FriendViewModel = getViewModel(),
+    authorFollowViewModel: AuthorFollowViewModel = getViewModel(),
+    applicationViewModel: ApplicationViewModel = getViewModel(),
+    notificationViewModel: NotificationViewModel = getViewModel()
+) {
+    val recommendedBooks by bookViewModel.recommendedBooks.collectAsState()
+    val newReleases by bookViewModel.newReleases.collectAsState()
+    val isLoading by bookViewModel.isLoading.collectAsState()
+    val currentUser by sessionManager.currentUser.collectAsState()
+
+    val friendsActivity by friendViewModel.friendsActivity.collectAsState()
+    val friendsActivityLoading by friendViewModel.isLoading.collectAsState()
+
+
+    val booksFromFollowedAuthors by authorFollowViewModel.booksFromFollowedAuthors.collectAsState()
+    val followedAuthorsLoading by authorFollowViewModel.isLoading.collectAsState()
+
+    var searchQuery by remember { mutableStateOf("") }
+    val searchResults by bookViewModel.homeSearchResults.collectAsState()
+    val isSearching by bookViewModel.isLoading.collectAsState()
+
+    val myApplications by applicationViewModel.myApplications.collectAsState()
+    val approvedApplications = myApplications.filter { it.status == "approved" }
+    val activeReadingApplications = approvedApplications.filter {
+        it.readingStatus != "reviewed"
+    }
+    val pendingApplications = myApplications.filter { it.status == "pending" }
+
+    val unreadCount by notificationViewModel.unreadCount.collectAsState()
+
+    val trendingBooks by bookViewModel.trendingBooks.collectAsState()
+
+    LaunchedEffect(Unit) {
+        bookViewModel.getRecommendedBooks()
+        bookViewModel.getNewReleases()
+        bookViewModel.getTrendingBooks()
+        friendViewModel.loadFriendsActivity()
+        authorFollowViewModel.loadBooksFromFollowedAuthors()
+        applicationViewModel.loadMyApplications()
+        notificationViewModel.loadUnreadCount()
+    }
+
+    LaunchedEffect(searchQuery) {
+        if (searchQuery.isNotBlank()) {
+            kotlinx.coroutines.delay(500)
+            bookViewModel.searchForHomeScreen(query = searchQuery, take = 20)
+        } else {
+            bookViewModel.clearHomeSearchResults()
+        }
+    }
+
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+        ) {
+            BackgroundDecoration(modifier = Modifier.fillMaxSize())
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .windowInsetsPadding(WindowInsets.navigationBars)
+                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .padding(paddingValues)
+                    .padding(horizontal = 16.dp),
+                contentPadding = PaddingValues(top = 50.dp, bottom = 40.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                item {
+                    SearchSection(
+                        searchQuery = searchQuery,
+                        onSearchQueryChange = { searchQuery = it },
+                        searchResults = searchResults,
+                        isSearching = isSearching,
+                        navController = navController
+                    )
+                }
+
+                item {
+                    GreetingSection(currentUser = currentUser)
+                }
+
+                item {
+                    QuickActionsSection(
+                        activeReadingApplications = activeReadingApplications,
+                        pendingApplications = pendingApplications,
+                        unreadCount = unreadCount,
+                        navController = navController
+                    )
+                }
+
+                item {
+                    BookSection(
+                        title = "Recommended for You",
+                        books = recommendedBooks,
+                        isLoading = isLoading && recommendedBooks.isEmpty(),
+                        navController = navController,
+                        onViewAllClick = {
+                            navController.navigate("books/recommended")
+                        }
+                    )
+                }
+
+                item {
+                    BookSection(
+                        title = "New Releases",
+                        books = newReleases,
+                        isLoading = isLoading && newReleases.isEmpty(),
+                        navController = navController,
+                        onViewAllClick = {
+                            navController.navigate("books/new_releases")
+                        }
+                    )
+                }
+
+                item {
+                    BookSection(
+                        title = "From Authors You Follow",
+                        books = booksFromFollowedAuthors,
+                        isLoading = followedAuthorsLoading && booksFromFollowedAuthors.isEmpty(),
+                        navController = navController,
+                        emptyMessage = "Follow some authors to see their latest books here!",
+                        onViewAllClick = {
+                            navController.navigate("books/followed_authors")
+                        },
+                        useSimpleItem = true
+                    )
+                }
+
+                item {
+                    TrendingSection(
+                        trendingBooks = trendingBooks,
+                        isLoading = isLoading && trendingBooks.isEmpty(),
+                        navController = navController
+                    )
+                }
+
+                item {
+                    FriendsActivitySection(
+                        friendsActivity = friendsActivity,
+                        isLoading = friendsActivityLoading,
+                        navController = navController
+                    )
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+        }
+    }
+}
