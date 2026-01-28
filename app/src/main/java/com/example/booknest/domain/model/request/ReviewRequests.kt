@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class CreateReviewRequest(
     val applicationId: String,
-    val rating: Int,
+    val rating: Double,
     val reviewType: String,
     val reviewContent: String? = null,
     val reviewUrls: List<String>? = null,
@@ -14,7 +14,7 @@ data class CreateReviewRequest(
 
 @Serializable
 data class UpdateReviewRequest(
-    val rating: Int? = null,
+    val rating: Double? = null,
     val reviewType: String? = null,
     val reviewContent: String? = null,
     val reviewUrls: List<String>? = null,

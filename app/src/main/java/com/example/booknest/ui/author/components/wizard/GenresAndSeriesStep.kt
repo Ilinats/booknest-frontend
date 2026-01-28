@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
@@ -15,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.booknest.domain.model.response.GenreResponse
 import com.example.booknest.domain.model.response.SeriesResponse
@@ -173,13 +175,16 @@ fun GenresAndSeriesStep(
         if (selectedSeries != null) {
             OutlinedTextField(
                 value = seriesOrder,
-                onValueChange = {
-                    onUpdate(selectedGenres, selectedSeries, it)
-                    onValidationChange?.invoke(validateSeriesOrder(it))
+                onValueChange = { newValue ->
+                    if (newValue.all { it.isDigit() }) {
+                        onUpdate(selectedGenres, selectedSeries, newValue)
+                        onValidationChange?.invoke(validateSeriesOrder(newValue))
+                    }
                 },
                 label = { Text("Order in Series") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 isError = seriesOrderError != null,
                 supportingText = seriesOrderError?.let {
                     {
@@ -207,12 +212,13 @@ fun GenresAndSeriesStep(
 }
 
 private fun validateSeriesOrder(order: String): String? {
-    return if (order.isNotBlank()) {
-        order.toIntOrNull()?.let { num ->
+    val trimmed = order.trim()
+    return if (trimmed.isNotBlank()) {
+        trimmed.toIntOrNull()?.let { num ->
             when {
                 num < 1 -> "Series order must be at least 1"
                 else -> null
             }
-        } ?: "Please enter a valid number"
+        }
     } else null
 }

@@ -12,11 +12,25 @@ import com.example.booknest.domain.model.request.UpdateReadingStatusRequest
 import com.example.booknest.domain.model.response.ApplicationCheckResponse
 import com.example.booknest.domain.model.response.ApplicationResponse
 import com.example.booknest.domain.repository.ApplicationsRepository
+import com.example.booknest.domain.usecase.applications.BulkActionApplicationsUseCase
+import com.example.booknest.domain.usecase.applications.CheckApplicationUseCase
+import com.example.booknest.domain.usecase.applications.CreateApplicationUseCase
+import com.example.booknest.domain.usecase.applications.GetApplicationUseCase
+import com.example.booknest.domain.usecase.applications.GetBookApplicationsUseCase
 import com.example.booknest.domain.usecase.applications.GetMyApplicationsUseCase
+import com.example.booknest.domain.usecase.applications.GetOverdueReviewsUseCase
+import com.example.booknest.domain.usecase.applications.GetReadingProgressUseCase
+import com.example.booknest.domain.usecase.applications.MarkCopyReceivedUseCase
+import com.example.booknest.domain.usecase.applications.MarkCopySentUseCase
+import com.example.booknest.domain.usecase.applications.RunLotterySelectionUseCase
+import com.example.booknest.domain.usecase.applications.UpdateApplicationCompleteUseCase
+import com.example.booknest.domain.usecase.applications.UpdateReadingStatusUseCase
+import com.example.booknest.domain.usecase.applications.WithdrawApplicationUseCase
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import com.example.booknest.ui.toast.GlobalToastHandler
 
@@ -35,7 +49,19 @@ enum class ApplicationStatus {
 
 class ApplicationViewModel(
     private val getMyApplicationsUseCase: GetMyApplicationsUseCase,
-    private val applicationsRepository: ApplicationsRepository
+    private val checkApplicationUseCase: CheckApplicationUseCase,
+    private val createApplicationUseCase: CreateApplicationUseCase,
+    private val getApplicationUseCase: GetApplicationUseCase,
+    private val getReadingProgressUseCase: GetReadingProgressUseCase,
+    private val withdrawApplicationUseCase: WithdrawApplicationUseCase,
+    private val markCopyReceivedUseCase: MarkCopyReceivedUseCase,
+    private val updateReadingStatusUseCase: UpdateReadingStatusUseCase,
+    private val getBookApplicationsUseCase: GetBookApplicationsUseCase,
+    private val updateApplicationCompleteUseCase: UpdateApplicationCompleteUseCase,
+    private val bulkActionApplicationsUseCase: BulkActionApplicationsUseCase,
+    private val markCopySentUseCase: MarkCopySentUseCase,
+    private val runLotterySelectionUseCase: RunLotterySelectionUseCase,
+    private val getOverdueReviewsUseCase: GetOverdueReviewsUseCase
 ) : ViewModel() {
 
     private val _myApplications = MutableStateFlow<List<ApplicationResponse>>(emptyList())
@@ -49,6 +75,9 @@ class ApplicationViewModel(
 
     private val _bookApplications = MutableStateFlow<List<ApplicationResponse>>(emptyList())
     val bookApplications: StateFlow<List<ApplicationResponse>> = _bookApplications
+
+    private val _overdueReviews = MutableStateFlow<List<ApplicationResponse>>(emptyList())
+    val overdueReviews: StateFlow<List<ApplicationResponse>> = _overdueReviews.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
@@ -78,7 +107,7 @@ class ApplicationViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val result = applicationsRepository.checkApplication(bookId)
+                val result = checkApplicationUseCase(bookId)
                 result
                     .onSuccess { check ->
                         _applicationCheck.value = check
@@ -95,12 +124,12 @@ class ApplicationViewModel(
     }
 
     suspend fun getApplication(applicationId: String) =
-        applicationsRepository.getApplication(applicationId)
+        getApplicationUseCase(applicationId)
 
     fun loadReadingProgress() {
         viewModelScope.launch {
             try {
-                val result = applicationsRepository.getReadingProgress()
+                val result = getReadingProgressUseCase()
                 result.onSuccess { progress ->
                     _readingProgress.value = progress
                 }
@@ -118,7 +147,7 @@ class ApplicationViewModel(
                     bookId = bookId,
                     applicationMessage = message
                 )
-                val result = applicationsRepository.createApplication(request)
+                val result = createApplicationUseCase(request)
                 result
                     .onSuccess {
                         GlobalToastHandler.showSuccess("Application submitted successfully!")
@@ -195,7 +224,7 @@ class ApplicationViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val result = applicationsRepository.withdrawApplication(applicationId)
+                val result = withdrawApplicationUseCase(applicationId)
                 result
                     .onSuccess {
                         GlobalToastHandler.showSuccess("Application withdrawn successfully!")
@@ -217,7 +246,7 @@ class ApplicationViewModel(
             _isLoading.value = true
             try {
                 val trimmedId = applicationId.trim()
-                val result = applicationsRepository.markCopyReceived(trimmedId)
+                val result = markCopyReceivedUseCase(trimmedId)
                 result
                     .onSuccess {
                         GlobalToastHandler.showSuccess("Copy marked as received!")
@@ -239,7 +268,7 @@ class ApplicationViewModel(
             _isLoading.value = true
             try {
                 val request = UpdateReadingStatusRequest(readingStatus = status.value)
-                val result = applicationsRepository.updateReadingStatus(applicationId, request)
+                val result = updateReadingStatusUseCase(applicationId, request)
                 result
                     .onSuccess {
                         GlobalToastHandler.showSuccess("Reading status updated!")
@@ -261,7 +290,7 @@ class ApplicationViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val result = applicationsRepository.getBookApplications(bookId)
+                val result = getBookApplicationsUseCase(bookId)
                 result
                     .onSuccess { apps ->
                         _bookApplications.value = apps
@@ -286,7 +315,7 @@ class ApplicationViewModel(
                     authorNotes = authorNotes
                 )
                 val result =
-                    applicationsRepository.updateApplicationComplete(applicationId, request)
+                    updateApplicationCompleteUseCase(applicationId, request)
                 result
                     .onSuccess {
                         GlobalToastHandler.showSuccess("Application approved!")
@@ -315,7 +344,7 @@ class ApplicationViewModel(
                     authorNotes = authorNotes
                 )
                 val result =
-                    applicationsRepository.updateApplicationComplete(applicationId, request)
+                    updateApplicationCompleteUseCase(applicationId, request)
                 result
                     .onSuccess {
                         GlobalToastHandler.showSuccess("Application rejected!")
@@ -355,7 +384,7 @@ class ApplicationViewModel(
                     action = action,
                     authorNotes = authorNotes
                 )
-                val result = applicationsRepository.bulkActionApplications(currentBookId, request)
+                val result = bulkActionApplicationsUseCase(currentBookId, request)
                 result
                     .onSuccess {
                         GlobalToastHandler.showSuccess("Bulk action completed!")
@@ -376,7 +405,7 @@ class ApplicationViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val result = applicationsRepository.markCopySent(applicationId)
+                val result = markCopySentUseCase(applicationId)
                 result
                     .onSuccess {
                         GlobalToastHandler.showSuccess("Copy marked as sent!")
@@ -400,7 +429,7 @@ class ApplicationViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val result = applicationsRepository.runLotterySelection(bookId)
+                val result = runLotterySelectionUseCase(bookId)
                 result
                     .onSuccess { lotteryResult ->
                         val message = "Lottery completed: ${lotteryResult.approved} approved, ${lotteryResult.rejected} rejected"
@@ -426,6 +455,23 @@ class ApplicationViewModel(
                 GlobalToastHandler.showError("Error running lottery: ${e.message}")
             } finally {
                 _isLoading.value = false
+            }
+        }
+    }
+
+    fun loadOverdueReviews() {
+        viewModelScope.launch {
+            try {
+                val result = getOverdueReviewsUseCase()
+                result
+                    .onSuccess { applications ->
+                        _overdueReviews.value = applications
+                    }
+                    .onFailure { e ->
+                        _overdueReviews.value = emptyList()
+                    }
+            } catch (e: Exception) {
+                _overdueReviews.value = emptyList()
             }
         }
     }

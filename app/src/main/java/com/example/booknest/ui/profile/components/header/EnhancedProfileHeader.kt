@@ -216,7 +216,6 @@ fun EnhancedProfileHeader(
                             Text(if (isFollowingAuthor) "Following" else "Follow")
                         }
                     } else if (!currentUserIsAuthor) {
-                        // Only show friend buttons if current user is not an author
                         when (friendshipStatus?.status) {
                             "accepted" -> {
                                 OutlinedButton(

@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.model.request.CreateAddressRequest
 import com.example.booknest.domain.model.request.CustomSocialLink
-import com.example.booknest.domain.model.request.NotificationPreferencesRequest
+import com.example.booknest.domain.model.enums.NotificationType
 import com.example.booknest.domain.model.request.UpdateAddressRequest
 import com.example.booknest.domain.model.request.UpdateNotificationSettingsRequest
 import com.example.booknest.domain.model.request.UpdatePrivacyRequest
@@ -16,7 +16,6 @@ import com.example.booknest.domain.model.response.ActivityStatsResponse
 import com.example.booknest.domain.model.response.PublicUserProfileResponse
 import com.example.booknest.domain.model.response.RecommendedBookResponse
 import com.example.booknest.domain.model.response.SocialMediaResponse
-import com.example.booknest.domain.model.response.NotificationPreferencesResponse
 import com.example.booknest.domain.model.response.UserActivityResponse
 import com.example.booknest.domain.model.response.UserProfileResponse
 import com.example.booknest.domain.model.response.UserStatsDataResponse
@@ -25,12 +24,25 @@ import com.example.booknest.domain.repository.AuthRepository
 import com.example.booknest.domain.repository.ProfileRepository
 import com.example.booknest.domain.usecase.books.BrowseBooksUseCase
 import com.example.booknest.domain.usecase.files.UploadProfileImageUseCase
+import com.example.booknest.domain.usecase.profile.AddAddressUseCase
+import com.example.booknest.domain.usecase.profile.DeleteAccountUseCase
+import com.example.booknest.domain.usecase.profile.DeleteAddressUseCase
 import com.example.booknest.domain.usecase.profile.GetAuthorStatsUseCase
 import com.example.booknest.domain.usecase.profile.GetMyActivityUseCase
+import com.example.booknest.domain.usecase.profile.GetMyAddressesUseCase
 import com.example.booknest.domain.usecase.profile.GetMyProfileUseCase
+import com.example.booknest.domain.usecase.profile.GetMyRecentActivityUseCase
 import com.example.booknest.domain.usecase.profile.GetMyStatsUseCase
+import com.example.booknest.domain.usecase.profile.GetPublicUserProfileUseCase
 import com.example.booknest.domain.usecase.profile.GetUserProfileUseCase
+import com.example.booknest.domain.usecase.profile.GetUserRecentActivityUseCase
 import com.example.booknest.domain.usecase.profile.GetCurrentUserUseCase
+import com.example.booknest.domain.usecase.profile.RemoveAvatarUseCase
+import com.example.booknest.domain.usecase.profile.UpdateAddressUseCase
+import com.example.booknest.domain.usecase.profile.UpdateMyProfileUseCase
+import com.example.booknest.domain.usecase.profile.UpdateNotificationSettingsUseCase
+import com.example.booknest.domain.usecase.profile.UpdatePrivacySettingsUseCase
+import com.example.booknest.domain.usecase.profile.UpdateSocialMediaUseCase
 import android.content.Context
 import android.net.Uri
 import kotlinx.coroutines.Dispatchers
@@ -61,7 +73,19 @@ class ProfileViewModel(
     private val getUserProfileUseCase: GetUserProfileUseCase,
     private val getCurrentUserUseCase: GetCurrentUserUseCase,
     private val getMyActivityUseCase: GetMyActivityUseCase,
-    private val profileRepository: ProfileRepository,
+    private val getMyRecentActivityUseCase: GetMyRecentActivityUseCase,
+    private val getUserRecentActivityUseCase: GetUserRecentActivityUseCase,
+    private val getPublicUserProfileUseCase: GetPublicUserProfileUseCase,
+    private val updateMyProfileUseCase: UpdateMyProfileUseCase,
+    private val updateSocialMediaUseCase: UpdateSocialMediaUseCase,
+    private val updatePrivacySettingsUseCase: UpdatePrivacySettingsUseCase,
+    private val updateNotificationSettingsUseCase: UpdateNotificationSettingsUseCase,
+    private val getMyAddressesUseCase: GetMyAddressesUseCase,
+    private val addAddressUseCase: AddAddressUseCase,
+    private val updateAddressUseCase: UpdateAddressUseCase,
+    private val deleteAddressUseCase: DeleteAddressUseCase,
+    private val removeAvatarUseCase: RemoveAvatarUseCase,
+    private val deleteAccountUseCase: DeleteAccountUseCase,
     private val browseBooksUseCase: BrowseBooksUseCase,
     private val uploadProfileImageUseCase: UploadProfileImageUseCase,
     private val authRepository: AuthRepository,
@@ -191,7 +215,7 @@ class ProfileViewModel(
                 _isLoading.value = true
                 _error.value = null
 
-                val result = profileRepository.getMyRecentActivity(days = days, limit = 50)
+                val result = getMyRecentActivityUseCase(days = days, limit = 50)
                 result
                     .onSuccess { activities ->
                         _myRecentActivity.value = activities
@@ -214,7 +238,7 @@ class ProfileViewModel(
                 _error.value = null
 
                 val result =
-                    profileRepository.getUserRecentActivity(username, days = days, limit = 50)
+                    getUserRecentActivityUseCase(username, days = days, limit = 50)
                 result
                     .onSuccess { activities ->
                         _myRecentActivity.value = activities
@@ -283,7 +307,7 @@ class ProfileViewModel(
                 _isLoading.value = true
                 _error.value = null
 
-                val result = profileRepository.getPublicUserProfile(username)
+                val result = getPublicUserProfileUseCase(username)
                 result
                     .onSuccess { profile ->
                         _publicProfile.value = profile
@@ -321,7 +345,7 @@ class ProfileViewModel(
                     bio = bio?.takeIf { it.isNotBlank() },
                     avatarUrl = avatarUrl?.takeIf { it.isNotBlank() }
                 )
-                val result = profileRepository.updateMyProfile(request)
+                val result = updateMyProfileUseCase(request)
                 result
                     .onSuccess { profile ->
                         onProfileLoaded(profile)
@@ -351,7 +375,7 @@ class ProfileViewModel(
                     goodreads = socialMedia.goodreads,
                     custom = customLinks
                 )
-                val result = profileRepository.updateSocialMedia(request)
+                val result = updateSocialMediaUseCase(request)
                 result
                     .onSuccess { profile ->
                         onProfileLoaded(profile)
@@ -386,7 +410,7 @@ class ProfileViewModel(
                     readingListPrivacy = readingListPrivacy,
                     reviewsPrivacy = reviewsPrivacy
                 )
-                val result = profileRepository.updatePrivacySettings(request)
+                val result = updatePrivacySettingsUseCase(request)
                 result
                     .onSuccess { profile ->
                         onProfileLoaded(profile)
@@ -406,29 +430,19 @@ class ProfileViewModel(
     fun updateNotificationSettings(
         notificationsEnabled: Boolean? = null,
         emailNotifications: Boolean? = null,
-        notificationPreferences: NotificationPreferencesResponse? = null
+        notificationPreferences: List<String>? = null
     ) {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
                 _error.value = null
-
-                val preferencesRequest = notificationPreferences?.let {
-                    NotificationPreferencesRequest(
-                        friendRequests = it.friendRequests,
-                        friendRequestAccepted = it.friendRequestAccepted,
-                        applicationApproved = it.applicationApproved,
-                        applicationRejected = it.applicationRejected,
-                        reviewDeadlineReminders = it.reviewDeadlineReminders,
-                        authorBookPublished = it.authorBookPublished
-                    )
-                }
+                
                 val request = UpdateNotificationSettingsRequest(
                     notificationsEnabled = notificationsEnabled,
                     emailNotifications = emailNotifications,
-                    notificationPreferences = preferencesRequest
+                    notificationPreferences = notificationPreferences
                 )
-                val result = profileRepository.updateNotificationSettings(request)
+                val result = updateNotificationSettingsUseCase(request)
                 result
                     .onSuccess { profile ->
                         onProfileLoaded(profile)
@@ -444,13 +458,40 @@ class ProfileViewModel(
             }
         }
     }
+    
+    fun convertNotificationTypesToBooleans(types: List<String>?): Map<String, Boolean> {
+        if (types == null) {
+            return mapOf(
+                NotificationType.FRIEND_REQUEST_RECEIVED to true,
+                NotificationType.FRIEND_REQUEST_ACCEPTED to true,
+                NotificationType.FRIEND_REQUEST_DECLINED to true,
+                NotificationType.APPLICATION_APPROVED to true,
+                NotificationType.APPLICATION_REJECTED to true,
+                NotificationType.REVIEW_DEADLINE_REMINDER to true,
+                NotificationType.AUTHOR_BOOK_PUBLISHED to true
+            )
+        }
+        return mapOf(
+            NotificationType.FRIEND_REQUEST_RECEIVED to types.contains(NotificationType.FRIEND_REQUEST_RECEIVED),
+            NotificationType.FRIEND_REQUEST_ACCEPTED to types.contains(NotificationType.FRIEND_REQUEST_ACCEPTED),
+            NotificationType.FRIEND_REQUEST_DECLINED to types.contains(NotificationType.FRIEND_REQUEST_DECLINED),
+            NotificationType.APPLICATION_APPROVED to types.contains(NotificationType.APPLICATION_APPROVED),
+            NotificationType.APPLICATION_REJECTED to types.contains(NotificationType.APPLICATION_REJECTED),
+            NotificationType.REVIEW_DEADLINE_REMINDER to types.contains(NotificationType.REVIEW_DEADLINE_REMINDER),
+            NotificationType.AUTHOR_BOOK_PUBLISHED to types.contains(NotificationType.AUTHOR_BOOK_PUBLISHED)
+        )
+    }
+    
+    fun convertBooleansToNotificationTypes(prefs: Map<String, Boolean>): List<String> {
+        return prefs.filter { it.value }.keys.toList()
+    }
 
     fun loadAddresses() {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
                 _error.value = null
-                val result = profileRepository.getMyAddresses()
+                val result = getMyAddressesUseCase()
                 result
                     .onSuccess { addresses ->
                         _addresses.value = addresses
@@ -485,7 +526,7 @@ class ProfileViewModel(
                     country = country,
                     isPrimary = isPrimary
                 )
-                val result = profileRepository.addAddress(request)
+                val result = addAddressUseCase(request)
                 result
                     .onSuccess {
                         loadAddresses()
@@ -522,7 +563,7 @@ class ProfileViewModel(
                     country = country,
                     isPrimary = isPrimary
                 )
-                val result = profileRepository.updateAddress(addressId, request)
+                val result = updateAddressUseCase(addressId, request)
                 result
                     .onSuccess {
                         loadAddresses()
@@ -545,7 +586,7 @@ class ProfileViewModel(
                 _isLoading.value = true
                 _error.value = null
 
-                val result = profileRepository.deleteAddress(addressId)
+                val result = deleteAddressUseCase(addressId)
                 result
                     .onSuccess {
                         loadAddresses()
@@ -603,13 +644,11 @@ class ProfileViewModel(
                         .onSuccess { avatarUrl ->
                             GlobalToastHandler.showSuccess("Image uploaded successfully")
                             loadMyProfile()
-                            // Update current user using UseCase
                             getCurrentUserUseCase()
                                 .onSuccess { user ->
                                     sessionManager.updateUser(user)
                                 }
                                 .onFailure { e ->
-                                    // Error already handled by GlobalToastHandler in UseCase if needed
                                 }
                         }
                         .onFailure { e ->
@@ -640,7 +679,7 @@ class ProfileViewModel(
                 _isLoading.value = true
                 _error.value = null
 
-                val result = profileRepository.removeAvatar()
+                val result = removeAvatarUseCase()
                 result
                     .onSuccess { user ->
                         sessionManager.updateUser(user)
@@ -669,7 +708,7 @@ class ProfileViewModel(
                 _isLoading.value = true
                 _error.value = null
 
-                val result = profileRepository.deleteAccount()
+                val result = deleteAccountUseCase()
                 result
                     .onSuccess {
                         android.util.Log.d("ProfileViewModel", "Delete account success")
@@ -677,8 +716,7 @@ class ProfileViewModel(
                         android.util.Log.d("ProfileViewModel", "Calling logout from viewModelScope")
                         sessionManager.logout(authRepository)
                         android.util.Log.d("ProfileViewModel", "Logout completed, emitting navigation event")
-                        
-                        // Emit navigation event to navigate to landing screen
+
                         _navigationEvent.emit(
                             NavigationEvent.NavigateAndClearStack(Screen.Landing.route)
                         )

@@ -2,6 +2,8 @@ package com.example.booknest.ui.author.components.profile
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -24,6 +26,7 @@ import com.example.booknest.domain.model.response.SocialMediaResponse
 import com.example.booknest.ui.components.social.SocialMediaLinkChip
 import org.koin.compose.koinInject
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AuthorProfileHeader(
     authorName: String,
@@ -216,10 +219,10 @@ fun AuthorProfileHeader(
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Row(
+                    FlowRow(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         socialMedia.instagram?.takeIf { it.isNotBlank() }
                             ?.let { url ->
@@ -319,7 +322,6 @@ private fun formatDateMyBooks(dateString: String?): String {
     }
 }
 
-// Extension function to safely get properties from dynamic objects
 private fun <T> Any?.getProperty(propertyName: String): T? {
     return try {
         val clazz = this?.javaClass

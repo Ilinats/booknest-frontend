@@ -459,7 +459,6 @@ fun BookCreationWizard(
                         fileUri = bookFileUri!!,
                         context = context,
                         onSuccess = {
-                            // Handled by LaunchedEffect watching bookFileUploadState
                         },
                         onError = { errorMsg ->
                             isUploadingFile = false
@@ -494,7 +493,6 @@ fun BookCreationWizard(
         }
     }
 
-    // Observe book file upload state
     LaunchedEffect(bookFileUploadState, createdBookId) {
         val state = bookFileUploadState
         when (state) {
@@ -525,7 +523,11 @@ fun BookCreationWizard(
 
     if (showPublishDialog && createdBookId != null) {
         androidx.compose.material3.AlertDialog(
-            onDismissRequest = { },
+            onDismissRequest = {
+                showPublishDialog = false
+                authorViewModel.clearBookCreationState()
+                navController.popBackStack()
+            },
             title = { Text("Book Created Successfully!") },
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
             text = {

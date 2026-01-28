@@ -3,12 +3,14 @@ package com.example.booknest.ui.author.components.wizard
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.booknest.ui.author.components.common.AgeRating
 import com.example.booknest.ui.author.components.common.DistributionType
@@ -92,13 +94,16 @@ fun DistributionStep(
 
         OutlinedTextField(
             value = totalCopies,
-            onValueChange = {
-                onUpdate(selectedAgeRating, selectedDistributionType, it)
-                onValidationChange?.invoke(validateTotalCopies(it))
+            onValueChange = { newValue ->
+                if (newValue.all { it.isDigit() }) {
+                    onUpdate(selectedAgeRating, selectedDistributionType, newValue)
+                    onValidationChange?.invoke(validateTotalCopies(newValue))
+                }
             },
             label = { Text("Total Copies") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             isError = totalCopiesError != null,
             supportingText = totalCopiesError?.let {
                 {
@@ -115,12 +120,13 @@ fun DistributionStep(
 }
 
 private fun validateTotalCopies(copies: String): String? {
-    return if (copies.isNotBlank()) {
-        copies.toIntOrNull()?.let { num ->
+    val trimmed = copies.trim()
+    return if (trimmed.isNotBlank()) {
+        trimmed.toIntOrNull()?.let { num ->
             when {
                 num < 1 -> "Total copies must be at least 1"
                 else -> null
             }
-        } ?: "Please enter a valid number"
+        }
     } else null
 }

@@ -55,7 +55,7 @@ import androidx.navigation.NavController
 import com.example.booknest.viewmodel.FavoriteGenresViewModel
 import org.koin.androidx.compose.getViewModel
 import com.example.booknest.data.session.SessionManager
-import com.example.booknest.domain.model.response.NotificationPreferencesResponse
+import com.example.booknest.domain.model.enums.NotificationType
 import com.example.booknest.navigation.Screen
 import com.example.booknest.ui.account.components.privacy.NotificationPreferenceCard
 import com.example.booknest.ui.account.components.privacy.PrivacySettingCard
@@ -138,13 +138,15 @@ fun PrivacySettingsScreen(
                 initialEmailNotifications = newEmailNotifications
             }
 
-            profile.notificationPreferences?.let { prefs ->
-                val newFriendRequests = prefs.friendRequests ?: true
-                val newFriendRequestAccepted = prefs.friendRequestAccepted ?: true
-                val newApplicationApproved = prefs.applicationApproved ?: true
-                val newApplicationRejected = prefs.applicationRejected ?: true
-                val newReviewDeadlineReminders = prefs.reviewDeadlineReminders ?: true
-                val newAuthorBookPublished = prefs.authorBookPublished ?: true
+            profile.notificationPreferences?.let { enabledTypes ->
+                val allEnabled = enabledTypes.isEmpty()
+                
+                val newFriendRequests = allEnabled || enabledTypes.contains(NotificationType.FRIEND_REQUEST_RECEIVED)
+                val newFriendRequestAccepted = allEnabled || enabledTypes.contains(NotificationType.FRIEND_REQUEST_ACCEPTED)
+                val newApplicationApproved = allEnabled || enabledTypes.contains(NotificationType.APPLICATION_APPROVED)
+                val newApplicationRejected = allEnabled || enabledTypes.contains(NotificationType.APPLICATION_REJECTED)
+                val newReviewDeadlineReminders = allEnabled || enabledTypes.contains(NotificationType.REVIEW_DEADLINE_REMINDER)
+                val newAuthorBookPublished = allEnabled || enabledTypes.contains(NotificationType.AUTHOR_BOOK_PUBLISHED)
 
                 friendRequests = newFriendRequests
                 friendRequestAccepted = newFriendRequestAccepted
@@ -580,17 +582,18 @@ fun PrivacySettingsScreen(
                                     readingListPrivacy = readingListPrivacy,
                                     reviewsPrivacy = reviewsPrivacy
                                 )
+                                val enabledTypes = mutableListOf<String>()
+                                if (friendRequests) enabledTypes.add(NotificationType.FRIEND_REQUEST_RECEIVED)
+                                if (friendRequestAccepted) enabledTypes.add(NotificationType.FRIEND_REQUEST_ACCEPTED)
+                                if (applicationApproved) enabledTypes.add(NotificationType.APPLICATION_APPROVED)
+                                if (applicationRejected) enabledTypes.add(NotificationType.APPLICATION_REJECTED)
+                                if (reviewDeadlineReminders) enabledTypes.add(NotificationType.REVIEW_DEADLINE_REMINDER)
+                                if (authorBookPublished) enabledTypes.add(NotificationType.AUTHOR_BOOK_PUBLISHED)
+                                
                                 profileViewModel.updateNotificationSettings(
                                     notificationsEnabled = notificationsEnabled,
                                     emailNotifications = emailNotifications,
-                                    notificationPreferences = NotificationPreferencesResponse(
-                                        friendRequests = friendRequests,
-                                        friendRequestAccepted = friendRequestAccepted,
-                                        applicationApproved = applicationApproved,
-                                        applicationRejected = applicationRejected,
-                                        reviewDeadlineReminders = reviewDeadlineReminders,
-                                        authorBookPublished = authorBookPublished
-                                    )
+                                    notificationPreferences = enabledTypes
                                 )
                                 initialActivityPrivacy = activityPrivacy
                                 initialProfilePrivacy = profilePrivacy

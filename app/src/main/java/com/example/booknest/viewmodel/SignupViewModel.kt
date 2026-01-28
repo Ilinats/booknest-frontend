@@ -1,7 +1,5 @@
 package com.example.booknest.viewmodel
 
-import android.content.Context
-import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.booknest.data.session.SessionManager
@@ -10,15 +8,6 @@ import com.example.booknest.domain.model.response.GenreResponse
 import com.example.booknest.domain.usecase.auth.RegisterUseCase
 import com.example.booknest.domain.usecase.genres.GetGenresUseCase
 import com.example.booknest.domain.usecase.genres.SaveUserGenrePreferenceUseCase
-import com.example.booknest.domain.usecase.files.UploadProfileImageUseCase
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.asRequestBody
-import java.io.File
-import java.io.FileOutputStream
-import java.io.InputStream
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.coroutines.async
@@ -51,9 +40,6 @@ data class SignupData(
     var genres: List<String>? = null
 )
 
-/**
- * Signup result data
- */
 data class SignupResult(
     val message: String? = null
 )
@@ -62,20 +48,15 @@ class SignupViewModel(
     private val sessionManager: SessionManager,
     private val registerUseCase: RegisterUseCase,
     private val getGenresUseCase: GetGenresUseCase,
-    private val saveUserGenrePreferenceUseCase: SaveUserGenrePreferenceUseCase,
-    private val uploadProfileImageUseCase: UploadProfileImageUseCase
+    private val saveUserGenrePreferenceUseCase: SaveUserGenrePreferenceUseCase
 ) : ViewModel() {
     var signupData = SignupData()
-    var pendingImageUri: Uri? = null
 
     private val _signupState = MutableStateFlow<UiState<SignupResult>>(UiState.Idle)
     val signupState: StateFlow<UiState<SignupResult>> = _signupState
 
     private val _availableGenres = MutableStateFlow<List<GenreResponse>>(emptyList())
     val availableGenres: StateFlow<List<GenreResponse>> = _availableGenres
-
-    private val _imageUploadState = MutableStateFlow<ImageUploadState>(ImageUploadState.Idle)
-    val imageUploadState: StateFlow<ImageUploadState> = _imageUploadState
 
     private val _navigationEvent = MutableSharedFlow<NavigationEvent>(replay = 0)
     val navigationEvent: SharedFlow<NavigationEvent> = _navigationEvent.asSharedFlow()
@@ -183,9 +164,10 @@ class SignupViewModel(
                     )
                     sessionManager.updateUser(response.user)
 
+                    saveGenres()
+
                     _signupState.value = UiState.Success(SignupResult("Registration successful!"))
                     
-                    // Emit navigation event instead of callback
                     val userEmail = signupData.email
                     _navigationEvent.emit(
                         NavigationEvent.NavigateTo(
@@ -211,8 +193,17 @@ class SignupViewModel(
         viewModelScope.launch {
             val selectedGenreNames = signupData.genres ?: emptyList()
             if (selectedGenreNames.isEmpty()) {
-                // No genres to save, this is fine - just return
                 return@launch
+            }
+
+            val token = sessionManager.getToken()
+            if (token.isEmpty()) {
+                kotlinx.coroutines.delay(500)
+                val tokenAfterDelay = sessionManager.getToken()
+                if (tokenAfterDelay.isEmpty()) {
+                    GlobalToastHandler.showError("Authentication required. Please complete signup first.")
+                    return@launch
+                }
             }
 
             var allSucceeded = true
@@ -258,74 +249,6 @@ class SignupViewModel(
             }
         }
     }
-
-    fun uploadProfileImage(context: Context, imageUri: Uri) {
-        viewModelScope.launch {
-            try {
-                _imageUploadState.value = ImageUploadState.Uploading
-
-                val file = withContext(Dispatchers.IO) {
-                    uriToFile(context, imageUri)
-                } ?: run {
-                    _imageUploadState.value = ImageUploadState.Error("Failed to process image file")
-                    GlobalToastHandler.showError("Failed to process image file")
-                    return@launch
-                }
-
-                try {
-                    val requestFile = file.asRequestBody("image/*".toMediaType())
-                    val multipartBody =
-                        MultipartBody.Part.createFormData("file", file.name, requestFile)
-
-                    val result = uploadProfileImageUseCase(multipartBody)
-                    result
-                        .onSuccess { avatarUrl ->
-                            _imageUploadState.value = ImageUploadState.Success(avatarUrl)
-                            // Update signupData with the uploaded URL
-                            signupData = signupData.copy(profilePicture = avatarUrl)
-                        }
-                        .onFailure { e ->
-                            val errorMsg = e.message ?: "Failed to upload image"
-                            _imageUploadState.value = ImageUploadState.Error(errorMsg)
-                            GlobalToastHandler.showError(e)
-                        }
-                } finally {
-                    withContext(Dispatchers.IO) {
-                        try {
-                            if (file.exists()) {
-                                file.delete()
-                            }
-                        } catch (e: Exception) {
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                val errorMsg = e.message ?: "Unknown error occurred"
-                _imageUploadState.value = ImageUploadState.Error(errorMsg)
-                GlobalToastHandler.showError(e)
-            }
-        }
-    }
-
-    private suspend fun uriToFile(context: Context, uri: Uri): File? = withContext(Dispatchers.IO) {
-        try {
-            val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
-            inputStream?.use { stream ->
-                val file = File(context.cacheDir, "profile_image_${System.currentTimeMillis()}.jpg")
-                FileOutputStream(file).use { output ->
-                    stream.copyTo(output)
-                }
-                file
-            }
-        } catch (e: Exception) {
-            null
-        }
-    }
 }
 
-sealed class ImageUploadState {
-    object Idle : ImageUploadState()
-    object Uploading : ImageUploadState()
-    data class Success(val url: String) : ImageUploadState()
-    data class Error(val message: String) : ImageUploadState()
-}
+sealed class ImageUploadState

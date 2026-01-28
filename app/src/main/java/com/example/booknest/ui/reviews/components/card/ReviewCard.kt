@@ -25,7 +25,6 @@ import com.example.booknest.ui.reviews.utils.formatDateNullable
 @Composable
 fun ReviewCard(
     review: ReviewResponse,
-    isFeatured: Boolean,
     onBookClick: (String) -> Unit
 ) {
     val bookTitle = review.application?.book?.title
@@ -35,13 +34,10 @@ fun ReviewCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isFeatured) 0.dp else 2.dp
+            defaultElevation = 2.dp
         ),
         colors = CardDefaults.cardColors(
-            containerColor = if (isFeatured)
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Column(
@@ -72,7 +68,7 @@ fun ReviewCard(
                 )
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    repeat(review.rating) {
+                    repeat(review.rating.toInt()) {
                         Icon(
                             imageVector = Icons.Default.Star,
                             contentDescription = "Star",

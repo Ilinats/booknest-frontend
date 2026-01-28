@@ -135,43 +135,9 @@ fun UserReviewsScreen(
                                 Spacer(modifier = Modifier.height(8.dp))
                             }
 
-                            val featuredReviews = userReviews.filter { it.isFeatured }
-                            if (featuredReviews.isNotEmpty()) {
-                                item {
-                                    Text(
-                                        text = "Featured Reviews",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                                items(featuredReviews) { review ->
-                                    ReviewCard(
-                                        review = review,
-                                        isFeatured = true,
-                                        onBookClick = { bookId ->
-                                            navController.navigate(
-                                                Screen.BookDetails.createRoute(
-                                                    bookId
-                                                )
-                                            )
-                                        }
-                                    )
-                                }
-
-                                item {
-                                    Text(
-                                        text = "All Reviews",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-
-                            val regularReviews = userReviews.filter { !it.isFeatured }
-                            items(regularReviews) { review ->
+                            items(userReviews) { review ->
                                 ReviewCard(
                                     review = review,
-                                    isFeatured = false,
                                     onBookClick = { bookId ->
                                         navController.navigate(Screen.BookDetails.createRoute(bookId))
                                     }

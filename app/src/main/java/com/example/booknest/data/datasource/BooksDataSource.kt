@@ -38,7 +38,6 @@ interface BooksDataSource {
         sortBy: String? = null
     ): Result<List<RecommendedBookResponse>>
 
-    suspend fun getFeaturedBooks(): Result<List<BookResponse>>
     suspend fun searchBooks(
         query: String,
         skip: Int?,

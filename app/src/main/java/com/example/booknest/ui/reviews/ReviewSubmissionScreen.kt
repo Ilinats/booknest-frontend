@@ -482,13 +482,13 @@ fun ReviewSubmissionScreen(
                                 else -> ReviewType.TEXT
                             }
 
-                            val intRating = rating.roundToInt().coerceIn(1, 5)
+                            val decimalRating = rating.toDouble().coerceIn(0.0, 5.0)
 
                             hasJustSaved = true
                             if (isEditMode && reviewId != null) {
                                 reviewViewModel.updateReview(
                                     reviewId = reviewId,
-                                    rating = intRating,
+                                    rating = decimalRating,
                                     reviewType = reviewType,
                                     reviewContent = content,
                                     reviewUrls = if (urls.isNotEmpty()) urls else null,
@@ -497,7 +497,7 @@ fun ReviewSubmissionScreen(
                             } else {
                                 reviewViewModel.createReview(
                                     applicationId = applicationId,
-                                    rating = intRating,
+                                    rating = decimalRating,
                                     reviewType = reviewType,
                                     reviewContent = content,
                                     reviewUrls = if (urls.isNotEmpty()) urls else null,

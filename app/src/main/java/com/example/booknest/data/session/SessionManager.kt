@@ -46,20 +46,18 @@ object SessionManager {
 
     suspend fun logout(authRepository: AuthRepository? = null) {
         android.util.Log.d("SessionManager", "logout() called")
-        
-        // Call backend logout if repository is provided and we have a refresh token
+
         val refreshToken = currentRefreshToken
+
         if (authRepository != null && refreshToken.isNotEmpty()) {
             try {
                 authRepository.logout(refreshToken)
                 android.util.Log.d("SessionManager", "Backend logout successful")
             } catch (e: Exception) {
                 android.util.Log.e("SessionManager", "Backend logout failed: ${e.message}", e)
-                // Continue with local logout even if backend logout fails
             }
         }
-        
-        // Clear local session data
+
         setAuthEntities("", "", "", "", "", "")
         _isLoggedIn.emit(false)
         _currentUser.emit(null)

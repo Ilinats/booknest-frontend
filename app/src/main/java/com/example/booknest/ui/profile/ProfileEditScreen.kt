@@ -97,7 +97,6 @@ fun ProfileEditScreen(
 
     val myProfile by profileViewModel.myProfile.collectAsState()
 
-    // Observe avatar upload completion
     LaunchedEffect(myProfile) {
         if (isUploadingImage && myProfile?.avatarUrl?.isNotBlank() == true) {
             avatarUrl = myProfile?.avatarUrl ?: ""

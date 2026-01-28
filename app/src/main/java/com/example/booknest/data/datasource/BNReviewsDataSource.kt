@@ -34,10 +34,6 @@ class BNReviewsDataSource(private val reviewsService: ReviewsService) : ReviewsD
         return requestPaginatedBody(reviewsService.getUserReviews(userId))
     }
 
-    override suspend fun getFeaturedReviews(): Result<List<ReviewResponse>> {
-        return requestPaginatedBody(reviewsService.getFeaturedReviews())
-    }
-
     override suspend fun getAuthorLatestReviews(limit: Int?): Result<List<ReviewResponse>> {
         return requestBody(reviewsService.getAuthorLatestReviews(limit))
     }

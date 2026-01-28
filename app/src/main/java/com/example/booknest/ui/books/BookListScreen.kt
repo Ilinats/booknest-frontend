@@ -178,13 +178,12 @@ fun BookListScreen(
         when (category) {
             "search" -> {
                 searchQuery?.let {
-                    bookViewModel.browseBooks(
-                        query = it,
-                        skip = 0,
-                        take = pageSize,
-                        status = "active",
-                        append = false
-                    )
+                bookViewModel.browseBooks(
+                    query = it,
+                    skip = 0,
+                    take = pageSize,
+                    append = false
+                )
                 }
             }
 
@@ -193,7 +192,6 @@ fun BookListScreen(
                     query = null,
                     skip = 0,
                     take = pageSize,
-                    status = "active",
                     append = false
                 )
             }
@@ -217,7 +215,6 @@ fun BookListScreen(
                 query = if (category == "search") searchQuery else null,
                 skip = 0,
                 take = pageSize,
-                status = "active",
                 append = false
             )
         }
@@ -267,7 +264,6 @@ fun BookListScreen(
                     maxAvgRating = maxAvgRating,
                     skip = 0,
                     take = pageSize,
-                    status = "active",
                     applicationStatus = applicationStatus,
                     deadlineFilter = deadlineFilter,
                     sortBy = sortBy,
@@ -332,7 +328,6 @@ fun BookListScreen(
                 maxAvgRating = maxAvgRating,
                 skip = nextSkip,
                 take = pageSize,
-                status = "active",
                 applicationStatus = applicationStatus,
                 deadlineFilter = deadlineFilter,
                 sortBy = sortBy,

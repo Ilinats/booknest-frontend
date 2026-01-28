@@ -151,7 +151,7 @@ fun CompletedApplicationCard(
                             )
 
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                repeat(it.rating) {
+                                repeat(it.rating.toInt()) {
                                     Icon(
                                         Icons.Filled.Star,
                                         contentDescription = "Star",

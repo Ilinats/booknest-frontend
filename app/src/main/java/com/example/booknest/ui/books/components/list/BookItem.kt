@@ -188,16 +188,21 @@ fun BookItem(
 
                                 if (book.availableCopies != null && book.totalCopies != null && book.totalCopies > 0) {
                                     val filled = book.totalCopies - book.availableCopies
-                                    val slotsText = "${filled}/${book.totalCopies} filled"
+                                    val slotsText = if (book.availableCopies == 0) {
+                                        "Fully Booked"
+                                    } else {
+                                        "${filled}/${book.totalCopies} filled"
+                                    }
                                     val isLowAvailability = book.availableCopies <= 3
+                                    val isFullyBooked = book.availableCopies == 0
 
                                     Surface(
                                         shape = RoundedCornerShape(16.dp),
-                                        color = if (isLowAvailability) 
+                                        color = if (isFullyBooked || isLowAvailability) 
                                             MaterialTheme.colorScheme.errorContainer 
                                         else 
                                             MaterialTheme.colorScheme.surfaceVariant,
-                                        border = if (isLowAvailability) BorderStroke(
+                                        border = if (isFullyBooked || isLowAvailability) BorderStroke(
                                             1.dp,
                                             MaterialTheme.colorScheme.error
                                         ) else null
@@ -205,7 +210,7 @@ fun BookItem(
                                         Text(
                                             text = slotsText,
                                             style = MaterialTheme.typography.labelMedium,
-                                            color = if (isLowAvailability) 
+                                            color = if (isFullyBooked || isLowAvailability) 
                                                 MaterialTheme.colorScheme.onErrorContainer 
                                             else 
                                                 MaterialTheme.colorScheme.onSurfaceVariant,
@@ -379,21 +384,26 @@ fun BookItem(
 
                         if (book.availableCopies != null && book.totalCopies != null && book.totalCopies > 0) {
                             val filled = book.totalCopies - book.availableCopies
-                            val slotsText = "${filled}/${book.totalCopies} filled"
+                            val slotsText = if (book.availableCopies == 0) {
+                                "Fully Booked"
+                            } else {
+                                "${filled}/${book.totalCopies} filled"
+                            }
                             val isLowAvailability = book.availableCopies <= 3
+                            val isFullyBooked = book.availableCopies == 0
 
                             Surface(
                                 shape = RoundedCornerShape(16.dp),
                                 color = Color.Transparent,
                                 border = BorderStroke(
                                     1.dp,
-                                    if (isLowAvailability) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
+                                    if (isFullyBooked || isLowAvailability) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
                                 )
                             ) {
                                 Text(
                                     text = slotsText,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = if (isLowAvailability) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                                    color = if (isFullyBooked || isLowAvailability) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.padding(
                                         horizontal = 12.dp,
                                         vertical = 6.dp

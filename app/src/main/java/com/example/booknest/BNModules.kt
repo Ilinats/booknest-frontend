@@ -215,11 +215,45 @@ val appModule = module {
     factory { GetMyBooksUseCase(get()) }
     factory { GetMySeriesUseCase(get()) }
     factory { GetBookStatsUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.author.CreateBookUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.author.UpdateBookUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.author.DeleteBookUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.author.PublishBookUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.author.FollowAuthorUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.author.UnfollowAuthorUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.author.GetFollowedAuthorsUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.author.GetAuthorFollowersUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.author.CheckIfFollowingAuthorUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.author.GetBooksFromFollowedAuthorsUseCase(get()) }
+
+    factory { com.example.booknest.domain.usecase.series.CreateSeriesUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.series.UpdateSeriesUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.series.DeleteSeriesUseCase(get()) }
 
     factory { GetAuthorAnalyticsUseCase(get()) }
     factory { GetDetailedBookAnalyticsUseCase(get()) }
 
     factory { GetMyApplicationsUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.applications.CheckApplicationUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.applications.CreateApplicationUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.applications.GetApplicationUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.applications.GetReadingProgressUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.applications.WithdrawApplicationUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.applications.MarkCopyReceivedUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.applications.UpdateReadingStatusUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.applications.GetBookApplicationsUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.applications.UpdateApplicationCompleteUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.applications.BulkActionApplicationsUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.applications.MarkCopySentUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.applications.RunLotterySelectionUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.applications.GetOverdueReviewsUseCase(get()) }
+
+    factory { com.example.booknest.domain.usecase.reviews.GetBookReviewsUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.reviews.GetUserReviewsUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.reviews.GetReviewUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.reviews.CreateReviewUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.reviews.UpdateReviewUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.reviews.GetAuthorLatestReviewsUseCase(get()) }
 
     factory { GetCurrentUserUseCase(get()) }
     factory { GetMyProfileUseCase(get()) }
@@ -227,18 +261,49 @@ val appModule = module {
     factory { GetMyStatsUseCase(get()) }
     factory { GetAuthorStatsUseCase(get()) }
     factory { GetMyActivityUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.profile.GetMyRecentActivityUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.profile.GetUserRecentActivityUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.profile.GetPublicUserProfileUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.profile.UpdateMyProfileUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.profile.UpdateSocialMediaUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.profile.UpdatePrivacySettingsUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.profile.UpdateNotificationSettingsUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.profile.GetMyAddressesUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.profile.AddAddressUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.profile.UpdateAddressUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.profile.DeleteAddressUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.profile.RemoveAvatarUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.profile.DeleteAccountUseCase(get()) }
 
     factory { GetGenresUseCase(get()) }
     factory { GetGenrePreferencesUseCase(get()) }
     factory { SaveUserGenrePreferenceUseCase(get()) }
 
     factory { GetFriendsUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.friends.GetSentFriendRequestsUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.friends.GetReceivedFriendRequestsUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.friends.GetFriendsActivityUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.friends.SearchUsersUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.friends.SendFriendRequestUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.friends.AcceptFriendRequestUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.friends.DeclineFriendRequestUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.friends.CancelFriendRequestUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.friends.UnfriendUserUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.friends.GetFriendshipStatusUseCase(get()) }
 
     factory { GetNotificationsUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.notifications.GetUnreadCountUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.notifications.MarkNotificationAsReadUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.notifications.MarkAllNotificationsAsReadUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.notifications.DeleteNotificationUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.notifications.DeleteAllNotificationsUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.notifications.RegisterDeviceTokenUseCase(get()) }
 
     factory { UploadProfileImageUseCase(get()) }
     factory { UploadBookFileUseCase(get()) }
     factory { GetBookDownloadUrlUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.files.UploadBookCoverImageUseCase(get()) }
+    factory { com.example.booknest.domain.usecase.files.RemoveBookCoverImageUseCase(get()) }
 
     viewModel {
         LoginViewModel(
@@ -253,8 +318,7 @@ val appModule = module {
             sessionManager = get(),
             registerUseCase = get(),
             getGenresUseCase = get(),
-            saveUserGenrePreferenceUseCase = get(),
-            uploadProfileImageUseCase = get()
+            saveUserGenrePreferenceUseCase = get()
         )
     }
 
@@ -286,13 +350,29 @@ val appModule = module {
     viewModel {
         ApplicationViewModel(
             getMyApplicationsUseCase = get(),
-            applicationsRepository = get()
+            checkApplicationUseCase = get(),
+            createApplicationUseCase = get(),
+            getApplicationUseCase = get(),
+            getReadingProgressUseCase = get(),
+            withdrawApplicationUseCase = get(),
+            markCopyReceivedUseCase = get(),
+            updateReadingStatusUseCase = get(),
+            getBookApplicationsUseCase = get(),
+            updateApplicationCompleteUseCase = get(),
+            bulkActionApplicationsUseCase = get(),
+            markCopySentUseCase = get(),
+            runLotterySelectionUseCase = get(),
+            getOverdueReviewsUseCase = get()
         )
     }
 
     viewModel {
         ReviewViewModel(
-            reviewsRepository = get(),
+            getBookReviewsUseCase = get(),
+            getUserReviewsUseCase = get(),
+            getReviewUseCase = get(),
+            createReviewUseCase = get(),
+            updateReviewUseCase = get(),
             booksRepository = get()
         )
     }
@@ -306,7 +386,19 @@ val appModule = module {
             getUserProfileUseCase = get(),
             getCurrentUserUseCase = get(),
             getMyActivityUseCase = get(),
-            profileRepository = get(),
+            getMyRecentActivityUseCase = get(),
+            getUserRecentActivityUseCase = get(),
+            getPublicUserProfileUseCase = get(),
+            updateMyProfileUseCase = get(),
+            updateSocialMediaUseCase = get(),
+            updatePrivacySettingsUseCase = get(),
+            updateNotificationSettingsUseCase = get(),
+            getMyAddressesUseCase = get(),
+            addAddressUseCase = get(),
+            updateAddressUseCase = get(),
+            deleteAddressUseCase = get(),
+            removeAvatarUseCase = get(),
+            deleteAccountUseCase = get(),
             browseBooksUseCase = get(),
             uploadProfileImageUseCase = get(),
             authRepository = get()
@@ -315,37 +407,65 @@ val appModule = module {
 
     viewModel {
         NotificationViewModel(
-            notificationsRepository = get(),
-            friendsRepository = get(),
             getNotificationsUseCase = get(),
+            getUnreadCountUseCase = get(),
+            markNotificationAsReadUseCase = get(),
+            markAllNotificationsAsReadUseCase = get(),
+            deleteNotificationUseCase = get(),
+            deleteAllNotificationsUseCase = get(),
+            registerDeviceTokenUseCase = get(),
+            acceptFriendRequestUseCase = get(),
+            declineFriendRequestUseCase = get(),
             sessionManager = get()
         )
     }
 
     viewModel {
         FriendViewModel(
-            friendsRepository = get(),
+            getFriendsUseCase = get(),
+            getSentFriendRequestsUseCase = get(),
+            getReceivedFriendRequestsUseCase = get(),
+            getFriendsActivityUseCase = get(),
+            searchUsersUseCase = get(),
+            sendFriendRequestUseCase = get(),
+            acceptFriendRequestUseCase = get(),
+            declineFriendRequestUseCase = get(),
+            cancelFriendRequestUseCase = get(),
+            unfriendUserUseCase = get(),
+            getFriendshipStatusUseCase = get(),
             sessionManager = get()
         )
     }
 
     viewModel {
         AuthorFollowViewModel(
-            authorFollowRepository = get(),
+            getFollowedAuthorsUseCase = get(),
+            getAuthorFollowersUseCase = get(),
+            getBooksFromFollowedAuthorsUseCase = get(),
+            followAuthorUseCase = get(),
+            unfollowAuthorUseCase = get(),
+            checkIfFollowingAuthorUseCase = get(),
             sessionManager = get()
         )
     }
 
     viewModel {
         AuthorViewModel(
-            booksRepository = get(),
-            seriesRepository = get(),
             getMyBooksUseCase = get(),
             getMySeriesUseCase = get(),
             getBookStatsUseCase = get(),
-            profileRepository = get(),
-            reviewsRepository = get(),
-            applicationsRepository = get()
+            createBookUseCase = get(),
+            updateBookUseCase = get(),
+            deleteBookUseCase = get(),
+            publishBookUseCase = get(),
+            uploadBookFileUseCase = get(),
+            uploadBookCoverImageUseCase = get(),
+            removeBookCoverImageUseCase = get(),
+            getMyStatsUseCase = get(),
+            getAuthorLatestReviewsUseCase = get(),
+            getOverdueReviewsUseCase = get(),
+            createSeriesUseCase = get(),
+            updateSeriesUseCase = get()
         )
     }
 
@@ -384,7 +504,9 @@ val appModule = module {
     viewModel {
         SeriesViewModel(
             getMySeriesUseCase = get(),
-            seriesRepository = get()
+            createSeriesUseCase = get(),
+            updateSeriesUseCase = get(),
+            deleteSeriesUseCase = get()
         )
     }
 }

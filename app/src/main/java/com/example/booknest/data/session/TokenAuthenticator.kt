@@ -18,6 +18,7 @@ class TokenAuthenticator(
 
     private val loginURL = "${RetrofitConstants.BASE_URL}${Auth.LOGIN}"
     private val refreshTokenURL = "${RetrofitConstants.BASE_URL}${Auth.REFRESH_STRING_CONCAT}"
+    private val logoutURL = "${RetrofitConstants.BASE_URL}${Auth.LOGOUT}"
 
     override fun authenticate(route: Route?, response: Response): Request? {
         return runBlocking {
@@ -26,16 +27,18 @@ class TokenAuthenticator(
     }
 
     private suspend fun getRequest(response: Response): Request? {
-        if (response.request.url.toString().endsWith("/login")) {
+        val requestUrl = response.request.url.toString()
+
+        if (requestUrl.endsWith("/login") || requestUrl == loginURL) {
             return null
         }
 
-        if (response.request.url.toString() == refreshTokenURL) {
+        if (requestUrl == refreshTokenURL) {
             SessionManager.getInstance(dataStore = context.dataStore).logout()
             return null
         }
 
-        if (response.request.url.toString() == loginURL) {
+        if (requestUrl == logoutURL) {
             return null
         }
 

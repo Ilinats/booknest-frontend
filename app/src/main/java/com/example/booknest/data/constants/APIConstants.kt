@@ -49,7 +49,6 @@ object Profiles {
 object Books {
     private const val BOOKS = "${Api.PREFIX}/books"
     const val LIST = BOOKS
-    const val FEATURED = "$BOOKS/featured"
     const val SEARCH = "$BOOKS/search"
     const val RECOMMENDED = "$BOOKS/recommended"
     const val TRENDING = "$BOOKS/trending"
@@ -107,7 +106,6 @@ object Reviews {
     const val BY_ID = "$REVIEWS/{reviewId}"
     const val BOOK_REVIEWS = "$REVIEWS/books/{bookId}"
     const val USER_REVIEWS = "$REVIEWS/users/{userId}"
-    const val FEATURED = "$REVIEWS/featured"
     const val AUTHOR_LATEST = "$REVIEWS/author/latest"
 }
 

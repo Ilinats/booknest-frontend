@@ -1,36 +1,25 @@
 package com.example.booknest.ui.onboarding
 
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.shadow
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 import androidx.navigation.NavController
 import com.example.booknest.navigation.NavigationEvent
 import com.example.booknest.navigation.Screen
@@ -38,7 +27,6 @@ import com.example.booknest.ui.components.Toast
 import com.example.booknest.ui.components.ToastMessage
 import com.example.booknest.ui.components.ToastType
 import com.example.booknest.viewmodel.SignupViewModel
-import com.example.booknest.viewmodel.ImageUploadState
 import com.example.booknest.ui.state.UiState
 import kotlinx.coroutines.flow.collectLatest
 
@@ -47,10 +35,8 @@ import kotlinx.coroutines.flow.collectLatest
 fun ProfileDetailsScreen(navController: NavController, viewModel: SignupViewModel) {
     val context = LocalContext.current
     val signupState by viewModel.signupState.collectAsState()
-    val imageUploadState by viewModel.imageUploadState.collectAsState()
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    // Handle navigation events from ViewModel
     LaunchedEffect(Unit) {
         viewModel.navigationEvent.collectLatest { event ->
             when (event) {
@@ -78,32 +64,13 @@ fun ProfileDetailsScreen(navController: NavController, viewModel: SignupViewMode
         }
     }
 
-    // Handle unified UI state - errors are shown via GlobalToastHandler in ViewModel
-    LaunchedEffect(signupState) {
-        when (val state = signupState) {
-            is UiState.Error -> {
-                // Error is already shown via GlobalToastHandler in ViewModel
-            }
-            else -> {}
-        }
-    }
-
     var bio by remember { mutableStateOf("") }
-    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
 
     var streetAddress by remember { mutableStateOf("") }
     var city by remember { mutableStateOf("") }
     var postalCode by remember { mutableStateOf("") }
     var country by remember { mutableStateOf("") }
     var isPrimary by remember { mutableStateOf(true) }
-
-    val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let {
-            selectedImageUri = it
-        }
-    }
 
     Box(
         modifier = Modifier
@@ -201,79 +168,6 @@ fun ProfileDetailsScreen(navController: NavController, viewModel: SignupViewMode
                 )
 
                 Spacer(modifier = Modifier.height(40.dp))
-
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Text(
-                            text = "Profile Picture",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Box(
-                            modifier = Modifier
-                                .size(120.dp)
-                                .clip(CircleShape)
-                                .clickable(enabled = signupState !is UiState.Loading) {
-                                    imagePickerLauncher.launch("image/*")
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            when {
-                                selectedImageUri != null -> {
-                                    AsyncImage(
-                                        model = selectedImageUri,
-                                        contentDescription = "Selected Profile Picture",
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .clip(CircleShape),
-                                        contentScale = ContentScale.Crop
-                                    )
-                                }
-
-                                else -> {
-                                    Icon(
-                                        Icons.Default.Person,
-                                        contentDescription = "Add Profile Picture",
-                                        modifier = Modifier.size(60.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            OutlinedButton(
-                                onClick = {
-                                    imagePickerLauncher.launch("image/*")
-                                },
-                                modifier = Modifier.weight(1f),
-                                enabled = signupState !is UiState.Loading
-                            ) {
-                                Icon(
-                                    Icons.Default.Add,
-                                    contentDescription = "Select Image",
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(if (selectedImageUri != null) "Change Photo" else "Add Photo")
-                            }
-                        }
-                    }
-                }
 
                 OutlinedTextField(
                     value = bio,
@@ -420,9 +314,6 @@ fun ProfileDetailsScreen(navController: NavController, viewModel: SignupViewMode
 
                 Button(
                     onClick = {
-                        selectedImageUri?.let { uri ->
-                            viewModel.pendingImageUri = uri
-                        }
                         viewModel.updateBio(bio.ifBlank { null }, null)
                         viewModel.updateProfileDetails(
                             birthDate = viewModel.signupData.birthDate,
@@ -433,11 +324,6 @@ fun ProfileDetailsScreen(navController: NavController, viewModel: SignupViewMode
                             isPrimary = isPrimary
                         )
                         viewModel.submitSignup()
-                        
-                        // Handle image upload after signup (non-blocking)
-                        selectedImageUri?.let { uri ->
-                            viewModel.uploadProfileImage(context, uri)
-                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()

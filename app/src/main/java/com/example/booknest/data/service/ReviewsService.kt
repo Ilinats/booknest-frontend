@@ -45,9 +45,6 @@ interface ReviewsService {
         @Path(PathConstants.USER_ID) userId: String
     ): Response<PaginatedResponse<ReviewResponse>>
 
-    @GET(Reviews.FEATURED)
-    suspend fun getFeaturedReviews(): Response<PaginatedResponse<ReviewResponse>>
-
     @GET(Reviews.AUTHOR_LATEST)
     suspend fun getAuthorLatestReviews(
         @retrofit2.http.Query("limit") limit: Int?

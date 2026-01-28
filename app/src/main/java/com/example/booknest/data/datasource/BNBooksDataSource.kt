@@ -53,10 +53,6 @@ class BNBooksDataSource(private val booksService: BooksService) : BooksDataSourc
         )
     }
 
-    override suspend fun getFeaturedBooks(): Result<List<BookResponse>> {
-        return requestBody(booksService.getFeaturedBooks())
-    }
-
     override suspend fun searchBooks(
         query: String,
         skip: Int?,

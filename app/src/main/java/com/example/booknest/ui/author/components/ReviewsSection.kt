@@ -133,7 +133,7 @@ fun ReviewCard(
                     ) {
                         repeat(5) { index ->
                             Icon(
-                                if (index < review.rating) Icons.Filled.Star else Icons.Default.Star,
+                                if (index < review.rating.toInt()) Icons.Filled.Star else Icons.Default.Star,
                                 contentDescription = "Star",
                                 modifier = Modifier.size(18.dp),
                                 tint = if (index < review.rating) Color(0xFFFFB300) else Color(

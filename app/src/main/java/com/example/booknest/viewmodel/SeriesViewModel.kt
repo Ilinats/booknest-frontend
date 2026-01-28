@@ -8,6 +8,9 @@ import com.example.booknest.domain.model.response.BookResponse
 import com.example.booknest.domain.model.response.SeriesResponse
 import com.example.booknest.domain.repository.SeriesRepository
 import com.example.booknest.domain.usecase.author.GetMySeriesUseCase
+import com.example.booknest.domain.usecase.series.CreateSeriesUseCase
+import com.example.booknest.domain.usecase.series.DeleteSeriesUseCase
+import com.example.booknest.domain.usecase.series.UpdateSeriesUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,7 +19,9 @@ import com.example.booknest.ui.toast.GlobalToastHandler
 
 class SeriesViewModel(
     private val getMySeriesUseCase: GetMySeriesUseCase,
-    private val seriesRepository: SeriesRepository
+    private val createSeriesUseCase: CreateSeriesUseCase,
+    private val updateSeriesUseCase: UpdateSeriesUseCase,
+    private val deleteSeriesUseCase: DeleteSeriesUseCase
 ) : ViewModel() {
 
     private val _series = MutableStateFlow<List<SeriesResponse>>(emptyList())
@@ -54,7 +59,7 @@ class SeriesViewModel(
             _isLoading.value = true
             try {
                 val request = CreateSeriesRequest(name = name, description = description)
-                val result = seriesRepository.createSeries(request)
+                val result = createSeriesUseCase(request)
                 result
                     .onSuccess { series ->
                         GlobalToastHandler.showSuccess("Series created successfully!")
@@ -76,7 +81,7 @@ class SeriesViewModel(
             _isLoading.value = true
             try {
                 val request = UpdateSeriesRequest(name = name, description = description)
-                val result = seriesRepository.updateSeries(seriesId, request)
+                val result = updateSeriesUseCase(seriesId, request)
                 result
                     .onSuccess { updatedSeries ->
                         GlobalToastHandler.showSuccess("Series updated successfully!")
@@ -97,7 +102,7 @@ class SeriesViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val result = seriesRepository.deleteSeries(seriesId)
+                val result = deleteSeriesUseCase(seriesId)
                 result
                     .onSuccess {
                         GlobalToastHandler.showSuccess("Series deleted successfully!")

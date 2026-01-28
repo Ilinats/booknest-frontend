@@ -6,7 +6,12 @@ import com.example.booknest.domain.model.request.CreateReviewRequest
 import com.example.booknest.domain.model.request.UpdateReviewRequest
 import com.example.booknest.domain.model.response.ApplicationResponse
 import com.example.booknest.domain.model.response.ReviewResponse
-import com.example.booknest.domain.repository.ReviewsRepository
+import com.example.booknest.domain.repository.BooksRepository
+import com.example.booknest.domain.usecase.reviews.CreateReviewUseCase
+import com.example.booknest.domain.usecase.reviews.GetBookReviewsUseCase
+import com.example.booknest.domain.usecase.reviews.GetReviewUseCase
+import com.example.booknest.domain.usecase.reviews.GetUserReviewsUseCase
+import com.example.booknest.domain.usecase.reviews.UpdateReviewUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -18,8 +23,12 @@ enum class ReviewType(val value: String) {
 }
 
 class ReviewViewModel(
-    private val reviewsRepository: ReviewsRepository,
-    private val booksRepository: com.example.booknest.domain.repository.BooksRepository
+    private val getBookReviewsUseCase: GetBookReviewsUseCase,
+    private val getUserReviewsUseCase: GetUserReviewsUseCase,
+    private val getReviewUseCase: GetReviewUseCase,
+    private val createReviewUseCase: CreateReviewUseCase,
+    private val updateReviewUseCase: UpdateReviewUseCase,
+    private val booksRepository: BooksRepository
 ) : ViewModel() {
 
     private val _bookReviews = MutableStateFlow<List<ReviewResponse>>(emptyList())
@@ -27,9 +36,6 @@ class ReviewViewModel(
 
     private val _userReviews = MutableStateFlow<List<ReviewResponse>>(emptyList())
     val userReviews: StateFlow<List<ReviewResponse>> = _userReviews
-
-    private val _featuredReviews = MutableStateFlow<List<ReviewResponse>>(emptyList())
-    val featuredReviews: StateFlow<List<ReviewResponse>> = _featuredReviews
 
     private val _currentReview = MutableStateFlow<ReviewResponse?>(null)
     val currentReview: StateFlow<ReviewResponse?> = _currentReview
@@ -42,20 +48,20 @@ class ReviewViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val result = reviewsRepository.getBookReviews(bookId)
+                val result = getBookReviewsUseCase(bookId)
                 result
                     .onSuccess { reviews ->
                         _bookReviews.value = reviews
                     }
                     .onFailure { e ->
-                        println("DEBUG: ReviewsRepository failed, trying BooksRepository: ${e.message}")
+                        println("DEBUG: GetBookReviewsUseCase failed, trying BooksRepository: ${e.message}")
                         val fallbackResult = booksRepository.getBookAllReviews(bookId)
                         fallbackResult
                             .onSuccess { reviews ->
                                 _bookReviews.value = reviews
                             }
                             .onFailure { fallbackError ->
-                                println("DEBUG: Both endpoints failed. ReviewsRepository: ${e.message}, BooksRepository: ${fallbackError.message}")
+                                println("DEBUG: Both endpoints failed. GetBookReviewsUseCase: ${e.message}, BooksRepository: ${fallbackError.message}")
                                 GlobalToastHandler.showError(
                                     fallbackError.message ?: "Failed to load book reviews"
                                 )
@@ -86,7 +92,7 @@ class ReviewViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val result = reviewsRepository.getUserReviews(userId)
+                val result = getUserReviewsUseCase(userId)
                 result
                     .onSuccess { reviews ->
                         _userReviews.value = reviews
@@ -106,7 +112,7 @@ class ReviewViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val result = reviewsRepository.getReview(reviewId)
+                val result = getReviewUseCase(reviewId)
                 result
                     .onSuccess { review ->
                         _currentReview.value = review
@@ -124,7 +130,7 @@ class ReviewViewModel(
 
     fun createReview(
         applicationId: String,
-        rating: Int,
+        rating: Double,
         reviewType: ReviewType,
         reviewContent: String? = null,
         reviewUrls: List<String>? = null,
@@ -141,7 +147,7 @@ class ReviewViewModel(
                     reviewUrls = reviewUrls,
                     isPublic = isPublic
                 )
-                val result = reviewsRepository.createReview(request)
+                val result = createReviewUseCase(request)
                 result
                     .onSuccess { review ->
                         GlobalToastHandler.showSuccess("Review submitted successfully!")
@@ -162,7 +168,7 @@ class ReviewViewModel(
 
     fun updateReview(
         reviewId: String,
-        rating: Int? = null,
+        rating: Double? = null,
         reviewType: ReviewType? = null,
         reviewContent: String? = null,
         reviewUrls: List<String>? = null,
@@ -178,7 +184,7 @@ class ReviewViewModel(
                     reviewUrls = reviewUrls,
                     isPublic = isPublic
                 )
-                val result = reviewsRepository.updateReview(reviewId, request)
+                val result = updateReviewUseCase(reviewId, request)
                 result
                     .onSuccess { review ->
                         GlobalToastHandler.showSuccess("Review updated successfully!")

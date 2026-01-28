@@ -7,7 +7,15 @@ import com.example.booknest.domain.model.request.RegisterDeviceTokenRequest
 import com.example.booknest.domain.model.response.NotificationResponse
 import com.example.booknest.domain.repository.FriendsRepository
 import com.example.booknest.domain.repository.NotificationsRepository
+import com.example.booknest.domain.usecase.friends.AcceptFriendRequestUseCase
+import com.example.booknest.domain.usecase.friends.DeclineFriendRequestUseCase
+import com.example.booknest.domain.usecase.notifications.DeleteAllNotificationsUseCase
+import com.example.booknest.domain.usecase.notifications.DeleteNotificationUseCase
 import com.example.booknest.domain.usecase.notifications.GetNotificationsUseCase
+import com.example.booknest.domain.usecase.notifications.GetUnreadCountUseCase
+import com.example.booknest.domain.usecase.notifications.MarkAllNotificationsAsReadUseCase
+import com.example.booknest.domain.usecase.notifications.MarkNotificationAsReadUseCase
+import com.example.booknest.domain.usecase.notifications.RegisterDeviceTokenUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,9 +23,15 @@ import kotlinx.coroutines.launch
 import com.example.booknest.ui.toast.GlobalToastHandler
 
 class NotificationViewModel(
-    private val notificationsRepository: NotificationsRepository,
-    private val friendsRepository: FriendsRepository,
     private val getNotificationsUseCase: GetNotificationsUseCase,
+    private val getUnreadCountUseCase: GetUnreadCountUseCase,
+    private val markNotificationAsReadUseCase: MarkNotificationAsReadUseCase,
+    private val markAllNotificationsAsReadUseCase: MarkAllNotificationsAsReadUseCase,
+    private val deleteNotificationUseCase: DeleteNotificationUseCase,
+    private val deleteAllNotificationsUseCase: DeleteAllNotificationsUseCase,
+    private val registerDeviceTokenUseCase: RegisterDeviceTokenUseCase,
+    private val acceptFriendRequestUseCase: AcceptFriendRequestUseCase,
+    private val declineFriendRequestUseCase: DeclineFriendRequestUseCase,
     private val sessionManager: SessionManager
 ) : ViewModel() {
 
@@ -101,7 +115,7 @@ class NotificationViewModel(
                     }
                 }
 
-                val result = notificationsRepository.getUnreadCount()
+                val result = getUnreadCountUseCase()
                 result
                     .onSuccess { unread ->
                         _unreadCount.value = unread.count
@@ -118,7 +132,7 @@ class NotificationViewModel(
                 val notification = _notifications.value.find { it.id == notificationId }
                 val wasUnread = notification?.isRead == false
 
-                val result = notificationsRepository.markNotificationAsRead(notificationId)
+                val result = markNotificationAsReadUseCase(notificationId)
                 result
                     .onSuccess { updated ->
                         _notifications.value = _notifications.value.map { n ->
@@ -142,7 +156,7 @@ class NotificationViewModel(
         viewModelScope.launch {
             try {
                 _isLoading.value = true
-                val result = notificationsRepository.markAllNotificationsAsRead()
+                val result = markAllNotificationsAsReadUseCase()
                 result
                     .onSuccess {
                         _notifications.value = _notifications.value.map { notification ->
@@ -170,7 +184,7 @@ class NotificationViewModel(
                 val notification = _notifications.value.find { it.id == notificationId }
                 val wasUnread = notification?.isRead == false
 
-                val result = notificationsRepository.deleteNotification(notificationId)
+                val result = deleteNotificationUseCase(notificationId)
                 result
                     .onSuccess {
                         _notifications.value =
@@ -194,7 +208,7 @@ class NotificationViewModel(
             try {
                 _isLoading.value = true
                 val unreadCountBefore = _notifications.value.count { !it.isRead }
-                val result = notificationsRepository.deleteAllNotifications()
+                val result = deleteAllNotificationsUseCase()
                 result
                     .onSuccess {
                         _notifications.value = emptyList()
@@ -219,11 +233,11 @@ class NotificationViewModel(
                 val notification = _notifications.value.find { it.id == notificationId }
                 val wasUnread = notification?.isRead == false
 
-                val result = friendsRepository.acceptFriendRequest(requesterId)
+                val result = acceptFriendRequestUseCase(requesterId)
                 result
                     .onSuccess {
                         val deleteResult =
-                            notificationsRepository.deleteNotification(notificationId)
+                            deleteNotificationUseCase(notificationId)
                         deleteResult.onSuccess {
                             _notifications.value =
                                 _notifications.value.filter { it.id != notificationId }
@@ -255,11 +269,11 @@ class NotificationViewModel(
                 val notification = _notifications.value.find { it.id == notificationId }
                 val wasUnread = notification?.isRead == false
 
-                val result = friendsRepository.declineFriendRequest(requesterId)
+                val result = declineFriendRequestUseCase(requesterId)
                 result
                     .onSuccess {
                         val deleteResult =
-                            notificationsRepository.deleteNotification(notificationId)
+                            deleteNotificationUseCase(notificationId)
                         deleteResult.onSuccess {
                             _notifications.value =
                                 _notifications.value.filter { it.id != notificationId }
@@ -292,7 +306,7 @@ class NotificationViewModel(
                     deviceId = deviceId,
                     appVersion = appVersion
                 )
-                val result = notificationsRepository.registerDeviceToken(request)
+                val result = registerDeviceTokenUseCase(request)
                 result
                     .onFailure { e ->
                         println("Failed to register device token: ${e.message}")

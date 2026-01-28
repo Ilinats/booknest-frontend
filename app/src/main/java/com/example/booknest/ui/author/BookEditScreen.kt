@@ -122,7 +122,10 @@ fun BookEditScreen(
                 val (stateBookId, stateCoverUrl) = state.data
                 if (stateBookId == bookId) {
                     coverImageUrl = stateCoverUrl
+                    initialCoverImageUrl = stateCoverUrl
+                    coverImageUri = null
                     shouldRemoveCoverImage = false
+                    bookViewModel.getBookDetails(bookId)
                 }
             }
             is UiState.Error -> {
@@ -607,14 +610,29 @@ fun BookEditScreen(
                                 try {
                                     if (shouldRemoveCoverImage) {
                                         authorViewModel.removeBookCoverImage(bookId)
-                                        kotlinx.coroutines.delay(500)
+                                        var removalComplete = false
+                                        var attempts = 0
+                                        while (!removalComplete && attempts < 100) {
+                                            kotlinx.coroutines.delay(100)
+                                            val removalState = authorViewModel.coverImageRemovalState.value
+                                            removalComplete = removalState is UiState.Success || removalState is UiState.Error
+                                            attempts++
+                                        }
                                     }
 
                                     authorViewModel.updateBook(bookId, updateRequest)
 
                                     coverImageUri?.let { uri ->
                                         authorViewModel.uploadBookCoverImage(bookId, uri, context)
-                                        kotlinx.coroutines.delay(500)
+                                        var uploadComplete = false
+                                        var attempts = 0
+                                        while (!uploadComplete && attempts < 300) {
+                                            kotlinx.coroutines.delay(100)
+                                            val uploadState = authorViewModel.coverImageUploadState.value
+                                            uploadComplete = uploadState is UiState.Success || uploadState is UiState.Error
+                                            attempts++
+                                        }
+                                        coverImageUri = null
                                     }
 
                                     bookFileUri?.let { uri ->
@@ -625,8 +643,19 @@ fun BookEditScreen(
                                             onSuccess = { },
                                             onError = { }
                                         )
-                                        kotlinx.coroutines.delay(500)
+                                        var fileUploadComplete = false
+                                        var attempts = 0
+                                        while (!fileUploadComplete && attempts < 600) {
+                                            kotlinx.coroutines.delay(100)
+                                            val fileUploadState = authorViewModel.bookFileUploadState.value
+                                            fileUploadComplete = fileUploadState is UiState.Success || fileUploadState is UiState.Error
+                                            attempts++
+                                        }
+                                        bookFileUri = null
                                     }
+
+                                    bookViewModel.getBookDetails(bookId)
+                                    kotlinx.coroutines.delay(300)
 
                                     isSaving = false
                                     navController.popBackStack()

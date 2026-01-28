@@ -11,6 +11,5 @@ interface ReviewsRepository {
     suspend fun deleteReview(reviewId: String): Result<Unit>
     suspend fun getBookReviews(bookId: String): Result<List<ReviewResponse>>
     suspend fun getUserReviews(userId: String): Result<List<ReviewResponse>>
-    suspend fun getFeaturedReviews(): Result<List<ReviewResponse>>
     suspend fun getAuthorLatestReviews(limit: Int? = 3): Result<List<ReviewResponse>>
 }

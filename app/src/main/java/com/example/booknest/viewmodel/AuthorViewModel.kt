@@ -17,9 +17,21 @@ import com.example.booknest.domain.repository.BooksRepository
 import com.example.booknest.domain.repository.ProfileRepository
 import com.example.booknest.domain.repository.ReviewsRepository
 import com.example.booknest.domain.repository.SeriesRepository
+import com.example.booknest.domain.usecase.applications.GetOverdueReviewsUseCase
+import com.example.booknest.domain.usecase.author.CreateBookUseCase
+import com.example.booknest.domain.usecase.author.DeleteBookUseCase
 import com.example.booknest.domain.usecase.author.GetBookStatsUseCase
 import com.example.booknest.domain.usecase.author.GetMyBooksUseCase
 import com.example.booknest.domain.usecase.author.GetMySeriesUseCase
+import com.example.booknest.domain.usecase.author.PublishBookUseCase
+import com.example.booknest.domain.usecase.author.UpdateBookUseCase
+import com.example.booknest.domain.usecase.files.RemoveBookCoverImageUseCase
+import com.example.booknest.domain.usecase.files.UploadBookCoverImageUseCase
+import com.example.booknest.domain.usecase.files.UploadBookFileUseCase
+import com.example.booknest.domain.usecase.profile.GetMyStatsUseCase
+import com.example.booknest.domain.usecase.reviews.GetAuthorLatestReviewsUseCase
+import com.example.booknest.domain.usecase.series.CreateSeriesUseCase
+import com.example.booknest.domain.usecase.series.UpdateSeriesUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,14 +45,21 @@ import com.example.booknest.ui.toast.GlobalToastHandler
 import com.example.booknest.ui.state.UiState
 
 class AuthorViewModel(
-    private val booksRepository: BooksRepository,
-    private val seriesRepository: SeriesRepository,
     private val getMyBooksUseCase: GetMyBooksUseCase,
     private val getMySeriesUseCase: GetMySeriesUseCase,
     private val getBookStatsUseCase: GetBookStatsUseCase,
-    private val profileRepository: ProfileRepository,
-    private val reviewsRepository: ReviewsRepository,
-    private val applicationsRepository: ApplicationsRepository
+    private val createBookUseCase: CreateBookUseCase,
+    private val updateBookUseCase: UpdateBookUseCase,
+    private val deleteBookUseCase: DeleteBookUseCase,
+    private val publishBookUseCase: PublishBookUseCase,
+    private val uploadBookFileUseCase: UploadBookFileUseCase,
+    private val uploadBookCoverImageUseCase: UploadBookCoverImageUseCase,
+    private val removeBookCoverImageUseCase: RemoveBookCoverImageUseCase,
+    private val getMyStatsUseCase: GetMyStatsUseCase,
+    private val getAuthorLatestReviewsUseCase: GetAuthorLatestReviewsUseCase,
+    private val getOverdueReviewsUseCase: GetOverdueReviewsUseCase,
+    private val createSeriesUseCase: CreateSeriesUseCase,
+    private val updateSeriesUseCase: UpdateSeriesUseCase
 ) : ViewModel() {
 
     private val _myBooks = MutableStateFlow<List<BookResponse>>(emptyList())
@@ -194,13 +213,11 @@ class AuthorViewModel(
                 }
 
                 val bookWithoutCover = book.copy(coverImageUrl = null)
-                val result = booksRepository.createBook(bookWithoutCover, filePart)
+                val result = createBookUseCase(bookWithoutCover, filePart)
                 result
                     .onSuccess { createdBook ->
                         coverImageUri?.let { uri ->
-                            // Upload cover image (non-blocking)
                             uploadBookCoverImage(createdBook.id, uri, context!!)
-                            // Set success state immediately, cover will be updated via state flow
                             GlobalToastHandler.showSuccess("Book created successfully!")
                             _bookCreationState.value = UiState.Success(createdBook)
                             reloadHomeScreenData()
@@ -232,6 +249,7 @@ class AuthorViewModel(
     ) {
         viewModelScope.launch(kotlinx.coroutines.NonCancellable) {
             try {
+                _bookFileUploadState.value = UiState.Loading
                 val mimeType = withContext(kotlinx.coroutines.Dispatchers.IO) {
                     context.contentResolver.getType(fileUri)
                 }
@@ -239,22 +257,26 @@ class AuthorViewModel(
                 val file = withContext(kotlinx.coroutines.Dispatchers.IO) {
                     uriToFileForBook(context, fileUri, mimeType)
                 } ?: run {
-                    onError("File type not allowed. Allowed types: pdf, epub")
+                    val errorMsg = "File type not allowed. Allowed types: pdf, epub"
+                    _bookFileUploadState.value = UiState.Error(errorMsg)
+                    onError(errorMsg)
                     return@launch
                 }
 
                 val uploadManager = com.example.booknest.utils.FileUploadManager(context)
                 val validationResult = uploadManager.validateBookFile(file)
                 if (validationResult is com.example.booknest.utils.FileUploadManager.ValidationResult.Error) {
+                    _bookFileUploadState.value = UiState.Error(validationResult.message)
                     onError(validationResult.message)
                     return@launch
                 }
 
                 val multipartBody = uploadManager.createMultipartBody(file)
-                val result = booksRepository.uploadBookFile(bookId, multipartBody)
+                val result = uploadBookFileUseCase(bookId, multipartBody)
 
                 result
                     .onSuccess {
+                        _bookFileUploadState.value = UiState.Success(bookId)
                         onSuccess()
                         withContext(kotlinx.coroutines.Dispatchers.IO) {
                             try {
@@ -265,14 +287,18 @@ class AuthorViewModel(
                     }
                     .onFailure { e ->
                         if (e !is kotlinx.coroutines.CancellationException) {
-                            onError(e.message ?: "Failed to upload file")
+                            val errorMsg = e.message ?: "Failed to upload file"
+                            _bookFileUploadState.value = UiState.Error(errorMsg)
+                            onError(errorMsg)
                         }
                     }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
                 if (e !is kotlinx.coroutines.CancellationException) {
-                    onError(e.message ?: "Error uploading file")
+                    val errorMsg = e.message ?: "Error uploading file"
+                    _bookFileUploadState.value = UiState.Error(errorMsg)
+                    onError(errorMsg)
                 }
             }
         }
@@ -318,14 +344,13 @@ class AuthorViewModel(
                 val multipartBody =
                     MultipartBody.Part.createFormData("cover", file.name, requestFile)
 
-                val result = booksRepository.uploadBookCoverImage(bookId, multipartBody)
+                val result = uploadBookCoverImageUseCase(bookId, multipartBody)
 
                 result
                     .onSuccess { bookResponse ->
                         val coverUrl = bookResponse.coverImageUrl ?: ""
                         _coverImageUploadState.value = UiState.Success(bookId to coverUrl)
                         GlobalToastHandler.showSuccess("Cover image uploaded successfully")
-                        // Reload books to reflect the change
                         loadMyBooks()
                         withContext(kotlinx.coroutines.Dispatchers.IO) {
                             try {
@@ -357,12 +382,11 @@ class AuthorViewModel(
         viewModelScope.launch(kotlinx.coroutines.NonCancellable) {
             try {
                 _coverImageRemovalState.value = UiState.Loading
-                val result = booksRepository.removeBookCoverImage(bookId)
+                val result = removeBookCoverImageUseCase(bookId)
                 result
                     .onSuccess {
                         _coverImageRemovalState.value = UiState.Success(Unit)
                         GlobalToastHandler.showSuccess("Cover image removed successfully")
-                        // Reload books to reflect the change
                         loadMyBooks()
                     }
                     .onFailure { e ->
@@ -516,6 +540,7 @@ class AuthorViewModel(
 
     fun clearBookCreationState() {
         _bookCreationState.value = UiState.Idle
+        _bookFileUploadState.value = UiState.Idle
     }
 
     fun reloadHomeScreenData() {
@@ -530,7 +555,7 @@ class AuthorViewModel(
     fun updateBook(bookId: String, book: UpdateBookRequest) {
         viewModelScope.launch {
             try {
-                val result = booksRepository.updateBook(bookId, book)
+                val result = updateBookUseCase(bookId, book)
                 result
                     .onSuccess {
                         GlobalToastHandler.showSuccess("Book updated successfully!")
@@ -548,7 +573,7 @@ class AuthorViewModel(
     fun deleteBook(bookId: String) {
         viewModelScope.launch {
             try {
-                val result = booksRepository.deleteBook(bookId)
+                val result = deleteBookUseCase(bookId)
                 result
                     .onSuccess {
                         GlobalToastHandler.showSuccess("Book deleted successfully!")
@@ -566,7 +591,7 @@ class AuthorViewModel(
     fun publishBook(bookId: String) {
         viewModelScope.launch {
             try {
-                val result = booksRepository.publishBook(bookId)
+                val result = publishBookUseCase(bookId)
                 result
                     .onSuccess {
                         reloadHomeScreenData()
@@ -600,7 +625,7 @@ class AuthorViewModel(
     fun createSeries(series: CreateSeriesRequest) {
         viewModelScope.launch {
             try {
-                val result = seriesRepository.createSeries(series)
+                val result = createSeriesUseCase(series)
                 result
                     .onSuccess {
                         loadMySeries()
@@ -617,7 +642,7 @@ class AuthorViewModel(
     fun updateSeries(seriesId: String, series: UpdateSeriesRequest) {
         viewModelScope.launch {
             try {
-                val result = seriesRepository.updateSeries(seriesId, series)
+                val result = updateSeriesUseCase(seriesId, series)
                 result
                     .onSuccess {
                         loadMySeries()
@@ -635,7 +660,7 @@ class AuthorViewModel(
         viewModelScope.launch {
             try {
                 _isLoadingStats.value = true
-                val result = profileRepository.getMyStats()
+                val result = getMyStatsUseCase()
                 result
                     .onSuccess { stats ->
                         _authorStats.value = stats
@@ -656,7 +681,7 @@ class AuthorViewModel(
         viewModelScope.launch {
             try {
                 _isLoadingReviews.value = true
-                val result = reviewsRepository.getAuthorLatestReviews(limit = 3)
+                val result = getAuthorLatestReviewsUseCase(limit = 3)
                 result
                     .onSuccess { reviews ->
                         _recentReviews.value = reviews
@@ -675,7 +700,7 @@ class AuthorViewModel(
     fun loadOverdueReviews() {
         viewModelScope.launch {
             try {
-                val result = applicationsRepository.getOverdueReviews()
+                val result = getOverdueReviewsUseCase()
                 result
                     .onSuccess { applications ->
                         _overdueReviews.value = applications

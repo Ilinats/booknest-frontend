@@ -7,13 +7,24 @@ import com.example.booknest.domain.model.response.AuthorFollowResponse
 import com.example.booknest.domain.model.response.AuthorFollowWithStatsResponse
 import com.example.booknest.domain.model.response.RecommendedBookResponse
 import com.example.booknest.domain.repository.AuthorFollowRepository
+import com.example.booknest.domain.usecase.author.CheckIfFollowingAuthorUseCase
+import com.example.booknest.domain.usecase.author.FollowAuthorUseCase
+import com.example.booknest.domain.usecase.author.GetAuthorFollowersUseCase
+import com.example.booknest.domain.usecase.author.GetBooksFromFollowedAuthorsUseCase
+import com.example.booknest.domain.usecase.author.GetFollowedAuthorsUseCase
+import com.example.booknest.domain.usecase.author.UnfollowAuthorUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class AuthorFollowViewModel(
-    private val authorFollowRepository: AuthorFollowRepository,
+    private val getFollowedAuthorsUseCase: GetFollowedAuthorsUseCase,
+    private val getAuthorFollowersUseCase: GetAuthorFollowersUseCase,
+    private val getBooksFromFollowedAuthorsUseCase: GetBooksFromFollowedAuthorsUseCase,
+    private val followAuthorUseCase: FollowAuthorUseCase,
+    private val unfollowAuthorUseCase: UnfollowAuthorUseCase,
+    private val checkIfFollowingAuthorUseCase: CheckIfFollowingAuthorUseCase,
     private val sessionManager: SessionManager
 ) : ViewModel() {
 
@@ -54,7 +65,7 @@ class AuthorFollowViewModel(
             try {
                 _isLoading.value = true
                 _error.value = null
-                val result = authorFollowRepository.getFollowedAuthors()
+                val result = getFollowedAuthorsUseCase()
                 result
                     .onSuccess { authors ->
                         _followedAuthors.value = authors
@@ -75,7 +86,7 @@ class AuthorFollowViewModel(
             try {
                 _isLoading.value = true
                 _error.value = null
-                val result = authorFollowRepository.getAuthorFollowers(authorId)
+                val result = getAuthorFollowersUseCase(authorId)
                 result
                     .onSuccess { followers ->
                         _authorFollowers.value = followers
@@ -96,7 +107,7 @@ class AuthorFollowViewModel(
             try {
                 _isLoading.value = true
                 _error.value = null
-                val result = authorFollowRepository.getBooksFromFollowedAuthors()
+                val result = getBooksFromFollowedAuthorsUseCase()
                 result
                     .onSuccess { books ->
                         _booksFromFollowedAuthors.value = books
@@ -128,7 +139,7 @@ class AuthorFollowViewModel(
                 )
                 _followedAuthors.value = _followedAuthors.value + optimisticFollow
 
-                val result = authorFollowRepository.followAuthor(authorId)
+                val result = followAuthorUseCase(authorId)
                 result
                     .onSuccess {
                         loadFollowedAuthors()
@@ -159,7 +170,7 @@ class AuthorFollowViewModel(
 
                 _followedAuthors.value = _followedAuthors.value.filter { it.authorId != authorId }
 
-                val result = authorFollowRepository.unfollowAuthor(authorId)
+                val result = unfollowAuthorUseCase(authorId)
                 result
                     .onSuccess {
                         loadFollowedAuthors()
@@ -186,7 +197,7 @@ class AuthorFollowViewModel(
     fun checkIfFollowingAuthor(authorId: String) {
         viewModelScope.launch {
             try {
-                val result = authorFollowRepository.checkIfFollowingAuthor(authorId)
+                val result = checkIfFollowingAuthorUseCase(authorId)
                 result.onSuccess { followMap ->
                     val isFollowing = followMap["isFollowing"] == true
                     _followingStatus.value = _followingStatus.value + (authorId to isFollowing)
