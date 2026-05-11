@@ -9,6 +9,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.example.booknest.data.datasource.extractErrorMessage
 import com.example.booknest.data.error.BNError
+import com.example.booknest.data.session.SessionManager
 import com.example.booknest.ui.components.Toast
 import com.example.booknest.ui.components.ToastMessage
 import com.example.booknest.ui.components.ToastType
@@ -26,6 +27,21 @@ object GlobalToastHandler {
     val toastMessage: SharedFlow<ToastMessage> = _toastMessage.asSharedFlow()
     private val toastScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
+    private fun shouldSuppressStaleAuthToast(message: String): Boolean {
+        val m = message.lowercase()
+        val looksLikeAuthNoise = m.contains("token") ||
+            m.contains("missing") ||
+            m.contains("unauthorized") ||
+            m.contains("not authorized") ||
+            m.contains("jwt") ||
+            m.contains("bearer") ||
+            m.contains("expired session")
+        if (!looksLikeAuthNoise) return false
+        val loggedOut = SessionManager.isLoggedIn.value != true
+        val noAccessToken = SessionManager.getToken().isEmpty()
+        return loggedOut || noAccessToken
+    }
+
     fun showSuccess(message: String) {
         toastScope.launch {
             _toastMessage.emit(ToastMessage(message, ToastType.SUCCESS))
@@ -33,6 +49,7 @@ object GlobalToastHandler {
     }
 
     fun showError(message: String) {
+        if (shouldSuppressStaleAuthToast(message)) return
         toastScope.launch {
             _toastMessage.emit(ToastMessage(message, ToastType.ERROR))
         }
@@ -73,6 +90,7 @@ object GlobalToastHandler {
                     extractErrorMessage(errorMsg)
                 }
             }
+            if (shouldSuppressStaleAuthToast(message)) return@launch
             _toastMessage.emit(ToastMessage(message, ToastType.ERROR))
         }
     }

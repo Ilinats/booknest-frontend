@@ -60,8 +60,8 @@ import com.example.booknest.navigation.BottomBarScreen
 import com.example.booknest.navigation.HomeNavGraph
 import com.example.booknest.navigation.Screen
 import com.example.booknest.domain.model.response.UserResponse
-import com.example.booknest.viewmodel.MainViewModel
-import com.example.booknest.viewmodel.NotificationViewModel
+import com.example.booknest.viewmodel.main.MainViewModel
+import com.example.booknest.viewmodel.notifications.NotificationViewModel
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
@@ -81,9 +81,6 @@ fun MainScreen(
     val isLoggedIn by sessionManager.isLoggedIn.collectAsState()
 
     androidx.compose.runtime.LaunchedEffect(isLoggedIn) {
-        if (isLoggedIn == false) {
-            kotlinx.coroutines.delay(300)
-        }
         if (isLoggedIn == true && currentUser == null) {
             mainViewModel.fetchCurrentUser()
         }
@@ -108,11 +105,9 @@ fun MainScreen(
                         popUpTo(BottomBarScreen.Home.route) { inclusive = false }
                         launchSingleTop = true
                     }
-                    println("DEBUG: Navigated to notifications screen from push notification (ID: $notificationId, Type: $notificationType)")
                     intent.removeExtra("notificationId")
                     intent.removeExtra("notificationType")
-                } catch (e: Exception) {
-                    println("DEBUG: Error navigating to notifications from push: ${e.message}")
+                } catch (_: Exception) {
                 }
             }
         }
@@ -179,7 +174,6 @@ fun MainScreen(
     ) { paddingValues ->
         HomeNavGraph(
             navController = navController,
-            sessionManager = sessionManager,
             modifier = Modifier.fillMaxSize()
         )
     }

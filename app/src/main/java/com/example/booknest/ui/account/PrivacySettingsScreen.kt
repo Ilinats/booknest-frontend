@@ -52,7 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.booknest.viewmodel.FavoriteGenresViewModel
+import com.example.booknest.viewmodel.genres.FavoriteGenresViewModel
 import org.koin.androidx.compose.getViewModel
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.model.enums.NotificationType
@@ -60,7 +60,10 @@ import com.example.booknest.navigation.Screen
 import com.example.booknest.ui.account.components.privacy.NotificationPreferenceCard
 import com.example.booknest.ui.account.components.privacy.PrivacySettingCard
 import com.example.booknest.ui.account.components.privacy.address.AddressManagementSection
-import com.example.booknest.viewmodel.ProfileViewModel
+import com.example.booknest.viewmodel.profile.AddressViewModel
+import com.example.booknest.viewmodel.profile.ProfileViewModel
+import com.example.booknest.viewmodel.profile.ProfileSettingsViewModel
+import com.example.booknest.ui.components.BackgroundDecoration
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -68,11 +71,14 @@ import org.koin.compose.koinInject
 fun PrivacySettingsScreen(
     navController: NavController,
     sessionManager: SessionManager = koinInject(),
-    profileViewModel: ProfileViewModel = getViewModel()
+    profileViewModel: ProfileViewModel = getViewModel(),
+    profileSettingsViewModel: ProfileSettingsViewModel = getViewModel(),
+    addressViewModel: AddressViewModel = getViewModel()
 ) {
     val myProfile by profileViewModel.myProfile.collectAsState()
     val isLoading by profileViewModel.isLoading.collectAsState()
-    val error by profileViewModel.error.collectAsState()
+    val saveIsLoading by profileSettingsViewModel.isLoading.collectAsState()
+    val error by profileSettingsViewModel.error.collectAsState()
     var hasJustSaved by remember { mutableStateOf(false) }
 
     var activityPrivacy by remember { mutableStateOf("friends") }
@@ -109,7 +115,7 @@ fun PrivacySettingsScreen(
 
     LaunchedEffect(Unit) {
         profileViewModel.loadMyProfile()
-        profileViewModel.loadAddresses()
+        addressViewModel.loadAddresses()
         favoriteGenresViewModel.loadGenres()
     }
 
@@ -167,11 +173,11 @@ fun PrivacySettingsScreen(
         }
     }
 
-    LaunchedEffect(isLoading, error) {
-        if (hasJustSaved && !isLoading && error == null) {
+    LaunchedEffect(saveIsLoading, error) {
+        if (hasJustSaved && !saveIsLoading && error == null) {
             hasJustSaved = false
             navController.popBackStack()
-        } else if (hasJustSaved && !isLoading && error != null) {
+        } else if (hasJustSaved && !saveIsLoading && error != null) {
             hasJustSaved = false
         }
     }
@@ -234,38 +240,7 @@ fun PrivacySettingsScreen(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(x = (-175).dp, y = (-175).dp)
-                    .size(350.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(x = (-135).dp, y = (-135).dp)
-                    .size(270.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary)
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .offset(x = 175.dp, y = 175.dp)
-                    .size(350.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .offset(x = 135.dp, y = 135.dp)
-                    .size(270.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary)
-            )
+            BackgroundDecoration(modifier = Modifier.fillMaxSize())
 
             if (isLoading && myProfile == null) {
                 Box(
@@ -545,11 +520,11 @@ fun PrivacySettingsScreen(
                     }
 
                     item {
-                        val addresses by profileViewModel.addresses.collectAsState()
+                        val addresses by addressViewModel.addresses.collectAsState()
                         AddressManagementSection(
                             addresses = addresses,
                             onAddAddress = { streetAddress: String, city: String, postalCode: String, country: String, isPrimary: Boolean ->
-                                profileViewModel.addAddress(
+                                addressViewModel.addAddress(
                                     streetAddress,
                                     city,
                                     postalCode,
@@ -558,7 +533,7 @@ fun PrivacySettingsScreen(
                                 )
                             },
                             onUpdateAddress = { addressId: String, streetAddress: String?, city: String?, postalCode: String?, country: String?, isPrimary: Boolean? ->
-                                profileViewModel.updateAddress(
+                                addressViewModel.updateAddress(
                                     addressId,
                                     streetAddress,
                                     city,
@@ -568,7 +543,7 @@ fun PrivacySettingsScreen(
                                 )
                             },
                             onDeleteAddress = { addressId: String ->
-                                profileViewModel.deleteAddress(addressId)
+                                addressViewModel.deleteAddress(addressId)
                             }
                         )
                     }
@@ -576,7 +551,7 @@ fun PrivacySettingsScreen(
                     item {
                         Button(
                             onClick = {
-                                profileViewModel.updatePrivacySettings(
+                                profileSettingsViewModel.updatePrivacySettings(
                                     activityPrivacy = activityPrivacy,
                                     profilePrivacy = profilePrivacy,
                                     readingListPrivacy = readingListPrivacy,
@@ -589,8 +564,8 @@ fun PrivacySettingsScreen(
                                 if (applicationRejected) enabledTypes.add(NotificationType.APPLICATION_REJECTED)
                                 if (reviewDeadlineReminders) enabledTypes.add(NotificationType.REVIEW_DEADLINE_REMINDER)
                                 if (authorBookPublished) enabledTypes.add(NotificationType.AUTHOR_BOOK_PUBLISHED)
-                                
-                                profileViewModel.updateNotificationSettings(
+
+                                profileSettingsViewModel.updateNotificationSettings(
                                     notificationsEnabled = notificationsEnabled,
                                     emailNotifications = emailNotifications,
                                     notificationPreferences = enabledTypes
@@ -612,7 +587,7 @@ fun PrivacySettingsScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(56.dp),
-                            enabled = hasChanges && !isLoading
+                            enabled = hasChanges && !saveIsLoading
                         ) {
                             if (isLoading) {
                                 CircularProgressIndicator(

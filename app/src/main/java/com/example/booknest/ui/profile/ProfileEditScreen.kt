@@ -26,7 +26,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.data.service.AuthService
-import com.example.booknest.viewmodel.ProfileViewModel
+import com.example.booknest.viewmodel.profile.ProfileViewModel
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
 import kotlinx.coroutines.flow.collectLatest

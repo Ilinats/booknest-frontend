@@ -42,6 +42,7 @@ import com.example.booknest.data.service.NotificationsService
 import com.example.booknest.data.service.ProfilesService
 import com.example.booknest.data.service.ReviewsService
 import com.example.booknest.data.service.SeriesService
+import com.example.booknest.network.NetworkConnectivityMonitor
 import com.example.booknest.data.session.SearchHistoryManager
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.data.session.TokenAuthenticator
@@ -58,6 +59,7 @@ import com.example.booknest.domain.repository.ProfileRepository
 import com.example.booknest.domain.repository.ReviewsRepository
 import com.example.booknest.domain.repository.SeriesRepository
 import com.example.booknest.domain.usecase.analytics.GetAuthorAnalyticsUseCase
+import com.example.booknest.domain.usecase.analytics.GetBookPerformanceComparisonUseCase
 import com.example.booknest.domain.usecase.analytics.GetDetailedBookAnalyticsUseCase
 import com.example.booknest.domain.usecase.applications.GetMyApplicationsUseCase
 import com.example.booknest.domain.usecase.auth.LoginUseCase
@@ -90,23 +92,29 @@ import com.example.booknest.domain.usecase.profile.GetMyActivityUseCase
 import com.example.booknest.domain.usecase.profile.GetMyProfileUseCase
 import com.example.booknest.domain.usecase.profile.GetMyStatsUseCase
 import com.example.booknest.domain.usecase.profile.GetUserProfileUseCase
-import com.example.booknest.viewmodel.AnalyticsViewModel
-import com.example.booknest.viewmodel.ApplicationViewModel
-import com.example.booknest.viewmodel.AuthorFollowViewModel
-import com.example.booknest.viewmodel.AuthorViewModel
-import com.example.booknest.viewmodel.BookViewModel
-import com.example.booknest.viewmodel.EmailVerificationViewModel
-import com.example.booknest.viewmodel.FavoriteGenresViewModel
-import com.example.booknest.viewmodel.FileViewModel
-import com.example.booknest.viewmodel.FriendViewModel
-import com.example.booknest.viewmodel.LoginViewModel
-import com.example.booknest.viewmodel.MainViewModel
-import com.example.booknest.viewmodel.NotificationViewModel
-import com.example.booknest.viewmodel.PasswordResetViewModel
-import com.example.booknest.viewmodel.ProfileViewModel
-import com.example.booknest.viewmodel.ReviewViewModel
-import com.example.booknest.viewmodel.SeriesViewModel
-import com.example.booknest.viewmodel.SignupViewModel
+import com.example.booknest.viewmodel.analytics.AnalyticsViewModel
+import com.example.booknest.viewmodel.applications.ApplicationViewModel
+import com.example.booknest.viewmodel.applications.BookApplicationViewModel
+import com.example.booknest.viewmodel.author.AuthorFollowViewModel
+import com.example.booknest.viewmodel.author.AuthorBooksViewModel
+import com.example.booknest.viewmodel.author.AuthorDashboardViewModel
+import com.example.booknest.viewmodel.author.AuthorSeriesViewModel
+import com.example.booknest.viewmodel.books.BookViewModel
+import com.example.booknest.viewmodel.auth.EmailVerificationViewModel
+import com.example.booknest.viewmodel.genres.FavoriteGenresViewModel
+import com.example.booknest.viewmodel.files.FileViewModel
+import com.example.booknest.viewmodel.friends.FriendViewModel
+import com.example.booknest.viewmodel.auth.LoginViewModel
+import com.example.booknest.viewmodel.main.MainViewModel
+import com.example.booknest.viewmodel.notifications.NotificationViewModel
+import com.example.booknest.viewmodel.auth.PasswordResetViewModel
+import com.example.booknest.viewmodel.profile.AddressViewModel
+import com.example.booknest.viewmodel.profile.ProfileViewModel
+import com.example.booknest.viewmodel.profile.ProfileSettingsViewModel
+import com.example.booknest.viewmodel.profile.ProfileStatsViewModel
+import com.example.booknest.viewmodel.analytics.ReviewViewModel
+import com.example.booknest.viewmodel.series.SeriesViewModel
+import com.example.booknest.viewmodel.auth.SignupViewModel
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
@@ -122,6 +130,8 @@ import coil.ImageLoader
 val appModule = module {
 
     single { SessionManager.getInstance(androidContext().dataStore) }
+
+    single { NetworkConnectivityMonitor(androidContext()) }
 
     single { SearchHistoryManager(androidContext().searchHistoryDataStore) }
 
@@ -176,134 +186,136 @@ val appModule = module {
     single<NotificationsService> { get<Retrofit>().create(NotificationsService::class.java) }
     single<SeriesService> { get<Retrofit>().create(SeriesService::class.java) }
 
-    factory<AuthDataSource> { BNAuthDataSource(get(), get(), androidContext()) }
-    factory<BooksDataSource> { BNBooksDataSource(get()) }
-    factory<ApplicationsDataSource> { BNApplicationsDataSource(get()) }
-    factory<ReviewsDataSource> { BNReviewsDataSource(get()) }
-    factory<GenresDataSource> { BNGenresDataSource(get()) }
-    factory<ProfilesDataSource> { BNProfilesDataSource(get()) }
-    factory<FriendsDataSource> { BNFriendsDataSource(get()) }
-    factory<AuthorsDataSource> { BNAuthorsDataSource(get()) }
-    factory<NotificationsDataSource> { BNNotificationsDataSource(get()) }
-    factory<SeriesDataSource> { BNSeriesDataSource(get()) }
+    single<AuthDataSource> { BNAuthDataSource(get(), get(), androidContext()) }
+    single<BooksDataSource> { BNBooksDataSource(get()) }
+    single<ApplicationsDataSource> { BNApplicationsDataSource(get()) }
+    single<ReviewsDataSource> { BNReviewsDataSource(get()) }
+    single<GenresDataSource> { BNGenresDataSource(get()) }
+    single<ProfilesDataSource> { BNProfilesDataSource(get()) }
+    single<FriendsDataSource> { BNFriendsDataSource(get()) }
+    single<AuthorsDataSource> { BNAuthorsDataSource(get()) }
+    single<NotificationsDataSource> { BNNotificationsDataSource(get()) }
+    single<SeriesDataSource> { BNSeriesDataSource(get()) }
 
-    factory<AuthRepository> { BNAuthRepository(get()) }
-    factory<BooksRepository> { BNBooksRepository(get()) }
-    factory<ApplicationsRepository> { BNApplicationsRepository(get()) }
-    factory<ReviewsRepository> { BNReviewsRepository(get()) }
-    factory<GenresRepository> { BNGenresRepository(get()) }
-    factory<ProfileRepository> { BNProfileRepository(get()) }
-    factory<FriendsRepository> { BNFriendsRepository(get()) }
-    factory<AuthorFollowRepository> { BNAuthorFollowRepository(get()) }
-    factory<NotificationsRepository> { BNNotificationsRepository(get()) }
-    factory<SeriesRepository> { BNSeriesRepository(get()) }
+    single<AuthRepository> { BNAuthRepository(get()) }
+    single<BooksRepository> { BNBooksRepository(get()) }
+    single<ApplicationsRepository> { BNApplicationsRepository(get()) }
+    single<ReviewsRepository> { BNReviewsRepository(get()) }
+    single<GenresRepository> { BNGenresRepository(get()) }
+    single<ProfileRepository> { BNProfileRepository(get()) }
+    single<FriendsRepository> { BNFriendsRepository(get()) }
+    single<AuthorFollowRepository> { BNAuthorFollowRepository(get()) }
+    single<NotificationsRepository> { BNNotificationsRepository(get()) }
+    single<SeriesRepository> { BNSeriesRepository(get()) }
 
-    factory { LoginUseCase(get()) }
-    factory { RegisterUseCase(get()) }
-    factory { VerifyEmailUseCase(get()) }
-    factory { ResendVerificationCodeUseCase(get()) }
-    factory { RequestPasswordResetUseCase(get()) }
-    factory { ResetPasswordUseCase(get()) }
+    single { LoginUseCase(get()) }
+    single { RegisterUseCase(get()) }
+    single { VerifyEmailUseCase(get()) }
+    single { ResendVerificationCodeUseCase(get()) }
+    single { RequestPasswordResetUseCase(get()) }
+    single { ResetPasswordUseCase(get()) }
 
-    factory { GetRecommendedBooksUseCase(get()) }
-    factory { GetNewReleasesUseCase(get()) }
-    factory { BrowseBooksUseCase(get()) }
-    factory { SearchBooksUseCase(get()) }
-    factory { GetBookDetailsUseCase(get()) }
-    factory { GetTrendingBooksUseCase(get()) }
+    single { GetRecommendedBooksUseCase(get()) }
+    single { GetNewReleasesUseCase(get()) }
+    single { BrowseBooksUseCase(get()) }
+    single { SearchBooksUseCase(get()) }
+    single { GetBookDetailsUseCase(get()) }
+    single { GetTrendingBooksUseCase(get()) }
 
-    factory { GetMyBooksUseCase(get()) }
-    factory { GetMySeriesUseCase(get()) }
-    factory { GetBookStatsUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.author.CreateBookUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.author.UpdateBookUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.author.DeleteBookUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.author.PublishBookUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.author.FollowAuthorUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.author.UnfollowAuthorUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.author.GetFollowedAuthorsUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.author.GetAuthorFollowersUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.author.CheckIfFollowingAuthorUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.author.GetBooksFromFollowedAuthorsUseCase(get()) }
+    single { GetMyBooksUseCase(get()) }
+    single { GetMySeriesUseCase(get()) }
+    single { GetBookStatsUseCase(get()) }
+    single { com.example.booknest.domain.usecase.author.CreateBookUseCase(get()) }
+    single { com.example.booknest.domain.usecase.author.UpdateBookUseCase(get()) }
+    single { com.example.booknest.domain.usecase.author.DeleteBookUseCase(get()) }
+    single { com.example.booknest.domain.usecase.author.PublishBookUseCase(get()) }
+    single { com.example.booknest.domain.usecase.author.FollowAuthorUseCase(get()) }
+    single { com.example.booknest.domain.usecase.author.UnfollowAuthorUseCase(get()) }
+    single { com.example.booknest.domain.usecase.author.GetFollowedAuthorsUseCase(get()) }
+    single { com.example.booknest.domain.usecase.author.GetAuthorFollowersUseCase(get()) }
+    single { com.example.booknest.domain.usecase.author.CheckIfFollowingAuthorUseCase(get()) }
+    single { com.example.booknest.domain.usecase.author.GetBooksFromFollowedAuthorsUseCase(get()) }
 
-    factory { com.example.booknest.domain.usecase.series.CreateSeriesUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.series.UpdateSeriesUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.series.DeleteSeriesUseCase(get()) }
+    single { com.example.booknest.domain.usecase.series.CreateSeriesUseCase(get()) }
+    single { com.example.booknest.domain.usecase.series.UpdateSeriesUseCase(get()) }
+    single { com.example.booknest.domain.usecase.series.DeleteSeriesUseCase(get()) }
 
-    factory { GetAuthorAnalyticsUseCase(get()) }
-    factory { GetDetailedBookAnalyticsUseCase(get()) }
+    single { GetAuthorAnalyticsUseCase(get()) }
+    single { GetDetailedBookAnalyticsUseCase(get()) }
+    single { GetBookPerformanceComparisonUseCase(get()) }
 
-    factory { GetMyApplicationsUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.applications.CheckApplicationUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.applications.CreateApplicationUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.applications.GetApplicationUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.applications.GetReadingProgressUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.applications.WithdrawApplicationUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.applications.MarkCopyReceivedUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.applications.UpdateReadingStatusUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.applications.GetBookApplicationsUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.applications.UpdateApplicationCompleteUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.applications.BulkActionApplicationsUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.applications.MarkCopySentUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.applications.RunLotterySelectionUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.applications.GetOverdueReviewsUseCase(get()) }
+    single { GetMyApplicationsUseCase(get()) }
+    single { com.example.booknest.domain.usecase.applications.CheckApplicationUseCase(get()) }
+    single { com.example.booknest.domain.usecase.applications.CreateApplicationUseCase(get()) }
+    single { com.example.booknest.domain.usecase.applications.GetApplicationUseCase(get()) }
+    single { com.example.booknest.domain.usecase.applications.GetReadingProgressUseCase(get()) }
+    single { com.example.booknest.domain.usecase.applications.WithdrawApplicationUseCase(get()) }
+    single { com.example.booknest.domain.usecase.applications.MarkCopyReceivedUseCase(get()) }
+    single { com.example.booknest.domain.usecase.applications.UpdateReadingStatusUseCase(get()) }
+    single { com.example.booknest.domain.usecase.applications.GetBookApplicationsUseCase(get()) }
+    single { com.example.booknest.domain.usecase.applications.UpdateApplicationCompleteUseCase(get()) }
+    single { com.example.booknest.domain.usecase.applications.BulkActionApplicationsUseCase(get()) }
+    single { com.example.booknest.domain.usecase.applications.MarkCopySentUseCase(get()) }
+    single { com.example.booknest.domain.usecase.applications.RunLotterySelectionUseCase(get()) }
+    single { com.example.booknest.domain.usecase.applications.GetOverdueReviewsUseCase(get()) }
 
-    factory { com.example.booknest.domain.usecase.reviews.GetBookReviewsUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.reviews.GetUserReviewsUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.reviews.GetReviewUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.reviews.CreateReviewUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.reviews.UpdateReviewUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.reviews.GetAuthorLatestReviewsUseCase(get()) }
+    single { com.example.booknest.domain.usecase.reviews.GetBookReviewsUseCase(get()) }
+    single { com.example.booknest.domain.usecase.reviews.GetBookAllReviewsUseCase(get()) }
+    single { com.example.booknest.domain.usecase.reviews.GetUserReviewsUseCase(get()) }
+    single { com.example.booknest.domain.usecase.reviews.GetReviewUseCase(get()) }
+    single { com.example.booknest.domain.usecase.reviews.CreateReviewUseCase(get()) }
+    single { com.example.booknest.domain.usecase.reviews.UpdateReviewUseCase(get()) }
+    single { com.example.booknest.domain.usecase.reviews.GetAuthorLatestReviewsUseCase(get()) }
 
-    factory { GetCurrentUserUseCase(get()) }
-    factory { GetMyProfileUseCase(get()) }
-    factory { GetUserProfileUseCase(get()) }
-    factory { GetMyStatsUseCase(get()) }
-    factory { GetAuthorStatsUseCase(get()) }
-    factory { GetMyActivityUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.profile.GetMyRecentActivityUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.profile.GetUserRecentActivityUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.profile.GetPublicUserProfileUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.profile.UpdateMyProfileUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.profile.UpdateSocialMediaUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.profile.UpdatePrivacySettingsUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.profile.UpdateNotificationSettingsUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.profile.GetMyAddressesUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.profile.AddAddressUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.profile.UpdateAddressUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.profile.DeleteAddressUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.profile.RemoveAvatarUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.profile.DeleteAccountUseCase(get()) }
+    single { GetCurrentUserUseCase(get()) }
+    single { GetMyProfileUseCase(get()) }
+    single { GetUserProfileUseCase(get()) }
+    single { GetMyStatsUseCase(get()) }
+    single { GetAuthorStatsUseCase(get()) }
+    single { GetMyActivityUseCase(get()) }
+    single { com.example.booknest.domain.usecase.profile.GetMyRecentActivityUseCase(get()) }
+    single { com.example.booknest.domain.usecase.profile.GetUserRecentActivityUseCase(get()) }
+    single { com.example.booknest.domain.usecase.profile.GetPublicUserProfileUseCase(get()) }
+    single { com.example.booknest.domain.usecase.profile.UpdateMyProfileUseCase(get()) }
+    single { com.example.booknest.domain.usecase.profile.UpdateSocialMediaUseCase(get()) }
+    single { com.example.booknest.domain.usecase.profile.UpdatePrivacySettingsUseCase(get()) }
+    single { com.example.booknest.domain.usecase.profile.UpdateNotificationSettingsUseCase(get()) }
+    single { com.example.booknest.domain.usecase.profile.GetMyAddressesUseCase(get()) }
+    single { com.example.booknest.domain.usecase.profile.AddAddressUseCase(get()) }
+    single { com.example.booknest.domain.usecase.profile.UpdateAddressUseCase(get()) }
+    single { com.example.booknest.domain.usecase.profile.DeleteAddressUseCase(get()) }
+    single { com.example.booknest.domain.usecase.profile.RemoveAvatarUseCase(get()) }
+    single { com.example.booknest.domain.usecase.profile.DeleteAccountUseCase(get()) }
 
-    factory { GetGenresUseCase(get()) }
-    factory { GetGenrePreferencesUseCase(get()) }
-    factory { SaveUserGenrePreferenceUseCase(get()) }
+    single { GetGenresUseCase(get()) }
+    single { GetGenrePreferencesUseCase(get()) }
+    single { SaveUserGenrePreferenceUseCase(get()) }
 
-    factory { GetFriendsUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.friends.GetSentFriendRequestsUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.friends.GetReceivedFriendRequestsUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.friends.GetFriendsActivityUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.friends.SearchUsersUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.friends.SendFriendRequestUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.friends.AcceptFriendRequestUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.friends.DeclineFriendRequestUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.friends.CancelFriendRequestUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.friends.UnfriendUserUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.friends.GetFriendshipStatusUseCase(get()) }
+    single { GetFriendsUseCase(get()) }
+    single { com.example.booknest.domain.usecase.friends.GetSentFriendRequestsUseCase(get()) }
+    single { com.example.booknest.domain.usecase.friends.GetReceivedFriendRequestsUseCase(get()) }
+    single { com.example.booknest.domain.usecase.friends.GetFriendsActivityUseCase(get()) }
+    single { com.example.booknest.domain.usecase.friends.SearchUsersUseCase(get()) }
+    single { com.example.booknest.domain.usecase.friends.SendFriendRequestUseCase(get()) }
+    single { com.example.booknest.domain.usecase.friends.AcceptFriendRequestUseCase(get()) }
+    single { com.example.booknest.domain.usecase.friends.DeclineFriendRequestUseCase(get()) }
+    single { com.example.booknest.domain.usecase.friends.CancelFriendRequestUseCase(get()) }
+    single { com.example.booknest.domain.usecase.friends.UnfriendUserUseCase(get()) }
+    single { com.example.booknest.domain.usecase.friends.GetFriendshipStatusUseCase(get()) }
 
-    factory { GetNotificationsUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.notifications.GetUnreadCountUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.notifications.MarkNotificationAsReadUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.notifications.MarkAllNotificationsAsReadUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.notifications.DeleteNotificationUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.notifications.DeleteAllNotificationsUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.notifications.RegisterDeviceTokenUseCase(get()) }
+    single { GetNotificationsUseCase(get()) }
+    single { com.example.booknest.domain.usecase.notifications.GetUnreadCountUseCase(get()) }
+    single { com.example.booknest.domain.usecase.notifications.MarkNotificationAsReadUseCase(get()) }
+    single { com.example.booknest.domain.usecase.notifications.MarkAllNotificationsAsReadUseCase(get()) }
+    single { com.example.booknest.domain.usecase.notifications.DeleteNotificationUseCase(get()) }
+    single { com.example.booknest.domain.usecase.notifications.DeleteAllNotificationsUseCase(get()) }
+    single { com.example.booknest.domain.usecase.notifications.RegisterDeviceTokenUseCase(get()) }
 
-    factory { UploadProfileImageUseCase(get()) }
-    factory { UploadBookFileUseCase(get()) }
-    factory { GetBookDownloadUrlUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.files.UploadBookCoverImageUseCase(get()) }
-    factory { com.example.booknest.domain.usecase.files.RemoveBookCoverImageUseCase(get()) }
+    single { UploadProfileImageUseCase(get()) }
+    single { UploadBookFileUseCase(get()) }
+    single { GetBookDownloadUrlUseCase(get()) }
+    single { com.example.booknest.domain.usecase.files.UploadBookCoverImageUseCase(get()) }
+    single { com.example.booknest.domain.usecase.files.RemoveBookCoverImageUseCase(get()) }
 
     viewModel {
         LoginViewModel(
@@ -356,7 +368,12 @@ val appModule = module {
             getReadingProgressUseCase = get(),
             withdrawApplicationUseCase = get(),
             markCopyReceivedUseCase = get(),
-            updateReadingStatusUseCase = get(),
+            updateReadingStatusUseCase = get()
+        )
+    }
+
+    viewModel {
+        BookApplicationViewModel(
             getBookApplicationsUseCase = get(),
             updateApplicationCompleteUseCase = get(),
             bulkActionApplicationsUseCase = get(),
@@ -373,35 +390,48 @@ val appModule = module {
             getReviewUseCase = get(),
             createReviewUseCase = get(),
             updateReviewUseCase = get(),
-            booksRepository = get()
+            getBookAllReviewsUseCase = get()
         )
     }
 
     viewModel {
         ProfileViewModel(
             sessionManager = get(),
-            getMyStatsUseCase = get(),
-            getAuthorStatsUseCase = get(),
             getMyProfileUseCase = get(),
             getUserProfileUseCase = get(),
             getCurrentUserUseCase = get(),
-            getMyActivityUseCase = get(),
             getMyRecentActivityUseCase = get(),
             getUserRecentActivityUseCase = get(),
             getPublicUserProfileUseCase = get(),
             updateMyProfileUseCase = get(),
+            removeAvatarUseCase = get(),
+            deleteAccountUseCase = get(),
+            uploadProfileImageUseCase = get(),
+            authRepository = get()
+        )
+    }
+
+    viewModel {
+        ProfileSettingsViewModel(
             updateSocialMediaUseCase = get(),
             updatePrivacySettingsUseCase = get(),
-            updateNotificationSettingsUseCase = get(),
+            updateNotificationSettingsUseCase = get()
+        )
+    }
+
+    viewModel {
+        ProfileStatsViewModel(
+            getMyStatsUseCase = get(),
+            getAuthorStatsUseCase = get()
+        )
+    }
+
+    viewModel {
+        AddressViewModel(
             getMyAddressesUseCase = get(),
             addAddressUseCase = get(),
             updateAddressUseCase = get(),
-            deleteAddressUseCase = get(),
-            removeAvatarUseCase = get(),
-            deleteAccountUseCase = get(),
-            browseBooksUseCase = get(),
-            uploadProfileImageUseCase = get(),
-            authRepository = get()
+            deleteAddressUseCase = get()
         )
     }
 
@@ -450,9 +480,8 @@ val appModule = module {
     }
 
     viewModel {
-        AuthorViewModel(
+        AuthorBooksViewModel(
             getMyBooksUseCase = get(),
-            getMySeriesUseCase = get(),
             getBookStatsUseCase = get(),
             createBookUseCase = get(),
             updateBookUseCase = get(),
@@ -460,12 +489,23 @@ val appModule = module {
             publishBookUseCase = get(),
             uploadBookFileUseCase = get(),
             uploadBookCoverImageUseCase = get(),
-            removeBookCoverImageUseCase = get(),
-            getMyStatsUseCase = get(),
-            getAuthorLatestReviewsUseCase = get(),
-            getOverdueReviewsUseCase = get(),
+            removeBookCoverImageUseCase = get()
+        )
+    }
+
+    viewModel {
+        AuthorSeriesViewModel(
+            getMySeriesUseCase = get(),
             createSeriesUseCase = get(),
             updateSeriesUseCase = get()
+        )
+    }
+
+    viewModel {
+        AuthorDashboardViewModel(
+            getMyStatsUseCase = get(),
+            getAuthorLatestReviewsUseCase = get(),
+            getOverdueReviewsUseCase = get()
         )
     }
 
@@ -473,7 +513,7 @@ val appModule = module {
         AnalyticsViewModel(
             getDetailedBookAnalyticsUseCase = get(),
             getAuthorAnalyticsUseCase = get(),
-            booksRepository = get()
+            getBookPerformanceComparisonUseCase = get()
         )
     }
 

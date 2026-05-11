@@ -49,6 +49,10 @@ object SessionManager {
 
         val refreshToken = currentRefreshToken
 
+        setAuthEntities("", "", "", "", "", "")
+        _isLoggedIn.emit(false)
+        _currentUser.emit(null)
+
         if (authRepository != null && refreshToken.isNotEmpty()) {
             try {
                 authRepository.logout(refreshToken)
@@ -58,9 +62,6 @@ object SessionManager {
             }
         }
 
-        setAuthEntities("", "", "", "", "", "")
-        _isLoggedIn.emit(false)
-        _currentUser.emit(null)
         android.util.Log.d("SessionManager", "logout() completed, isLoggedIn=${_isLoggedIn.value}")
     }
 

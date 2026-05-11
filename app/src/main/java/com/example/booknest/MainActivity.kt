@@ -7,6 +7,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.example.booknest.ui.theme.BookNestTheme
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -17,11 +18,13 @@ import androidx.navigation.compose.rememberNavController
 import com.example.booknest.navigation.NavGraph
 import com.example.booknest.utils.ComposeDeepLinkHandler
 import com.example.booknest.data.session.SessionManager
-import com.example.booknest.viewmodel.LoginViewModel
-import com.example.booknest.viewmodel.SignupViewModel
-import com.example.booknest.viewmodel.NotificationViewModel
+import com.example.booknest.viewmodel.auth.LoginViewModel
+import com.example.booknest.viewmodel.auth.SignupViewModel
+import com.example.booknest.viewmodel.notifications.NotificationViewModel
 import com.example.booknest.utils.FCMTokenManager
+import com.example.booknest.network.NetworkConnectivityMonitor
 import com.example.booknest.ui.download.GlobalDownloadHandler
+import com.example.booknest.ui.network.OfflineBlockingOverlay
 import com.example.booknest.ui.toast.GlobalToastHandler
 import android.Manifest
 import android.content.pm.PackageManager
@@ -31,6 +34,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import org.koin.androidx.compose.get
 import org.koin.androidx.compose.getViewModel
+import org.koin.compose.koinInject
 
 class MainActivity : ComponentActivity() {
 
@@ -84,6 +88,13 @@ class MainActivity : ComponentActivity() {
                 val sessionManager: SessionManager = get()
                 val isLoggedIn by sessionManager.isLoggedIn.collectAsState()
 
+                val networkMonitor: NetworkConnectivityMonitor = koinInject()
+                val isOnline by networkMonitor.isOnline.collectAsState()
+                DisposableEffect(networkMonitor) {
+                    networkMonitor.start()
+                    onDispose { networkMonitor.stop() }
+                }
+
                 LaunchedEffect(isLoggedIn) {
                     if (isLoggedIn == true) {
                         val token = FCMTokenManager.getToken()
@@ -99,11 +110,11 @@ class MainActivity : ComponentActivity() {
                     NavGraph(
                         navController = navController,
                         signupViewModel = signupViewModel,
-                        loginViewModel = loginViewModel,
-                        sessionManager = sessionManager
+                        loginViewModel = loginViewModel
                     )
                     GlobalDownloadHandler()
                     GlobalToastHandler()
+                    OfflineBlockingOverlay(visible = !isOnline)
                 }
             }
         }

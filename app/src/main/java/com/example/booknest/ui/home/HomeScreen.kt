@@ -34,11 +34,11 @@ import com.example.booknest.ui.home.components.sections.GreetingSection
 import com.example.booknest.ui.home.components.sections.QuickActionsSection
 import com.example.booknest.ui.home.components.sections.SearchSection
 import com.example.booknest.ui.home.components.sections.TrendingSection
-import com.example.booknest.viewmodel.ApplicationViewModel
-import com.example.booknest.viewmodel.AuthorFollowViewModel
-import com.example.booknest.viewmodel.BookViewModel
-import com.example.booknest.viewmodel.FriendViewModel
-import com.example.booknest.viewmodel.NotificationViewModel
+import com.example.booknest.viewmodel.applications.ApplicationViewModel
+import com.example.booknest.viewmodel.author.AuthorFollowViewModel
+import com.example.booknest.viewmodel.books.BookViewModel
+import com.example.booknest.viewmodel.friends.FriendViewModel
+import com.example.booknest.viewmodel.notifications.NotificationViewModel
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
 
@@ -69,12 +69,8 @@ fun HomeScreen(
     val searchResults by bookViewModel.homeSearchResults.collectAsState()
     val isSearching by bookViewModel.isLoading.collectAsState()
 
-    val myApplications by applicationViewModel.myApplications.collectAsState()
-    val approvedApplications = myApplications.filter { it.status == "approved" }
-    val activeReadingApplications = approvedApplications.filter {
-        it.readingStatus != "reviewed"
-    }
-    val pendingApplications = myApplications.filter { it.status == "pending" }
+    val activeReadingApplications by applicationViewModel.activeReadingApplications.collectAsState()
+    val pendingApplications by applicationViewModel.pendingApplications.collectAsState()
 
     val unreadCount by notificationViewModel.unreadCount.collectAsState()
 
@@ -91,12 +87,7 @@ fun HomeScreen(
     }
 
     LaunchedEffect(searchQuery) {
-        if (searchQuery.isNotBlank()) {
-            kotlinx.coroutines.delay(500)
-            bookViewModel.searchForHomeScreen(query = searchQuery, take = 20)
-        } else {
-            bookViewModel.clearHomeSearchResults()
-        }
+        bookViewModel.updateSearchQuery(searchQuery)
     }
 
     Scaffold(

@@ -12,7 +12,6 @@ import com.example.booknest.domain.model.response.RecommendedBookResponse
 import com.example.booknest.domain.model.response.ReviewResponse
 import com.example.booknest.domain.model.response.TrendingBookResponse
 import com.example.booknest.domain.model.response.UploadBookFileResponse
-import com.example.booknest.domain.model.response.UploadBookCoverResponse
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -42,7 +41,7 @@ class BNBooksDataSource(private val booksService: BooksService) : BooksDataSourc
         deadlineFilter: String?,
         sortBy: String?
     ): Result<List<RecommendedBookResponse>> {
-        return requestPaginatedBody(
+        return runSuspendRequestPaginated {
             booksService.browseBooks(
                 search, genres, title, authorName, authorId,
                 seriesName, seriesId, ageRating, distributionType,
@@ -50,7 +49,7 @@ class BNBooksDataSource(private val booksService: BooksService) : BooksDataSourc
                 minAvgRating, maxAvgRating, skip, take, status,
                 applicationStatus, deadlineFilter, sortBy
             )
-        )
+        }
     }
 
     override suspend fun searchBooks(
@@ -58,19 +57,19 @@ class BNBooksDataSource(private val booksService: BooksService) : BooksDataSourc
         skip: Int?,
         take: Int?
     ): Result<List<RecommendedBookResponse>> {
-        return requestPaginatedBody(booksService.searchBooks(query, skip, take))
+        return runSuspendRequestPaginated { booksService.searchBooks(query, skip, take) }
     }
 
     override suspend fun getRecommendedBooks(take: Int?): Result<List<RecommendedBookResponse>> {
-        return requestPaginatedBody(booksService.getRecommendedBooks(take))
+        return runSuspendRequestPaginated { booksService.getRecommendedBooks(take) }
     }
 
     override suspend fun getTrendingBooks(limit: Int?): Result<List<TrendingBookResponse>> {
-        return requestBody(booksService.getTrendingBooks(limit))
+        return runSuspendRequest { booksService.getTrendingBooks(limit) }
     }
 
     override suspend fun getBookDetails(bookId: String): Result<BookResponse> {
-        return requestBody(booksService.getBookDetails(bookId))
+        return runSuspendRequest { booksService.getBookDetails(bookId) }
     }
 
     override suspend fun createBook(
@@ -95,7 +94,7 @@ class BNBooksDataSource(private val booksService: BooksService) : BooksDataSourc
         val seriesId = book.seriesId?.toRequestBody("text/plain".toMediaType())
         val seriesOrder = book.seriesOrder?.toString()?.toRequestBody("text/plain".toMediaType())
 
-        return requestBody(
+        return runSuspendRequest {
             booksService.createBook(
                 title = title,
                 shortDescription = shortDescription,
@@ -113,68 +112,68 @@ class BNBooksDataSource(private val booksService: BooksService) : BooksDataSourc
                 seriesOrder = seriesOrder,
                 file = filePart
             )
-        )
+        }
     }
 
     override suspend fun getMyBooks(): Result<List<BookResponse>> {
-        return requestBody(booksService.getMyBooks())
+        return runSuspendRequest { booksService.getMyBooks() }
     }
 
     override suspend fun updateBook(bookId: String, book: UpdateBookRequest): Result<BookResponse> {
-        return requestBody(booksService.updateBook(bookId, book))
+        return runSuspendRequest { booksService.updateBook(bookId, book) }
     }
 
     override suspend fun deleteBook(bookId: String): Result<Unit> {
-        return requestBodyUnit(booksService.deleteBook(bookId))
+        return runSuspendRequestUnit { booksService.deleteBook(bookId) }
     }
 
     override suspend fun publishBook(bookId: String): Result<BookResponse> {
-        return requestBody(booksService.publishBook(bookId))
+        return runSuspendRequest { booksService.publishBook(bookId) }
     }
 
     override suspend fun getBookStats(bookId: String): Result<BookStatsResponse> {
-        return requestBody(booksService.getBookStats(bookId))
+        return runSuspendRequest { booksService.getBookStats(bookId) }
     }
 
     override suspend fun getBookAnalytics(bookId: String): Result<DetailedBookAnalyticsResponse> {
-        return requestBody(booksService.getBookAnalytics(bookId))
+        return runSuspendRequest { booksService.getBookAnalytics(bookId) }
     }
 
     override suspend fun getDetailedBookAnalytics(bookId: String): Result<DetailedBookAnalyticsResponse> {
-        return requestBody(booksService.getDetailedBookAnalytics(bookId))
+        return runSuspendRequest { booksService.getDetailedBookAnalytics(bookId) }
     }
 
     override suspend fun getAuthorAnalytics(dateRange: String?): Result<AuthorAnalyticsResponse> {
-        return requestBody(booksService.getAuthorAnalytics(dateRange))
+        return runSuspendRequest { booksService.getAuthorAnalytics(dateRange) }
     }
 
     override suspend fun getBookPerformanceComparison(): Result<List<com.example.booknest.domain.model.response.BookPerformanceComparisonResponse>> {
-        return requestBody(booksService.getBookPerformanceComparison())
+        return runSuspendRequest { booksService.getBookPerformanceComparison() }
     }
 
     override suspend fun uploadBookFile(
         bookId: String,
         file: MultipartBody.Part
     ): Result<UploadBookFileResponse> {
-        return requestBody(booksService.uploadBookFile(bookId, file))
+        return runSuspendRequest { booksService.uploadBookFile(bookId, file) }
     }
 
     override suspend fun uploadBookCoverImage(
         bookId: String,
         file: MultipartBody.Part
     ): Result<BookResponse> {
-        return requestBody(booksService.uploadBookCoverImage(bookId, file)).fold(
+        return runSuspendRequest { booksService.uploadBookCoverImage(bookId, file) }.fold(
             onSuccess = { response -> Result.success(response.book) },
             onFailure = { error -> Result.failure(error) }
         )
     }
 
     override suspend fun removeBookCoverImage(bookId: String): Result<BookResponse> {
-        return requestBody(booksService.removeBookCoverImage(bookId))
+        return runSuspendRequest { booksService.removeBookCoverImage(bookId) }
     }
 
     override suspend fun getBookDownloadUrl(bookId: String): Result<DownloadBookResponse> {
-        return requestBody(booksService.getBookDownloadUrl(bookId))
+        return runSuspendRequest { booksService.getBookDownloadUrl(bookId) }
     }
 
     override suspend fun getBookAllReviews(
@@ -182,7 +181,6 @@ class BNBooksDataSource(private val booksService: BooksService) : BooksDataSourc
         skip: Int?,
         take: Int?
     ): Result<List<ReviewResponse>> {
-        return requestPaginatedBody(booksService.getBookAllReviews(bookId, skip, take))
+        return runSuspendRequestPaginated { booksService.getBookAllReviews(bookId, skip, take) }
     }
 }
-

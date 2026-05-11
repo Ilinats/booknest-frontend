@@ -33,7 +33,8 @@ import com.example.booknest.navigation.Screen
 import com.example.booknest.ui.components.genres.GenreButton
 import com.example.booknest.ui.components.genres.utils.createSmartRows
 import com.example.booknest.ui.toast.GlobalToastHandler
-import com.example.booknest.viewmodel.SignupViewModel
+import com.example.booknest.viewmodel.auth.SignupViewModel
+import com.example.booknest.ui.components.BackgroundDecoration
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,38 +54,7 @@ fun GenresScreen(navController: NavController, viewModel: SignupViewModel) {
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .offset(x = (-175).dp, y = (-175).dp)
-                .size(350.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .offset(x = (-135).dp, y = (-135).dp)
-                .size(270.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary)
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .offset(x = 175.dp, y = 175.dp)
-                .size(350.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .offset(x = 135.dp, y = 135.dp)
-                .size(270.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary)
-        )
+        BackgroundDecoration(modifier = Modifier.fillMaxSize())
 
         Column(
             modifier = Modifier

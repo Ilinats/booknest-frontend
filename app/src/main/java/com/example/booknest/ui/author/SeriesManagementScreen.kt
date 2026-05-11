@@ -29,13 +29,14 @@ import com.example.booknest.domain.model.response.BookResponse
 import com.example.booknest.domain.model.response.RecommendedBookResponse
 import com.example.booknest.navigation.Screen
 import com.example.booknest.ui.components.BackButton
-import com.example.booknest.viewmodel.BookViewModel
-import com.example.booknest.viewmodel.SeriesViewModel
+import com.example.booknest.viewmodel.books.BookViewModel
+import com.example.booknest.viewmodel.series.SeriesViewModel
 import com.example.booknest.domain.usecase.books.BrowseBooksUseCase
 import com.example.booknest.ui.author.components.series.CreateSeriesDialog
 import com.example.booknest.ui.author.components.series.DeleteSeriesDialog
 import com.example.booknest.ui.author.components.series.EditSeriesDialog
 import com.example.booknest.ui.author.components.series.SeriesCard
+import com.example.booknest.ui.components.BackgroundDecoration
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.getViewModel
@@ -174,38 +175,7 @@ fun SeriesManagementScreen(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(x = (-175).dp, y = (-175).dp)
-                    .size(350.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(x = (-135).dp, y = (-135).dp)
-                    .size(270.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary)
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .offset(x = 175.dp, y = 175.dp)
-                    .size(350.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .offset(x = 135.dp, y = 135.dp)
-                    .size(270.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary)
-            )
+            BackgroundDecoration(modifier = Modifier.fillMaxSize())
 
             if (isLoading && series.isEmpty()) {
                 Box(

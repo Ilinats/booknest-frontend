@@ -39,7 +39,9 @@ import com.example.booknest.ui.components.social.CustomLinkCard
 import com.example.booknest.ui.onboarding.components.fields.SocialMediaInputField
 import com.example.booknest.ui.auth.components.utils.isValidUrl
 import com.example.booknest.ui.components.BackButton
-import com.example.booknest.viewmodel.ProfileViewModel
+import com.example.booknest.viewmodel.profile.ProfileSettingsViewModel
+import com.example.booknest.viewmodel.profile.ProfileViewModel
+import com.example.booknest.ui.components.BackgroundDecoration
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
 
@@ -48,7 +50,8 @@ import org.koin.compose.koinInject
 fun SocialMediaScreen(
     navController: NavController,
     sessionManager: SessionManager = koinInject(),
-    profileViewModel: ProfileViewModel = getViewModel()
+    profileViewModel: ProfileViewModel = getViewModel(),
+    profileSettingsViewModel: ProfileSettingsViewModel = getViewModel()
 ) {
     val myProfile by profileViewModel.myProfile.collectAsState()
     val isLoading by profileViewModel.isLoading.collectAsState()
@@ -90,38 +93,7 @@ fun SocialMediaScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .offset(x = (-175).dp, y = (-175).dp)
-                .size(350.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .offset(x = (-135).dp, y = (-135).dp)
-                .size(270.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary)
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .offset(x = 175.dp, y = 175.dp)
-                .size(350.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .offset(x = 135.dp, y = 135.dp)
-                .size(270.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary)
-        )
+        BackgroundDecoration(modifier = Modifier.fillMaxSize())
 
         Column(
             modifier = Modifier
@@ -420,7 +392,7 @@ fun SocialMediaScreen(
 
             Button(
                 onClick = {
-                    profileViewModel.updateSocialMedia(
+                    profileSettingsViewModel.updateSocialMedia(
                         SocialMediaResponse(
                             instagram = instagram.takeIf { it.isNotBlank() },
                             tiktok = tiktok.takeIf { it.isNotBlank() },

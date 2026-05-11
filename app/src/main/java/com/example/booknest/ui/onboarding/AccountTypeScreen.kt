@@ -21,7 +21,7 @@ import androidx.navigation.NavController
 import com.example.booknest.R
 import com.example.booknest.navigation.Screen
 import com.example.booknest.ui.onboarding.components.cards.AccountTypeCard
-import com.example.booknest.viewmodel.SignupViewModel
+import com.example.booknest.viewmodel.auth.SignupViewModel
 
 @Composable
 fun AccountTypeScreen(navController: NavController, viewModel: SignupViewModel) {

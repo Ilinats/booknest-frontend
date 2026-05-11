@@ -26,8 +26,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.booknest.ui.books.components.list.BookItem
 import com.example.booknest.ui.components.BackButton
-import com.example.booknest.viewmodel.AuthorFollowViewModel
-import com.example.booknest.viewmodel.BookViewModel
+import com.example.booknest.viewmodel.author.AuthorFollowViewModel
+import com.example.booknest.viewmodel.books.BookViewModel
 import org.koin.androidx.compose.getViewModel
 
 @Composable

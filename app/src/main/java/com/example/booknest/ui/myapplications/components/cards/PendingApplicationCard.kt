@@ -44,7 +44,7 @@ import com.example.booknest.navigation.Screen
 import com.example.booknest.ui.myapplications.components.common.StatusBadge
 import com.example.booknest.ui.myapplications.utils.formatDate
 import androidx.navigation.NavController
-import com.example.booknest.viewmodel.ApplicationViewModel
+import com.example.booknest.viewmodel.applications.ApplicationViewModel
 import androidx.compose.foundation.background
 
 @Composable

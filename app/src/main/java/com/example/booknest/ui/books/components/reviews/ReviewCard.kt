@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.booknest.domain.model.response.ReviewResponse
 import com.example.booknest.ui.components.reviews.ReviewLinkPreview
-import com.example.booknest.viewmodel.ReviewType
+import com.example.booknest.viewmodel.analytics.ReviewType
 import com.example.booknest.ui.books.utils.formatDate
 
 @Composable

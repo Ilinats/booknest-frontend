@@ -30,7 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.navigation.Screen
-import com.example.booknest.viewmodel.FriendViewModel
+import com.example.booknest.viewmodel.friends.FriendViewModel
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
 import com.example.booknest.ui.components.BackButton
@@ -42,6 +42,7 @@ import com.example.booknest.ui.friends.components.list.FriendsList
 import com.example.booknest.ui.friends.components.list.SentRequestsList
 import com.example.booknest.ui.friends.components.list.ReceivedRequestsList
 import com.example.booknest.ui.friends.utils.getSortedFriends
+import com.example.booknest.ui.components.BackgroundDecoration
 
 enum class FriendsSortOption {
     Alphabetical, RecentlyAdded, MostActive
@@ -100,38 +101,7 @@ fun FriendsScreen(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(x = (-175).dp, y = (-175).dp)
-                    .size(350.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(x = (-135).dp, y = (-135).dp)
-                    .size(270.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary)
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .offset(x = 175.dp, y = 175.dp)
-                    .size(350.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .offset(x = 135.dp, y = 135.dp)
-                    .size(270.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary)
-            )
+            BackgroundDecoration(modifier = Modifier.fillMaxSize())
 
             Column(
                 modifier = Modifier

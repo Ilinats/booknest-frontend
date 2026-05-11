@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.shadow
@@ -14,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -26,8 +28,9 @@ import com.example.booknest.navigation.Screen
 import com.example.booknest.ui.components.Toast
 import com.example.booknest.ui.components.ToastMessage
 import com.example.booknest.ui.components.ToastType
-import com.example.booknest.viewmodel.SignupViewModel
+import com.example.booknest.viewmodel.auth.SignupViewModel
 import com.example.booknest.ui.state.UiState
+import com.example.booknest.ui.components.BackgroundDecoration
 import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -82,38 +85,7 @@ fun ProfileDetailsScreen(navController: NavController, viewModel: SignupViewMode
             onDismiss = { errorMessage = null },
             modifier = Modifier.align(Alignment.TopCenter)
         )
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .offset(x = (-175).dp, y = (-175).dp)
-                .size(350.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .offset(x = (-135).dp, y = (-135).dp)
-                .size(270.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary)
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .offset(x = 175.dp, y = 175.dp)
-                .size(350.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .offset(x = 135.dp, y = 135.dp)
-                .size(270.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary)
-        )
+        BackgroundDecoration(modifier = Modifier.fillMaxSize())
 
         Column(
             modifier = Modifier.fillMaxSize()
@@ -316,7 +288,7 @@ fun ProfileDetailsScreen(navController: NavController, viewModel: SignupViewMode
                     onClick = {
                         viewModel.updateBio(bio.ifBlank { null }, null)
                         viewModel.updateProfileDetails(
-                            birthDate = viewModel.signupData.birthDate,
+                            birthDate = viewModel.signupData.value.birthDate,
                             streetAddress = streetAddress,
                             city = city,
                             postalCode = postalCode,

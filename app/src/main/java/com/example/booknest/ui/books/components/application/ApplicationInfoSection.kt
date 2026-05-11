@@ -35,8 +35,9 @@ import com.example.booknest.domain.model.response.ApplicationCheckApplicationRes
 import com.example.booknest.domain.model.response.BookResponse
 import com.example.booknest.navigation.Screen
 import com.example.booknest.ui.books.utils.formatDate
-import com.example.booknest.viewmodel.ApplicationViewModel
-import com.example.booknest.viewmodel.ProfileViewModel
+import com.example.booknest.viewmodel.profile.AddressViewModel
+import com.example.booknest.viewmodel.applications.ApplicationViewModel
+import com.example.booknest.viewmodel.profile.ProfileViewModel
 import org.koin.androidx.compose.getViewModel
 
 @Composable
@@ -52,8 +53,9 @@ fun ApplicationInfoSection(
     applicationViewModel: ApplicationViewModel = getViewModel()
 ) {
     val profileViewModel: ProfileViewModel = getViewModel()
+    val addressViewModel: AddressViewModel = getViewModel()
     val myProfile by profileViewModel.myProfile.collectAsState()
-    val addresses by profileViewModel.addresses.collectAsState()
+    val addresses by addressViewModel.addresses.collectAsState()
     val currentUser = if (sessionManager != null) {
         val user by sessionManager.currentUser.collectAsState()
         user
@@ -70,7 +72,7 @@ fun ApplicationInfoSection(
             if (myProfile == null) {
                 profileViewModel.loadMyProfile()
             }
-            profileViewModel.loadAddresses()
+            addressViewModel.loadAddresses()
         }
     }
 

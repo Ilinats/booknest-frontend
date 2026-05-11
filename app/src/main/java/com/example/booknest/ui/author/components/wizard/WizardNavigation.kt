@@ -14,7 +14,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.booknest.ui.author.components.common.*
 import com.example.booknest.domain.model.request.CreateBookRequest
-import com.example.booknest.viewmodel.AuthorViewModel
 
 @Composable
 fun WizardNavigation(

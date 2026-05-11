@@ -3,6 +3,7 @@ package com.example.booknest.data.datasource
 import com.example.booknest.data.error.BNError
 import kotlinx.serialization.json.Json
 import retrofit2.Response
+import java.io.IOException
 
 fun extractErrorMessage(errorBody: String?): String {
     if (errorBody.isNullOrBlank()) return "An error occurred"
@@ -70,6 +71,44 @@ fun extractErrorMessage(errorBody: String?): String {
         } catch (ex: Exception) {
             "An error occurred"
         }
+    }
+}
+
+internal fun mapNetworkOrUnknown(e: Exception): Throwable = when (e) {
+    is BNError -> e
+    is IOException -> BNError.Network(
+        messageString = "Unable to reach the server. Check your connection and try again."
+    )
+    else -> BNError.Generic(
+        messageString = e.message ?: "Request failed",
+        error = null,
+        statusCode = null
+    )
+}
+
+suspend fun <T> runSuspendRequest(block: suspend () -> Response<T>): Result<T> {
+    return try {
+        requestBody(block())
+    } catch (e: Exception) {
+        Result.failure(mapNetworkOrUnknown(e))
+    }
+}
+
+suspend fun <T> runSuspendRequestPaginated(
+    block: suspend () -> Response<com.example.booknest.domain.model.response.PaginatedResponse<T>>
+): Result<List<T>> {
+    return try {
+        requestPaginatedBody(block())
+    } catch (e: Exception) {
+        Result.failure(mapNetworkOrUnknown(e))
+    }
+}
+
+suspend fun runSuspendRequestUnit(block: suspend () -> Response<Unit>): Result<Unit> {
+    return try {
+        requestBodyUnit(block())
+    } catch (e: Exception) {
+        Result.failure(mapNetworkOrUnknown(e))
     }
 }
 

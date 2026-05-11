@@ -19,7 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.ui.analytics.components.book.BookAnalyticsContent
-import com.example.booknest.viewmodel.AnalyticsViewModel
+import com.example.booknest.viewmodel.analytics.AnalyticsViewModel
 import com.example.booknest.ui.state.UiState
 import org.koin.androidx.compose.getViewModel
 

@@ -9,7 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.booknest.ui.author.BookStatus
+import com.example.booknest.viewmodel.author.BookStatus
 
 @Composable
 fun StatusChip(status: String?) {

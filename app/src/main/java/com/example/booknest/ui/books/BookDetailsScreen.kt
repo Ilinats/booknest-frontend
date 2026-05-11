@@ -35,9 +35,9 @@ import com.example.booknest.ui.books.components.details.GenreTagsSection
 import com.example.booknest.ui.books.components.dialogs.ApplicationFormDialog
 import com.example.booknest.ui.books.components.dialogs.WithdrawApplicationDialog
 import com.example.booknest.ui.books.components.reviews.ReviewsSection
-import com.example.booknest.viewmodel.ApplicationViewModel
-import com.example.booknest.viewmodel.BookViewModel
-import com.example.booknest.viewmodel.ReviewViewModel
+import com.example.booknest.viewmodel.applications.ApplicationViewModel
+import com.example.booknest.viewmodel.books.BookViewModel
+import com.example.booknest.viewmodel.analytics.ReviewViewModel
 import com.example.booknest.ui.components.BackButton
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject

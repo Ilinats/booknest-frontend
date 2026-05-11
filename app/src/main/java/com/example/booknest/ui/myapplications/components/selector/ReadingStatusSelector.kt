@@ -12,7 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.booknest.viewmodel.ReadingStatus
+import com.example.booknest.viewmodel.applications.ReadingStatus
 import java.util.Locale
 
 @Composable

@@ -23,7 +23,8 @@ import com.example.booknest.domain.repository.GenresRepository
 import com.example.booknest.ui.author.components.wizard.*
 import com.example.booknest.ui.author.components.common.*
 import com.example.booknest.ui.components.BackButton
-import com.example.booknest.viewmodel.AuthorViewModel
+import com.example.booknest.viewmodel.author.AuthorBooksViewModel
+import com.example.booknest.viewmodel.author.AuthorSeriesViewModel
 import com.example.booknest.ui.state.UiState
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.getViewModel
@@ -40,7 +41,8 @@ fun BookCreationWizard(
     navController: NavController,
     sessionManager: SessionManager = koinInject(),
     genresRepository: GenresRepository = koinInject(),
-    authorViewModel: AuthorViewModel = getViewModel()
+    authorBooksViewModel: AuthorBooksViewModel = getViewModel(),
+    authorSeriesViewModel: AuthorSeriesViewModel = getViewModel()
 ) {
     var currentStep by remember { mutableStateOf(1) }
     val totalSteps = 6
@@ -115,15 +117,15 @@ fun BookCreationWizard(
     var applicationDeadlineError by remember { mutableStateOf<String?>(null) }
     var reviewDeadlineError by remember { mutableStateOf<String?>(null) }
 
-    val mySeries by authorViewModel.mySeries.collectAsState()
-    val bookCreationState by authorViewModel.bookCreationState.collectAsState()
-    val bookFileUploadState by authorViewModel.bookFileUploadState.collectAsState()
+    val mySeries by authorSeriesViewModel.mySeries.collectAsState()
+    val bookCreationState by authorBooksViewModel.bookCreationState.collectAsState()
+    val bookFileUploadState by authorBooksViewModel.bookFileUploadState.collectAsState()
     var genres by remember { mutableStateOf(listOf<GenreResponse>()) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        authorViewModel.loadMySeries()
+        authorSeriesViewModel.loadMySeries()
         try {
             val result = genresRepository.getGenres()
             result
@@ -229,7 +231,7 @@ fun BookCreationWizard(
                                 seriesOrder = so
                             },
                             onCreateSeries = { name: String, description: String ->
-                                authorViewModel.createSeries(
+                                authorSeriesViewModel.createSeries(
                                     CreateSeriesRequest(
                                         name = name,
                                         description = description.ifBlank { null }
@@ -389,7 +391,7 @@ fun BookCreationWizard(
                             seriesOrder = seriesOrder.toIntOrNull(),
                             coverImageUrl = coverImageUrl
                         )
-                        authorViewModel.createBook(
+                        authorBooksViewModel.createBook(
                             book,
                             bookFileUri,
                             coverImageUri,
@@ -418,7 +420,7 @@ fun BookCreationWizard(
                             seriesOrder = seriesOrder.toIntOrNull(),
                             coverImageUrl = coverImageUrl
                         )
-                        authorViewModel.createBook(
+                        authorBooksViewModel.createBook(
                             book,
                             bookFileUri,
                             coverImageUri,
@@ -454,7 +456,7 @@ fun BookCreationWizard(
                 createdBookId = state.data.id
                 if (bookFileUri != null) {
                     isUploadingFile = true
-                    authorViewModel.uploadBookFile(
+                    authorBooksViewModel.uploadBookFile(
                         bookId = state.data.id,
                         fileUri = bookFileUri!!,
                         context = context,
@@ -473,7 +475,7 @@ fun BookCreationWizard(
                     if (shouldPublishAfterCreation) {
                         showPublishDialog = true
                     } else {
-                        authorViewModel.clearBookCreationState()
+                        authorBooksViewModel.clearBookCreationState()
                         navController.popBackStack()
                     }
                 }
@@ -502,7 +504,7 @@ fun BookCreationWizard(
                     if (shouldPublishAfterCreation) {
                         showPublishDialog = true
                     } else {
-                        authorViewModel.clearBookCreationState()
+                        authorBooksViewModel.clearBookCreationState()
                         navController.popBackStack()
                     }
                 }
@@ -525,7 +527,7 @@ fun BookCreationWizard(
         androidx.compose.material3.AlertDialog(
             onDismissRequest = {
                 showPublishDialog = false
-                authorViewModel.clearBookCreationState()
+                authorBooksViewModel.clearBookCreationState()
                 navController.popBackStack()
             },
             title = { Text("Book Created Successfully!") },
@@ -541,7 +543,7 @@ fun BookCreationWizard(
                     OutlinedButton(
                         onClick = {
                             showPublishDialog = false
-                            authorViewModel.clearBookCreationState()
+                            authorBooksViewModel.clearBookCreationState()
                             navController.popBackStack()
                         },
                         modifier = Modifier.weight(1f)
@@ -551,8 +553,8 @@ fun BookCreationWizard(
                     Button(
                         onClick = {
                             showPublishDialog = false
-                            authorViewModel.publishBook(createdBookId!!)
-                            authorViewModel.clearBookCreationState()
+                            authorBooksViewModel.publishBook(createdBookId!!)
+                            authorBooksViewModel.clearBookCreationState()
                             navController.popBackStack()
                         },
                         modifier = Modifier.weight(1f)

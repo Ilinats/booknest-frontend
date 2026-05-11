@@ -22,12 +22,13 @@ import com.example.booknest.ui.theme.SkyBluePeriwinkle
 import androidx.navigation.NavController
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.ui.author.components.profile.AuthorProfileHeader
+import com.example.booknest.navigation.Screen
 import com.example.booknest.ui.author.components.profile.AuthorStatisticsSection
 import com.example.booknest.ui.author.components.AuthorBooksSection
-import com.example.booknest.viewmodel.AuthorViewModel
+import com.example.booknest.viewmodel.author.AuthorBooksViewModel
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
-import com.example.booknest.viewmodel.ProfileViewModel
+import com.example.booknest.viewmodel.profile.ProfileViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,16 +36,16 @@ fun AuthorProfileScreen(
     navController: NavController,
     sessionManager: SessionManager = koinInject(),
     profileViewModel: ProfileViewModel = getViewModel(),
-    authorViewModel: AuthorViewModel = getViewModel()
+    authorBooksViewModel: AuthorBooksViewModel = getViewModel()
 ) {
     val currentUser by sessionManager.currentUser.collectAsState()
     val myProfile by profileViewModel.myProfile.collectAsState()
-    val myBooks by authorViewModel.myBooks.collectAsState()
+    val myBooks by authorBooksViewModel.myBooks.collectAsState()
     val isLoadingProfile by profileViewModel.isLoading.collectAsState()
 
     LaunchedEffect(Unit) {
         profileViewModel.loadMyProfile()
-        authorViewModel.loadMyBooks()
+        authorBooksViewModel.loadMyBooks()
     }
 
     val authorName = myProfile?.firstName?.let { firstName ->
@@ -73,7 +74,7 @@ fun AuthorProfileScreen(
                     },
                     actions = {
                         IconButton(onClick = {
-                            navController.navigate("profile_edit")
+                            navController.navigate(Screen.ProfileEdit.route)
                         }) {
                             Icon(Icons.Default.Edit, contentDescription = "Edit Profile")
                         }

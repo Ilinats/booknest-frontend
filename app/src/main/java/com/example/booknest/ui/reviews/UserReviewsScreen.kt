@@ -21,13 +21,14 @@ import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.model.response.ReviewResponse
 import com.example.booknest.navigation.Screen
 import com.example.booknest.ui.components.BackButton
-import com.example.booknest.viewmodel.ReviewViewModel
+import com.example.booknest.viewmodel.analytics.ReviewViewModel
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
 import androidx.compose.runtime.collectAsState
 import kotlinx.coroutines.flow.collectLatest
 import com.example.booknest.ui.reviews.components.card.ReviewCard
 import com.example.booknest.ui.reviews.components.stats.ReviewStats
+import com.example.booknest.ui.components.BackgroundDecoration
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,38 +70,7 @@ fun UserReviewsScreen(
                 .background(MaterialTheme.colorScheme.background)
                 .padding(bottom = 20.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(x = (-175).dp, y = (-175).dp)
-                    .size(350.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(x = (-135).dp, y = (-135).dp)
-                    .size(270.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary)
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .offset(x = 175.dp, y = 175.dp)
-                    .size(350.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .offset(x = 135.dp, y = 135.dp)
-                    .size(270.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary)
-            )
+            BackgroundDecoration(modifier = Modifier.fillMaxSize())
 
             Box(
                 modifier = Modifier

@@ -21,9 +21,12 @@ import androidx.navigation.NavController
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.model.response.*
 import com.example.booknest.navigation.Screen
-import com.example.booknest.viewmodel.ProfileViewModel
-import com.example.booknest.viewmodel.AuthorFollowViewModel
-import com.example.booknest.viewmodel.FriendViewModel
+import com.example.booknest.viewmodel.profile.ProfileViewModel
+import com.example.booknest.viewmodel.analytics.ReviewViewModel
+import com.example.booknest.viewmodel.author.AuthorFollowViewModel
+import com.example.booknest.viewmodel.books.BookViewModel
+import com.example.booknest.viewmodel.friends.FriendViewModel
+import com.example.booknest.viewmodel.genres.FavoriteGenresViewModel
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
 import kotlinx.coroutines.flow.collectLatest
@@ -39,6 +42,7 @@ import com.example.booknest.ui.profile.components.sections.AuthorBooksSection
 import com.example.booknest.ui.profile.components.sections.RecentActivitySection
 import com.example.booknest.ui.profile.components.sections.ReviewsWrittenSection
 import com.example.booknest.ui.profile.components.sections.ProfileDetailsSection
+import com.example.booknest.ui.components.BackgroundDecoration
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -103,7 +107,7 @@ fun ProfileScreen(
                     actions = {
                         if (isOwnProfile) {
                             IconButton(onClick = {
-                                navController.navigate("profile_edit")
+                                navController.navigate(Screen.ProfileEdit.route)
                             }) {
                                 Icon(Icons.Default.Edit, contentDescription = "Edit Profile")
                             }
@@ -212,8 +216,9 @@ fun ProfileContent(
     navController: NavController,
     modifier: Modifier = Modifier
 ) {
-    val authorBooks by profileViewModel.authorBooks.collectAsState()
-    val authorBooksLoading by profileViewModel.authorBooksLoading.collectAsState()
+    val bookViewModel: BookViewModel = getViewModel()
+    val authorBooks by bookViewModel.authorBooks.collectAsState()
+    val authorBooksLoading by bookViewModel.authorBooksLoading.collectAsState()
     val userReviews by remember {
         mutableStateOf<List<com.example.booknest.domain.model.response.ReviewResponse>>(
             emptyList()
@@ -239,14 +244,10 @@ fun ProfileContent(
         )
     }
 
-    val friendViewModel: com.example.booknest.viewmodel.FriendViewModel =
-        org.koin.androidx.compose.getViewModel()
-    val authorFollowViewModel: com.example.booknest.viewmodel.AuthorFollowViewModel =
-        org.koin.androidx.compose.getViewModel()
-    val reviewViewModel: com.example.booknest.viewmodel.ReviewViewModel =
-        org.koin.androidx.compose.getViewModel()
-    val favoriteGenresViewModel: com.example.booknest.viewmodel.FavoriteGenresViewModel =
-        org.koin.androidx.compose.getViewModel()
+    val friendViewModel: FriendViewModel = getViewModel()
+    val authorFollowViewModel: AuthorFollowViewModel = getViewModel()
+    val reviewViewModel: ReviewViewModel = getViewModel()
+    val favoriteGenresViewModel: FavoriteGenresViewModel = getViewModel()
     val unfriendLoading by friendViewModel.isLoading.collectAsState()
     val authorFollowLoading by authorFollowViewModel.isLoading.collectAsState()
     val loadingAuthors by authorFollowViewModel.loadingAuthors.collectAsState()
@@ -259,7 +260,7 @@ fun ProfileContent(
                 .joinToString(" ")
                 .ifBlank { profile.username ?: "" }
             if (authorName.isNotBlank()) {
-                profileViewModel.loadAuthorBooks(authorId, authorName)
+                bookViewModel.loadAuthorBooks(authorId, authorName)
             }
         }
     }
@@ -336,38 +337,7 @@ fun ProfileContent(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .offset(x = (-175).dp, y = (-175).dp)
-                .size(350.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .offset(x = (-135).dp, y = (-135).dp)
-                .size(270.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary)
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .offset(x = 175.dp, y = 175.dp)
-                .size(350.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .offset(x = 135.dp, y = 135.dp)
-                .size(270.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary)
-        )
+        BackgroundDecoration(modifier = Modifier.fillMaxSize())
 
         Column(
             modifier = modifier

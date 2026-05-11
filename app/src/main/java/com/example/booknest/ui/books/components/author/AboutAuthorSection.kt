@@ -32,7 +32,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.model.response.BookResponse
-import com.example.booknest.viewmodel.AuthorFollowViewModel
+import com.example.booknest.viewmodel.author.AuthorFollowViewModel
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.getViewModel
 
@@ -141,9 +141,7 @@ fun AboutAuthorSection(
             OutlinedButton(
                 onClick = {
                     authorUsername?.let {
-                        navController.navigate("profile/$it")
-                    } ?: run {
-                        println("DEBUG: Cannot navigate to author profile - username is missing")
+                        navController.navigate(com.example.booknest.navigation.Screen.Profile.createRoute(it))
                     }
                 },
                 modifier = Modifier.weight(1f),

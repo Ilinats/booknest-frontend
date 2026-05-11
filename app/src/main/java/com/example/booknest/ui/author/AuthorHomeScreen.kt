@@ -8,11 +8,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -21,7 +18,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -35,54 +31,43 @@ import com.example.booknest.ui.author.components.AuthorTopBar
 import com.example.booknest.ui.author.components.QuickActionsSection
 import com.example.booknest.ui.author.components.QuickStatsSection
 import com.example.booknest.ui.author.components.RecentReviewsSection
+import com.example.booknest.ui.components.BackgroundDecoration
 import com.example.booknest.ui.author.components.profile.WelcomeSection
 import com.example.booknest.ui.author.components.PerformanceSummarySection
 import com.example.booknest.ui.author.utils.AuthorHomeUtils
-import com.example.booknest.viewmodel.AuthorViewModel
+import com.example.booknest.viewmodel.author.AuthorBooksViewModel
+import com.example.booknest.viewmodel.author.AuthorDashboardViewModel
+import com.example.booknest.viewmodel.author.BookStatus
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
-
-enum class BookStatus(val value: String) {
-    DRAFT("draft"),
-    ACTIVE("active"),
-    IN_PROGRESS("in_progress"),
-    COMPLETED("completed"),
-    ARCHIVED("archived")
-}
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun AuthorHomeScreen(
     navController: NavController,
     sessionManager: SessionManager = koinInject(),
-    authorViewModel: AuthorViewModel = getViewModel(),
+    authorBooksViewModel: AuthorBooksViewModel = getViewModel(),
+    authorDashboardViewModel: AuthorDashboardViewModel = getViewModel(),
     authRepository: AuthRepository = koinInject()
 ) {
-    val myBooks by authorViewModel.myBooks.collectAsState()
-    val isLoadingBooks by authorViewModel.isLoadingBooks.collectAsState()
-    val quickStats by authorViewModel.quickStats.collectAsState()
-    val authorStats by authorViewModel.authorStats.collectAsState()
-    val recentReviews by authorViewModel.recentReviews.collectAsState()
-    val overdueReviews by authorViewModel.overdueReviews.collectAsState()
-    val bookStats by authorViewModel.bookStats.collectAsState()
+    val myBooks by authorBooksViewModel.myBooks.collectAsState()
+    val isLoadingBooks by authorBooksViewModel.isLoadingBooks.collectAsState()
+    val quickStats by authorDashboardViewModel.quickStats.collectAsState()
+    val authorStats by authorDashboardViewModel.authorStats.collectAsState()
+    val recentReviews by authorDashboardViewModel.recentReviews.collectAsState()
+    val overdueReviews by authorDashboardViewModel.overdueReviews.collectAsState()
+    val bookStats by authorBooksViewModel.bookStats.collectAsState()
     val currentUser by sessionManager.currentUser.collectAsState()
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    LaunchedEffect(Unit) {
-        authorViewModel.reloadHomeScreenData()
-    }
-
     LaunchedEffect(currentRoute) {
         if (currentRoute == AuthorBottomBarScreen.Home.route) {
-            authorViewModel.reloadHomeScreenData()
-        }
-    }
-
-    LaunchedEffect(myBooks) {
-        myBooks.filter { it.status == BookStatus.ACTIVE.value }.forEach { book ->
-            authorViewModel.getBookStats(book.id)
+            authorBooksViewModel.loadMyBooks()
+            authorDashboardViewModel.loadAuthorStats()
+            authorDashboardViewModel.loadRecentReviews()
+            authorDashboardViewModel.loadOverdueReviews()
         }
     }
 
@@ -114,38 +99,7 @@ fun AuthorHomeScreen(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(x = (-175).dp, y = (-175).dp)
-                    .size(350.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(x = (-135).dp, y = (-135).dp)
-                    .size(270.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary)
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .offset(x = 175.dp, y = 175.dp)
-                    .size(350.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .offset(x = 135.dp, y = 135.dp)
-                    .size(270.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary)
-            )
+            BackgroundDecoration(modifier = Modifier.fillMaxSize())
 
             LazyColumn(
                 modifier = Modifier
@@ -182,7 +136,7 @@ fun AuthorHomeScreen(
                         bookStats = bookStats,
                         isLoading = isLoadingBooks,
                         onBookClick = { bookId ->
-                            navController.navigate("book_applications/$bookId")
+                            navController.navigate(Screen.BookApplicationDetail.createRoute(bookId))
                         },
                         onEditClick = { bookId ->
                             navController.navigate(Screen.BookEdit.createRoute(bookId))

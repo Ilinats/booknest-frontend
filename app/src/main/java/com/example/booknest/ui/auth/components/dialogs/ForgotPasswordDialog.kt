@@ -22,7 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.booknest.viewmodel.PasswordResetViewModel
+import com.example.booknest.viewmodel.auth.PasswordResetViewModel
 import org.koin.androidx.compose.getViewModel
 
 @Composable

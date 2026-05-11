@@ -32,7 +32,7 @@ import com.example.booknest.ui.components.BackButton
 import com.example.booknest.ui.components.auth.CodeInputField
 import com.example.booknest.ui.components.auth.ResendCodeButton
 import com.example.booknest.data.session.SessionManager
-import com.example.booknest.viewmodel.PasswordResetViewModel
+import com.example.booknest.viewmodel.auth.PasswordResetViewModel
 import com.example.booknest.navigation.Screen
 import com.example.booknest.ui.auth.components.AuthBackgroundDecoration
 
@@ -247,7 +247,7 @@ fun PasswordResetScreen(
                             if (newPassword == confirmPassword && newPassword.length >= 6) {
                                 viewModel.resetPassword(enteredCode, newPassword)
                             } else {
-                                viewModel.showError("Passwords don't match or are too short")
+                                viewModel.setClientValidationError("Passwords don't match or are too short")
                             }
                         },
                         enabled = newPassword.isNotEmpty() && confirmPassword.isNotEmpty() && !uiState.isLoading,

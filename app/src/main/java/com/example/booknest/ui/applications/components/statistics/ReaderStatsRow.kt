@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.booknest.domain.model.response.UserProfileResponse
 import com.example.booknest.ui.applications.components.list.GenreTag
-import com.example.booknest.viewmodel.ProfileViewModel
+import com.example.booknest.viewmodel.profile.ProfileViewModel
 import org.koin.androidx.compose.getViewModel
 
 @Composable

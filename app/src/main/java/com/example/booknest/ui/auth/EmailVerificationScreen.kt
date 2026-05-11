@@ -25,7 +25,7 @@ import org.koin.androidx.compose.getViewModel
 import com.example.booknest.ui.components.auth.CodeInputField
 import com.example.booknest.ui.components.auth.ResendCodeButton
 import com.example.booknest.data.session.SessionManager
-import com.example.booknest.viewmodel.EmailVerificationViewModel
+import com.example.booknest.viewmodel.auth.EmailVerificationViewModel
 import com.example.booknest.navigation.Screen
 import com.example.booknest.ui.auth.components.AuthBackgroundDecoration
 

@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.example.booknest.data.session.SessionManager
 import com.example.booknest.ui.components.Toast
 import com.example.booknest.ui.components.ToastMessage
 import com.example.booknest.ui.components.ToastType
@@ -23,6 +24,20 @@ object GlobalDownloadHandler {
     private val _toastMessage = MutableSharedFlow<ToastMessage>(replay = 0)
     val toastMessage: SharedFlow<ToastMessage> = _toastMessage.asSharedFlow()
     private val downloadScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    private fun shouldSuppressStaleAuthToast(message: String): Boolean {
+        val m = message.lowercase()
+        val looksLikeAuthNoise = m.contains("token") ||
+            m.contains("missing") ||
+            m.contains("unauthorized") ||
+            m.contains("not authorized") ||
+            m.contains("jwt") ||
+            m.contains("bearer")
+        if (!looksLikeAuthNoise) return false
+        val loggedOut = SessionManager.isLoggedIn.value != true
+        val noAccessToken = SessionManager.getToken().isEmpty()
+        return loggedOut || noAccessToken
+    }
 
     fun showDownloadStarted(bookTitle: String? = null) {
         downloadScope.launch {
@@ -47,6 +62,7 @@ object GlobalDownloadHandler {
     }
 
     fun showDownloadError(errorMessage: String) {
+        if (shouldSuppressStaleAuthToast(errorMessage)) return
         downloadScope.launch {
             _toastMessage.emit(ToastMessage(errorMessage, ToastType.ERROR))
         }

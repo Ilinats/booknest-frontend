@@ -10,7 +10,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.booknest.domain.model.response.ApplicationResponse
 import com.example.booknest.ui.myapplications.components.cards.CompletedApplicationCard
-import com.example.booknest.viewmodel.FileViewModel
+import com.example.booknest.viewmodel.files.FileViewModel
 
 fun LazyListScope.CompletedApplicationsContent(
     applications: List<ApplicationResponse>,

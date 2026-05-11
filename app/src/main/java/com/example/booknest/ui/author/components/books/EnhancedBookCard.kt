@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.booknest.domain.model.response.BookResponse
 import com.example.booknest.domain.model.response.BookStatsResponse
-import com.example.booknest.ui.author.BookStatus
+import com.example.booknest.viewmodel.author.BookStatus
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable

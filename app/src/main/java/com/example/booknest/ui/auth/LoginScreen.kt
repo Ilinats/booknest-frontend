@@ -30,7 +30,7 @@ import com.example.booknest.data.session.SessionManager
 import com.example.booknest.navigation.Screen
 import com.example.booknest.ui.auth.components.dialogs.ForgotPasswordDialog
 import com.example.booknest.navigation.NavigationEvent
-import com.example.booknest.viewmodel.LoginViewModel
+import com.example.booknest.viewmodel.auth.LoginViewModel
 import com.example.booknest.ui.state.UiState
 import kotlinx.coroutines.flow.collectLatest
 

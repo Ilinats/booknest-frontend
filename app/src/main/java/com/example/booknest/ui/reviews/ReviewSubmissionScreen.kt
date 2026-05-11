@@ -20,9 +20,9 @@ import kotlin.math.roundToInt
 import androidx.navigation.NavController
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.model.response.*
-import com.example.booknest.viewmodel.ApplicationViewModel
-import com.example.booknest.viewmodel.ReviewViewModel
-import com.example.booknest.viewmodel.ReviewType
+import com.example.booknest.viewmodel.applications.ApplicationViewModel
+import com.example.booknest.viewmodel.analytics.ReviewViewModel
+import com.example.booknest.viewmodel.analytics.ReviewType
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
 import com.example.booknest.ui.reviews.components.header.BookReferenceHeader

@@ -24,8 +24,10 @@ import com.example.booknest.ui.author.components.BookEditNavigation
 import com.example.booknest.ui.author.components.wizard.*
 import com.example.booknest.ui.author.components.common.*
 import com.example.booknest.ui.components.BackButton
-import com.example.booknest.viewmodel.AuthorViewModel
-import com.example.booknest.viewmodel.BookViewModel
+import com.example.booknest.viewmodel.author.AuthorBooksViewModel
+import com.example.booknest.viewmodel.author.AuthorSeriesViewModel
+import com.example.booknest.viewmodel.author.BookStatus
+import com.example.booknest.viewmodel.books.BookViewModel
 import com.example.booknest.ui.state.UiState
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.getViewModel
@@ -41,16 +43,17 @@ fun BookEditScreen(
     bookId: String,
     sessionManager: SessionManager = koinInject(),
     genresRepository: GenresRepository = koinInject(),
-    authorViewModel: AuthorViewModel = getViewModel(),
+    authorBooksViewModel: AuthorBooksViewModel = getViewModel(),
+    authorSeriesViewModel: AuthorSeriesViewModel = getViewModel(),
     bookViewModel: BookViewModel = getViewModel()
 ) {
     var currentStep by remember { mutableStateOf(1) }
     val totalSteps = 6
 
     val bookDetails by bookViewModel.bookDetails.collectAsState()
-    val coverImageRemovalState by authorViewModel.coverImageRemovalState.collectAsState()
-    val coverImageUploadState by authorViewModel.coverImageUploadState.collectAsState()
-    val bookFileUploadState by authorViewModel.bookFileUploadState.collectAsState()
+    val coverImageRemovalState by authorBooksViewModel.coverImageRemovalState.collectAsState()
+    val coverImageUploadState by authorBooksViewModel.coverImageUploadState.collectAsState()
+    val bookFileUploadState by authorBooksViewModel.bookFileUploadState.collectAsState()
     var isLoading by remember { mutableStateOf(true) }
     var isSaving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf<String?>(null) }
@@ -145,7 +148,7 @@ fun BookEditScreen(
 
     var showCreateSeriesDialog by remember { mutableStateOf(false) }
 
-    val mySeries by authorViewModel.mySeries.collectAsState()
+    val mySeries by authorSeriesViewModel.mySeries.collectAsState()
     var genres by remember { mutableStateOf(listOf<GenreResponse>()) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -162,7 +165,7 @@ fun BookEditScreen(
     }
 
     LaunchedEffect(Unit) {
-        authorViewModel.loadMySeries()
+        authorSeriesViewModel.loadMySeries()
         try {
             val result = genresRepository.getGenres()
             result
@@ -455,7 +458,7 @@ fun BookEditScreen(
                                     seriesOrder = so
                                 },
                                 onCreateSeries = { name: String, description: String ->
-                                    authorViewModel.createSeries(
+                                    authorSeriesViewModel.createSeries(
                                         com.example.booknest.domain.model.request.CreateSeriesRequest(
                                             name = name,
                                             description = description.ifBlank { null }
@@ -609,26 +612,26 @@ fun BookEditScreen(
                             scope.launch {
                                 try {
                                     if (shouldRemoveCoverImage) {
-                                        authorViewModel.removeBookCoverImage(bookId)
+                                        authorBooksViewModel.removeBookCoverImage(bookId)
                                         var removalComplete = false
                                         var attempts = 0
                                         while (!removalComplete && attempts < 100) {
                                             kotlinx.coroutines.delay(100)
-                                            val removalState = authorViewModel.coverImageRemovalState.value
+                                            val removalState = authorBooksViewModel.coverImageRemovalState.value
                                             removalComplete = removalState is UiState.Success || removalState is UiState.Error
                                             attempts++
                                         }
                                     }
 
-                                    authorViewModel.updateBook(bookId, updateRequest)
+                                    authorBooksViewModel.updateBook(bookId, updateRequest)
 
                                     coverImageUri?.let { uri ->
-                                        authorViewModel.uploadBookCoverImage(bookId, uri, context)
+                                        authorBooksViewModel.uploadBookCoverImage(bookId, uri, context)
                                         var uploadComplete = false
                                         var attempts = 0
                                         while (!uploadComplete && attempts < 300) {
                                             kotlinx.coroutines.delay(100)
-                                            val uploadState = authorViewModel.coverImageUploadState.value
+                                            val uploadState = authorBooksViewModel.coverImageUploadState.value
                                             uploadComplete = uploadState is UiState.Success || uploadState is UiState.Error
                                             attempts++
                                         }
@@ -636,7 +639,7 @@ fun BookEditScreen(
                                     }
 
                                     bookFileUri?.let { uri ->
-                                        authorViewModel.uploadBookFile(
+                                        authorBooksViewModel.uploadBookFile(
                                             bookId = bookId,
                                             fileUri = uri,
                                             context = context,
@@ -647,7 +650,7 @@ fun BookEditScreen(
                                         var attempts = 0
                                         while (!fileUploadComplete && attempts < 600) {
                                             kotlinx.coroutines.delay(100)
-                                            val fileUploadState = authorViewModel.bookFileUploadState.value
+                                            val fileUploadState = authorBooksViewModel.bookFileUploadState.value
                                             fileUploadComplete = fileUploadState is UiState.Success || fileUploadState is UiState.Error
                                             attempts++
                                         }

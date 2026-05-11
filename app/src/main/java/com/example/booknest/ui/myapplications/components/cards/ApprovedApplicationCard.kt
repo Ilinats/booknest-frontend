@@ -41,9 +41,9 @@ import com.example.booknest.ui.myapplications.components.sections.CopyStatusSect
 import com.example.booknest.ui.myapplications.components.sections.ProgressTimeline
 import com.example.booknest.ui.myapplications.components.selector.ReadingStatusSelector
 import com.example.booknest.ui.myapplications.utils.formatDate
-import com.example.booknest.viewmodel.ApplicationViewModel
-import com.example.booknest.viewmodel.FileViewModel
-import com.example.booknest.viewmodel.ReadingStatus
+import com.example.booknest.viewmodel.applications.ApplicationViewModel
+import com.example.booknest.viewmodel.files.FileViewModel
+import com.example.booknest.viewmodel.applications.ReadingStatus
 import androidx.navigation.NavController
 import androidx.compose.foundation.background
 

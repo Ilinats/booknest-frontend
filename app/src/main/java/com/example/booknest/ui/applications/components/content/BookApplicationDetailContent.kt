@@ -34,9 +34,9 @@ import com.example.booknest.ui.applications.dialogs.RunLotteryDialog
 import com.example.booknest.ui.applications.models.ApplicationStats
 import com.example.booknest.ui.applications.models.SortOption
 import com.example.booknest.ui.components.BackButton
-import com.example.booknest.viewmodel.ApplicationViewModel
-import com.example.booknest.viewmodel.BookViewModel
-import com.example.booknest.viewmodel.ReviewViewModel
+import com.example.booknest.viewmodel.applications.BookApplicationViewModel
+import com.example.booknest.viewmodel.books.BookViewModel
+import com.example.booknest.viewmodel.analytics.ReviewViewModel
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
 import java.text.SimpleDateFormat
@@ -50,15 +50,15 @@ fun BookApplicationDetailContent(
     navController: NavController,
     sessionManager: SessionManager = koinInject(),
     bookId: String,
-    applicationViewModel: ApplicationViewModel = getViewModel(),
+    bookApplicationViewModel: BookApplicationViewModel = getViewModel(),
     bookViewModel: BookViewModel = getViewModel(),
     reviewViewModel: ReviewViewModel = getViewModel()
 ) {
-    val bookApplications by applicationViewModel.bookApplications.collectAsState()
-    val isLoading by applicationViewModel.isLoading.collectAsState()
+    val bookApplications by bookApplicationViewModel.bookApplications.collectAsState()
+    val isLoading by bookApplicationViewModel.isLoading.collectAsState()
     val bookDetails by bookViewModel.bookDetails.collectAsState()
     val bookReviews by reviewViewModel.bookReviews.collectAsState()
-    val allOverdueReviews by applicationViewModel.overdueReviews.collectAsState()
+    val allOverdueReviews by bookApplicationViewModel.overdueReviews.collectAsState()
 
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("All", "Pending", "Approved", "Rejected", "Reviews", "Statistics")
@@ -91,9 +91,9 @@ fun BookApplicationDetailContent(
 
     LaunchedEffect(bookId) {
         bookViewModel.getBookDetails(bookId)
-        applicationViewModel.loadBookApplications(bookId)
+        bookApplicationViewModel.loadBookApplications(bookId)
         reviewViewModel.loadBookReviews(bookId)
-        applicationViewModel.loadOverdueReviews()
+        bookApplicationViewModel.loadOverdueReviews()
     }
 
     LaunchedEffect(selectedTab) {
@@ -221,7 +221,7 @@ fun BookApplicationDetailContent(
                         }
                         IconButton(onClick = {
                             bookId.let {
-                                navController.navigate("book_analytics/$it")
+                                navController.navigate(Screen.BookAnalytics.createRoute(it))
                             }
                         }) {
                             Icon(Icons.Filled.Info, contentDescription = "Analytics")
@@ -328,7 +328,7 @@ fun BookApplicationDetailContent(
                         selectedCount = selectedApplicationIds.size,
                         availableSlots = availableSlots,
                         onApproveSelected = {
-                            applicationViewModel.bulkActionApplications(
+                            bookApplicationViewModel.bulkActionApplications(
                                 selectedApplicationIds.toList(),
                                 "approved"
                             )
@@ -336,7 +336,7 @@ fun BookApplicationDetailContent(
                             isSelectionMode = false
                         },
                         onRejectSelected = {
-                            applicationViewModel.bulkActionApplications(
+                            bookApplicationViewModel.bulkActionApplications(
                                 selectedApplicationIds.toList(),
                                 "rejected"
                             )
@@ -345,7 +345,7 @@ fun BookApplicationDetailContent(
                         },
                         onMarkSentSelected = {
                             selectedApplicationIds.forEach { id ->
-                                applicationViewModel.markCopySent(id)
+                                bookApplicationViewModel.markCopySent(id)
                             }
                             selectedApplicationIds = emptySet()
                             isSelectionMode = false
@@ -418,13 +418,13 @@ fun BookApplicationDetailContent(
                                     },
                                     navController = navController,
                                     onApprove = { app, notes ->
-                                        applicationViewModel.approveApplication(
+                                        bookApplicationViewModel.approveApplication(
                                             app.id,
                                             notes
                                         )
                                     },
                                     onReject = { app, notes ->
-                                        applicationViewModel.rejectApplication(
+                                        bookApplicationViewModel.rejectApplication(
                                             app.id,
                                             notes
                                         )
@@ -477,13 +477,13 @@ fun BookApplicationDetailContent(
                                     },
                                     navController = navController,
                                     onApprove = { app, notes ->
-                                        applicationViewModel.approveApplication(
+                                        bookApplicationViewModel.approveApplication(
                                             app.id,
                                             notes
                                         )
                                     },
                                     onReject = { app, notes ->
-                                        applicationViewModel.rejectApplication(
+                                        bookApplicationViewModel.rejectApplication(
                                             app.id,
                                             notes
                                         )
@@ -535,7 +535,7 @@ fun BookApplicationDetailContent(
                                             }
                                     },
                                     navController = navController,
-                                    onMarkSent = { app -> applicationViewModel.markCopySent(app.id) }
+                                    onMarkSent = { app -> bookApplicationViewModel.markCopySent(app.id) }
                                 )
                             }
                         }
@@ -631,7 +631,7 @@ fun BookApplicationDetailContent(
             availableCopies = book?.availableCopies ?: 0,
             pendingCount = applicationStats.pending,
             onConfirm = {
-                applicationViewModel.runLottery(bookId)
+                bookApplicationViewModel.runLottery(bookId)
                 showLotteryDialog = false
             },
             onDismiss = { showLotteryDialog = false }
