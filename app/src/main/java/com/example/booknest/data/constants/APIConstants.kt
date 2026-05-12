@@ -22,9 +22,8 @@ object Auth {
 object Users {
     private const val USERS = "${Api.PREFIX}/users"
     const val ME = "$USERS/me"
-    const val PROFILE = "$USERS/profile/{userId}"
     const val MY_STATS = "$USERS/me/stats"
-    const val AUTHOR_STATS = "$USERS/profile/{authorId}/stats"
+    const val AUTHOR_STATS = "$USERS/{authorId}/stats"
     const val UPLOAD_AVATAR = "$USERS/me/avatar"
     const val DELETE_AVATAR = "$USERS/me/avatar"
     const val DELETE_ACCOUNT = "$USERS/me"
@@ -49,7 +48,6 @@ object Profiles {
 object Books {
     private const val BOOKS = "${Api.PREFIX}/books"
     const val LIST = BOOKS
-    const val SEARCH = "$BOOKS/search"
     const val RECOMMENDED = "$BOOKS/recommended"
     const val TRENDING = "$BOOKS/trending"
     const val MY_BOOKS = "$BOOKS/my"
@@ -96,7 +94,6 @@ object Applications {
     const val MARK_SENT = "$APPLICATIONS/{applicationId}/mark-sent"
     const val MARK_RECEIVED = "$APPLICATIONS/{applicationId}/mark-received"
     const val READING_STATUS = "$APPLICATIONS/{applicationId}/reading-status"
-    const val READING_PROGRESS = "$APPLICATIONS/my/reading-progress"
     const val OVERDUE_REVIEWS = "$APPLICATIONS/overdue-reviews"
 }
 
@@ -116,7 +113,7 @@ object Friends {
     const val ACCEPT = "$FRIENDS/accept/{requesterId}"
     const val DECLINE = "$FRIENDS/decline/{requesterId}"
     const val CANCEL = "$FRIENDS/cancel/{addresseeId}"
-    const val UNFRIEND = "$FRIENDS/unfriend/{friendId"
+    const val UNFRIEND = "$FRIENDS/unfriend/{friendId}"
     const val REQUESTS_SENT = "$FRIENDS/requests/sent"
     const val REQUESTS_RECEIVED = "$FRIENDS/requests/received"
     const val STATUS = "$FRIENDS/status/{userId}"

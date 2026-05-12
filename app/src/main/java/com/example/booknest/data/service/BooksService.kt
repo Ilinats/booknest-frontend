@@ -54,9 +54,9 @@ interface BooksService {
         @Query(QueryConstants.SORT_BY) sortBy: String? = null
     ): Response<PaginatedResponse<RecommendedBookResponse>>
 
-    @GET(Books.SEARCH)
+    @GET(Books.LIST)
     suspend fun searchBooks(
-        @Query(QueryConstants.QUERY) query: String,
+        @Query(QueryConstants.SEARCH) query: String,
         @Query(QueryConstants.SKIP) skip: Int?,
         @Query(QueryConstants.TAKE) take: Int?
     ): Response<PaginatedResponse<RecommendedBookResponse>>

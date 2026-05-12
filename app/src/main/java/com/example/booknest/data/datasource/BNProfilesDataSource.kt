@@ -153,7 +153,7 @@ class BNProfilesDataSource(private val profilesService: ProfilesService) : Profi
         userId: String,
         profile: UpdateUserProfileRequest
     ): Result<UserResponse> {
-        return runSuspendRequest { profilesService.updateUserProfile(userId, profile) }
+        return runSuspendRequest { profilesService.updateUserProfile(profile) }
     }
 
     override suspend fun updateSocialMedia(request: UpdateSocialMediaRequest): Result<UserProfileResponse> {

@@ -60,7 +60,17 @@ class BNApplicationsDataSource(private val applicationsService: ApplicationsServ
     }
 
     override suspend fun getReadingProgress(): Result<List<ApplicationResponse>> {
-        return runSuspendRequest { applicationsService.getReadingProgress() }
+        return runSuspendRequestPaginated {
+            applicationsService.getMyApplications(skip = 0, take = 100)
+        }.map { list ->
+            list.filter { it.isActiveReadingProgress() }
+        }
+    }
+
+    private fun ApplicationResponse.isActiveReadingProgress(): Boolean {
+        if (!status.equals("approved", ignoreCase = true)) return false
+        if (readingStatus.equals("reviewed", ignoreCase = true)) return false
+        return true
     }
 
     override suspend fun getBookApplications(bookId: String): Result<List<ApplicationResponse>> {

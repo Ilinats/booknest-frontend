@@ -22,13 +22,17 @@ import retrofit2.http.POST
 import retrofit2.http.PATCH
 import retrofit2.http.PUT
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 interface ApplicationsService {
     @POST(Applications.CREATE)
     suspend fun createApplication(@Body application: CreateApplicationRequest): Response<ApplicationResponse>
 
     @GET(Applications.MY_APPLICATIONS)
-    suspend fun getMyApplications(): Response<PaginatedResponse<ApplicationResponse>>
+    suspend fun getMyApplications(
+        @Query("skip") skip: Int? = null,
+        @Query("take") take: Int? = null
+    ): Response<PaginatedResponse<ApplicationResponse>>
 
     @GET(Applications.CHECK)
     suspend fun checkApplication(
@@ -67,9 +71,6 @@ interface ApplicationsService {
         @Path(PathConstants.APPLICATION_ID) applicationId: String,
         @Body status: UpdateReadingStatusRequest
     ): Response<ApplicationResponse>
-
-    @GET(Applications.READING_PROGRESS)
-    suspend fun getReadingProgress(): Response<List<ApplicationResponse>>
 
     @GET(Applications.BOOK_APPLICATIONS)
     suspend fun getBookApplications(
