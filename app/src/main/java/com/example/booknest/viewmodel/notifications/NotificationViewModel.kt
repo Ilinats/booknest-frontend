@@ -1,6 +1,7 @@
 package com.example.booknest.viewmodel.notifications
 
 import androidx.lifecycle.ViewModel
+import com.example.booknest.viewmodel.common.UserFeedback
 import androidx.lifecycle.viewModelScope
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.model.request.RegisterDeviceTokenRequest
@@ -22,6 +23,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class NotificationViewModel(
+    private val feedback: UserFeedback,
     private val getNotificationsUseCase: GetNotificationsUseCase,
     private val getUnreadCountUseCase: GetUnreadCountUseCase,
     private val markNotificationAsReadUseCase: MarkNotificationAsReadUseCase,
@@ -45,6 +47,8 @@ class NotificationViewModel(
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
+
+    private fun notifyError(message: String) = feedback.error(message, _error)
 
     private var hasMore = true
 
@@ -79,10 +83,10 @@ class NotificationViewModel(
                         hasMore = false
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to load notifications"
+                        notifyError(e.message ?: "Failed to load notifications")
                     }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
+                notifyError(e.message ?: "Unknown error occurred")
             } finally {
                 _isLoading.value = false
             }
@@ -134,10 +138,10 @@ class NotificationViewModel(
                         loadUnreadCount()
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to mark notification as read"
+                        notifyError(e.message ?: "Failed to mark notification as read")
                     }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
+                notifyError(e.message ?: "Unknown error occurred")
             }
         }
     }
@@ -158,10 +162,10 @@ class NotificationViewModel(
                         _unreadCount.value = 0
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to mark all notifications as read"
+                        notifyError(e.message ?: "Failed to mark all notifications as read")
                     }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
+                notifyError(e.message ?: "Unknown error occurred")
             } finally {
                 _isLoading.value = false
             }
@@ -185,10 +189,10 @@ class NotificationViewModel(
                         loadUnreadCount()
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to delete notification"
+                        notifyError(e.message ?: "Failed to delete notification")
                     }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
+                notifyError(e.message ?: "Unknown error occurred")
             }
         }
     }
@@ -205,10 +209,10 @@ class NotificationViewModel(
                         _unreadCount.value = 0
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to delete all notifications"
+                        notifyError(e.message ?: "Failed to delete all notifications")
                     }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
+                notifyError(e.message ?: "Unknown error occurred")
             } finally {
                 _isLoading.value = false
             }
@@ -240,12 +244,12 @@ class NotificationViewModel(
                             _processingNotifications.value - notificationId
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to accept friend request"
+                        notifyError(e.message ?: "Failed to accept friend request")
                         _processingNotifications.value =
                             _processingNotifications.value - notificationId
                     }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
+                notifyError(e.message ?: "Unknown error occurred")
                 _processingNotifications.value = _processingNotifications.value - notificationId
             }
         }
@@ -276,12 +280,12 @@ class NotificationViewModel(
                             _processingNotifications.value - notificationId
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to decline friend request"
+                        notifyError(e.message ?: "Failed to decline friend request")
                         _processingNotifications.value =
                             _processingNotifications.value - notificationId
                     }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
+                notifyError(e.message ?: "Unknown error occurred")
                 _processingNotifications.value = _processingNotifications.value - notificationId
             }
         }

@@ -66,6 +66,27 @@ fun extractErrorMessage(errorBody: String?): String {
                         "You must mark the book copy as received before submitting a review"
                     }
 
+                    errorBody.contains("BOOK_FILE_NOT_AVAILABLE", ignoreCase = true) -> {
+                        "No downloadable file is available for this book"
+                    }
+
+                    errorBody.contains("BOOK_PDF_WATERMARK_FAILED", ignoreCase = true) -> {
+                        "Could not prepare the PDF for download. Please try again later."
+                    }
+
+                    errorBody.contains("BOOK_EPUB_FINGERPRINT_FAILED", ignoreCase = true) ||
+                        errorBody.contains("BOOK_EPUB_INVALID", ignoreCase = true) -> {
+                        "Could not prepare the EPUB for download. Please try again later."
+                    }
+
+                    errorBody.contains("BOOK_FINGERPRINT_NOT_FOUND", ignoreCase = true) -> {
+                        "No verifiable fingerprint was found in this file"
+                    }
+
+                    errorBody.contains("BOOK_FINGERPRINT_WRONG_BOOK", ignoreCase = true) -> {
+                        "This file does not match this book"
+                    }
+
                     else -> "An error occurred"
                 }
         } catch (ex: Exception) {

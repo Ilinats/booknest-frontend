@@ -20,10 +20,6 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    buildFeatures {
-        buildConfig = true
-    }
-    
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -41,6 +37,7 @@ android {
         jvmTarget = "11"
     }
     buildFeatures {
+        buildConfig = true
         compose = true
         viewBinding = true
     }
@@ -50,6 +47,7 @@ dependencies {
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
@@ -59,6 +57,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation(libs.androidx.navigation.fragmentKtx)
     implementation(libs.androidx.navigation.uiKtx)
+    implementation(libs.compose.testing)
     implementation(libs.squareup.retrofit.core)
     implementation(libs.squareup.retrofit.converterGson)
     implementation(libs.androidx.lifecycle.viewmodelKtx)
@@ -91,7 +90,6 @@ dependencies {
     implementation("com.google.firebase:firebase-messaging")
     implementation(libs.androidx.ui)
     implementation(libs.androidx.compose.foundation)
-    implementation(libs.androidx.compose.testing)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

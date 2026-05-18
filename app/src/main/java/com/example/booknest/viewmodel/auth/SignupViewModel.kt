@@ -1,6 +1,7 @@
 package com.example.booknest.viewmodel.auth
 
 import androidx.lifecycle.ViewModel
+import com.example.booknest.viewmodel.common.UserFeedback
 import androidx.lifecycle.viewModelScope
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.model.request.UpsertPreferenceRequest
@@ -19,9 +20,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import com.example.booknest.domain.model.request.AddressDto
-import com.example.booknest.navigation.NavigationEvent
-import com.example.booknest.navigation.Screen
-import com.example.booknest.ui.state.UiState
+import com.example.booknest.presentation.common.UiState
+import com.example.booknest.presentation.effects.AuthUiEffect
+import com.example.booknest.utils.DebugLog
 
 data class SignupData(
     val userType: String? = null,
@@ -42,6 +43,7 @@ data class SignupResult(
 )
 
 class SignupViewModel(
+    private val feedback: UserFeedback,
     private val sessionManager: SessionManager,
     private val registerUseCase: RegisterUseCase,
     private val getGenresUseCase: GetGenresUseCase,
@@ -56,8 +58,8 @@ class SignupViewModel(
     private val _availableGenres = MutableStateFlow<List<GenreResponse>>(emptyList())
     val availableGenres: StateFlow<List<GenreResponse>> = _availableGenres.asStateFlow()
 
-    private val _navigationEvent = MutableSharedFlow<NavigationEvent>(replay = 0)
-    val navigationEvent: SharedFlow<NavigationEvent> = _navigationEvent.asSharedFlow()
+    private val _authUiEffect = MutableSharedFlow<AuthUiEffect>(replay = 0)
+    val authUiEffect: SharedFlow<AuthUiEffect> = _authUiEffect.asSharedFlow()
 
     init {
         fetchAvailableGenres()
@@ -70,7 +72,8 @@ class SignupViewModel(
                 .onSuccess { genres ->
                     _availableGenres.value = genres
                 }
-                .onFailure { _ ->
+                .onFailure { e ->
+                    DebugLog.w("SignupVM", "Failed to load signup genres", e)
                     _availableGenres.value = emptyList()
                 }
         }
@@ -154,22 +157,19 @@ class SignupViewModel(
 
                     saveGenres()
 
+                    feedback.success("Registration successful")
                     _signupState.value = UiState.Success(SignupResult("Registration successful!"))
 
                     val userEmail = data.email
-                    _navigationEvent.emit(
-                        NavigationEvent.NavigateTo(
-                            route = Screen.EmailVerification.createRoute(userEmail),
-                            popUpTo = Screen.ProfileDetails.route,
-                            inclusive = true
-                        )
-                    )
+                    _authUiEffect.emit(AuthUiEffect.NavigateToEmailVerification(email = userEmail))
                 }.onFailure { exception ->
                     val errorMsg = exception.message ?: "Registration failed"
+                    feedback.error(exception)
                     _signupState.value = UiState.Error(errorMsg, exception)
                 }
             } catch (e: Exception) {
                 val errorMsg = "Network error: ${e.localizedMessage}"
+                feedback.error(errorMsg)
                 _signupState.value = UiState.Error(errorMsg, e)
             }
         }
@@ -211,7 +211,7 @@ class SignupViewModel(
                     _signupState.value = UiState.Error(firstError)
                 }
             } catch (e: Exception) {
-                // Genre saving is a non-critical background step; ignore silently
+                DebugLog.w("SignupVM", "saveGenres failed (non-blocking)", e)
             }
         }
     }

@@ -9,7 +9,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicInteger
 
-abstract class BaseViewModel : ViewModel() {
+abstract class BaseViewModel(
+    protected val feedback: UserFeedback
+) : ViewModel() {
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -57,14 +59,14 @@ abstract class BaseViewModel : ViewModel() {
                 block().fold(
                     onSuccess = onSuccess,
                     onFailure = { e ->
-                        val msg = e.message ?: "Unknown error"
-                        _error.value = msg
+                        val msg = e.toErrorMessage()
+                        feedback.error(msg, _error)
                         onError?.invoke(msg)
                     }
                 )
             } catch (e: Exception) {
-                val msg = e.message ?: "Unknown error"
-                _error.value = msg
+                val msg = e.toErrorMessage()
+                feedback.error(msg, _error)
                 onError?.invoke(msg)
             } finally {
                 setLoading(false)

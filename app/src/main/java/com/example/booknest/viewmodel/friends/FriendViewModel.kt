@@ -1,6 +1,7 @@
 package com.example.booknest.viewmodel.friends
 
 import androidx.lifecycle.ViewModel
+import com.example.booknest.viewmodel.common.UserFeedback
 import androidx.lifecycle.viewModelScope
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.model.response.FriendRequestResponse
@@ -25,6 +26,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class FriendViewModel(
+    private val feedback: UserFeedback,
     private val getFriendsUseCase: GetFriendsUseCase,
     private val getSentFriendRequestsUseCase: GetSentFriendRequestsUseCase,
     private val getReceivedFriendRequestsUseCase: GetReceivedFriendRequestsUseCase,
@@ -60,6 +62,9 @@ class FriendViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    private fun notifyError(message: String) = feedback.error(message, _error)
+    private fun notifySuccess(message: String) = feedback.success(message)
+
     private val _friendshipStatuses = MutableStateFlow<Map<String, FriendshipStatusResponse?>>(emptyMap())
     val friendshipStatuses: StateFlow<Map<String, FriendshipStatusResponse?>> = _friendshipStatuses.asStateFlow()
 
@@ -74,10 +79,10 @@ class FriendViewModel(
                         _friends.value = friendsList
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to load friends"
+                        notifyError(e.message ?: "Failed to load friends")
                     }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
+                notifyError(e.message ?: "Unknown error occurred")
             } finally {
                 _isLoading.value = false
             }
@@ -95,10 +100,10 @@ class FriendViewModel(
                         _sentRequests.value = requestsList
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to load sent requests"
+                        notifyError(e.message ?: "Failed to load sent requests")
                     }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
+                notifyError(e.message ?: "Unknown error occurred")
             } finally {
                 _isLoading.value = false
             }
@@ -116,10 +121,10 @@ class FriendViewModel(
                         _receivedRequests.value = requestsList
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to load received requests"
+                        notifyError(e.message ?: "Failed to load received requests")
                     }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
+                notifyError(e.message ?: "Unknown error occurred")
             } finally {
                 _isLoading.value = false
             }
@@ -145,10 +150,10 @@ class FriendViewModel(
                         _friendsActivity.value = activityList
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to load friends activity"
+                        notifyError(e.message ?: "Failed to load friends activity")
                     }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
+                notifyError(e.message ?: "Unknown error occurred")
             } finally {
                 _isLoading.value = false
             }
@@ -171,10 +176,10 @@ class FriendViewModel(
                         _searchResults.value = users
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to search users"
+                        notifyError(e.message ?: "Failed to search users")
                     }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
+                notifyError(e.message ?: "Unknown error occurred")
             } finally {
                 _isLoading.value = false
             }
@@ -189,13 +194,14 @@ class FriendViewModel(
                 val result = sendFriendRequestUseCase(username)
                 result
                     .onSuccess {
+                        notifySuccess("Friend request sent")
                         loadSentRequests()
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to send friend request"
+                        notifyError(e.message ?: "Failed to send friend request")
                     }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
+                notifyError(e.message ?: "Unknown error occurred")
             } finally {
                 _isLoading.value = false
             }
@@ -210,14 +216,15 @@ class FriendViewModel(
                 val result = acceptFriendRequestUseCase(requesterId)
                 result
                     .onSuccess {
+                        notifySuccess("Friend request accepted")
                         loadFriends()
                         loadReceivedRequests()
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to accept friend request"
+                        notifyError(e.message ?: "Failed to accept friend request")
                     }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
+                notifyError(e.message ?: "Unknown error occurred")
             } finally {
                 _isLoading.value = false
             }
@@ -232,13 +239,14 @@ class FriendViewModel(
                 val result = declineFriendRequestUseCase(requesterId)
                 result
                     .onSuccess {
+                        notifySuccess("Friend request declined")
                         loadReceivedRequests()
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to decline friend request"
+                        notifyError(e.message ?: "Failed to decline friend request")
                     }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
+                notifyError(e.message ?: "Unknown error occurred")
             } finally {
                 _isLoading.value = false
             }
@@ -253,13 +261,14 @@ class FriendViewModel(
                 val result = cancelFriendRequestUseCase(addresseeId)
                 result
                     .onSuccess {
+                        notifySuccess("Friend request cancelled")
                         loadSentRequests()
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to cancel friend request"
+                        notifyError(e.message ?: "Failed to cancel friend request")
                     }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
+                notifyError(e.message ?: "Unknown error occurred")
             } finally {
                 _isLoading.value = false
             }
@@ -274,13 +283,14 @@ class FriendViewModel(
                 val result = unfriendUserUseCase(friendId)
                 result
                     .onSuccess {
+                        notifySuccess("Removed from friends")
                         loadFriends()
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to unfriend user"
+                        notifyError(e.message ?: "Failed to unfriend user")
                     }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
+                notifyError(e.message ?: "Unknown error occurred")
             } finally {
                 _isLoading.value = false
             }

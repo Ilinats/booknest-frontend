@@ -3,6 +3,7 @@ package com.example.booknest.utils
 import android.content.Context
 import android.provider.Settings
 import com.google.firebase.messaging.FirebaseMessaging
+import com.example.booknest.utils.DebugLog
 import kotlinx.coroutines.tasks.await
 
 object FCMTokenManager {
@@ -10,7 +11,7 @@ object FCMTokenManager {
         return try {
             FirebaseMessaging.getInstance().token.await()
         } catch (e: Exception) {
-            println("Error getting FCM token: ${e.message}")
+            DebugLog.w("FCM", "Error getting FCM token: ${e.message}", e)
             null
         }
     }

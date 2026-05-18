@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.ResponseBody
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
@@ -121,6 +122,131 @@ class FileDownloadManager(private val context: Context) {
         } catch (e: Exception) {
             Log.e(TAG, "Download failed", e)
             Result.failure(e)
+        }
+    }
+
+    suspend fun saveBookFromResponseBody(
+        bookId: String,
+        body: ResponseBody,
+        displayFileName: String,
+        fileExtension: String
+    ): Result<File> = withContext(Dispatchers.IO) {
+        try {
+            val ext = fileExtension.lowercase().trim().removePrefix(".")
+            if (ext !in SUPPORTED_EXTENSIONS) {
+                body.close()
+                return@withContext Result.failure(
+                    Exception("Unsupported file type: $ext")
+                )
+            }
+
+            val finalFileName = if (displayFileName.contains('.')) {
+                displayFileName
+            } else {
+                "$displayFileName.$ext"
+            }
+
+            val contentLength = body.contentLength()
+            if (contentLength > MAX_FILE_SIZE && contentLength > 0) {
+                body.close()
+                return@withContext Result.failure(
+                    Exception("File too large: $contentLength bytes")
+                )
+            }
+
+            val file: File = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                downloadStreamToMediaStore(finalFileName, ext, bookId, body)
+                    ?: return@withContext Result.failure(
+                        Exception("Failed to download file using MediaStore")
+                    )
+            } else {
+                val downloadsDir = getDownloadsDirectory()
+                if (!downloadsDir.exists()) {
+                    downloadsDir.mkdirs()
+                }
+                val outFile = File(downloadsDir, "${bookId}_$finalFileName")
+                body.byteStream().use { inputStream ->
+                    FileOutputStream(outFile).use { outputStream ->
+                        inputStream.copyTo(outputStream)
+                    }
+                }
+                body.close()
+                outFile
+            }
+
+            Log.d(TAG, "Stream download completed: ${file.absolutePath}")
+            Result.success(file)
+        } catch (e: Exception) {
+            try {
+                body.close()
+            } catch (_: Exception) {
+            }
+            Log.e(TAG, "Stream download failed", e)
+            Result.failure(e)
+        }
+    }
+
+    private fun downloadStreamToMediaStore(
+        fileName: String,
+        extension: String,
+        bookId: String,
+        body: ResponseBody
+    ): File? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            return null
+        }
+
+        val mimeType = when (extension.lowercase()) {
+            "pdf" -> "application/pdf"
+            "epub" -> "application/epub+zip"
+            else -> "application/octet-stream"
+        }
+
+        return try {
+            val contentValues = ContentValues().apply {
+                put(MediaStore.Downloads.DISPLAY_NAME, "${bookId}_$fileName")
+                put(MediaStore.Downloads.MIME_TYPE, mimeType)
+                put(
+                    MediaStore.Downloads.RELATIVE_PATH,
+                    Environment.DIRECTORY_DOWNLOADS + "/" + DOWNLOADS_FOLDER
+                )
+                put(MediaStore.Downloads.IS_PENDING, 1)
+            }
+
+            val uri = context.contentResolver.insert(
+                MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                contentValues
+            ) ?: run {
+                body.close()
+                return null
+            }
+
+            context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                body.byteStream().use { inputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+            } ?: run {
+                context.contentResolver.delete(uri, null, null)
+                body.close()
+                return null
+            }
+
+            body.close()
+
+            val updateValues = ContentValues().apply {
+                put(MediaStore.Downloads.IS_PENDING, 0)
+            }
+            context.contentResolver.update(uri, updateValues, null, null)
+
+            val filePath = getFilePathFromUri(uri)
+            filePath?.let { File(it) }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error streaming to MediaStore: ${e.message}", e)
+            try {
+                body.close()
+            } catch (_: Exception) {
+            }
+            null
         }
     }
 
