@@ -46,11 +46,11 @@ import com.example.booknest.domain.model.response.ApplicationResponse
 import com.example.booknest.domain.model.response.BookResponse
 import com.example.booknest.domain.model.response.ReaderAddressResponse
 import com.example.booknest.domain.model.response.ReviewResponse
-import com.example.booknest.navigation.Screen
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.ui.applications.utils.formatDate
 
 @Composable
-fun ReviewCard(
+fun ApplicationReaderReviewCard(
     application: ApplicationResponse,
     navController: NavController
 ) {

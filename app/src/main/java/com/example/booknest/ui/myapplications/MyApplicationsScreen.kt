@@ -1,7 +1,16 @@
 package com.example.booknest.ui.myapplications
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -12,13 +21,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.booknest.data.session.SessionManager
-import com.example.booknest.navigation.Screen
 import com.example.booknest.ui.components.BackgroundDecoration
 import com.example.booknest.viewmodel.applications.ApplicationViewModel
 import com.example.booknest.viewmodel.applications.ApplicationSortOption
@@ -90,70 +96,89 @@ fun MyApplicationsScreen(
 
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) },
-            topBar = {
-                TopAppBar(
-                    title = { Text("My Applications", fontWeight = FontWeight.Bold, fontSize = 20.sp) },
-                    navigationIcon = {
-                        com.example.booknest.ui.components.BackButton(onClick = { navController.popBackStack() })
-                    },
-                    actions = {
-                        IconButton(onClick = { showSortMenu = true }) {
-                            Icon(Icons.Filled.Sort, contentDescription = "Sort")
-                        }
-                        DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
-                            DropdownMenuItem(text = { Text("By Application Date") }, onClick = {
-                                applicationViewModel.updateSortOption(ApplicationSortOption.APPLICATION_DATE)
-                                showSortMenu = false
-                            })
-                            DropdownMenuItem(text = { Text("By Deadline") }, onClick = {
-                                applicationViewModel.updateSortOption(ApplicationSortOption.DEADLINE)
-                                showSortMenu = false
-                            })
-                            DropdownMenuItem(text = { Text("By Status") }, onClick = {
-                                applicationViewModel.updateSortOption(ApplicationSortOption.STATUS)
-                                showSortMenu = false
-                            })
-                        }
-                    }
-                )
-            }
+            topBar = {},
+            contentWindowInsets = WindowInsets(0, 0, 0, 0)
         ) { paddingValues ->
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(paddingValues),
-                contentPadding = PaddingValues(bottom = 100.dp),
+                contentPadding = PaddingValues(bottom = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 item { QuickStatsSummary(stats = stats) }
 
                 item {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { applicationViewModel.updateSearchQuery(it) },
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                            .shadow(elevation = 2.dp, shape = RoundedCornerShape(28.dp)),
-                        placeholder = { Text("Search applications...") },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
-                        trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { applicationViewModel.updateSearchQuery("") }) {
-                                    Icon(Icons.Default.Delete, contentDescription = "Clear")
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { applicationViewModel.updateSearchQuery(it) },
+                            modifier = Modifier
+                                .weight(1f)
+                                .shadow(elevation = 2.dp, shape = RoundedCornerShape(28.dp)),
+                            placeholder = { Text("Search applications...") },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                            trailingIcon = {
+                                if (searchQuery.isNotEmpty()) {
+                                    IconButton(onClick = { applicationViewModel.updateSearchQuery("") }) {
+                                        Icon(Icons.Default.Delete, contentDescription = "Clear")
+                                    }
                                 }
-                            }
-                        },
-                        singleLine = true,
-                        shape = RoundedCornerShape(28.dp),
-                        colors = TextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            disabledIndicatorColor = Color.Transparent
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(28.dp),
+                            colors = TextFieldDefaults.colors(
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent,
+                                disabledIndicatorColor = Color.Transparent
+                            )
                         )
-                    )
+                        Box {
+                            IconButton(
+                                onClick = { showSortMenu = true },
+                                modifier = Modifier.size(48.dp)
+                            ) {
+                                Icon(
+                                    Icons.Filled.Sort,
+                                    contentDescription = "Sort applications"
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = showSortMenu,
+                                onDismissRequest = { showSortMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("By Application Date") },
+                                    onClick = {
+                                        applicationViewModel.updateSortOption(ApplicationSortOption.APPLICATION_DATE)
+                                        showSortMenu = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("By Deadline") },
+                                    onClick = {
+                                        applicationViewModel.updateSortOption(ApplicationSortOption.DEADLINE)
+                                        showSortMenu = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("By Status") },
+                                    onClick = {
+                                        applicationViewModel.updateSortOption(ApplicationSortOption.STATUS)
+                                        showSortMenu = false
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
 
                 item {
@@ -215,8 +240,7 @@ fun MyApplicationsScreen(
                     item {
                         EmptyApplicationsState(
                             modifier = Modifier.fillMaxWidth().height(400.dp),
-                            message = "No approved applications",
-                            onBrowseBooks = { navController.navigate(Screen.Home.route) }
+                            message = "No approved applications"
                         )
                     }
                 } else if (selectedTab != 2 && filteredApplications.isEmpty()) {
@@ -229,8 +253,7 @@ fun MyApplicationsScreen(
                                 3 -> "No completed applications"
                                 4 -> "No rejected applications"
                                 else -> "No applications"
-                            },
-                            onBrowseBooks = { navController.navigate(Screen.Home.route) }
+                            }
                         )
                     }
                 } else {

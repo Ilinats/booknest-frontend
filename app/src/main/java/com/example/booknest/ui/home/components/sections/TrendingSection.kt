@@ -1,5 +1,6 @@
 package com.example.booknest.ui.home.components.sections
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -7,10 +8,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material3.CircularProgressIndicator
@@ -25,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.booknest.domain.model.response.TrendingBookResponse
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.ui.books.components.list.SimpleBookItem
 
 @Composable
@@ -36,7 +38,9 @@ fun TrendingSection(
 ) {
     Column(modifier = modifier) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -56,7 +60,7 @@ fun TrendingSection(
                 )
             }
             if (trendingBooks.isNotEmpty()) {
-                TextButton(onClick = { navController.navigate("books/trending") }) {
+                TextButton(onClick = { navController.navigate(Screen.Books.createRoute("trending")) }) {
                     Text("View All", color = MaterialTheme.colorScheme.primary)
                 }
             }
@@ -69,6 +73,7 @@ fun TrendingSection(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
                         .height(200.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -76,22 +81,29 @@ fun TrendingSection(
                 }
             }
             trendingBooks.isNotEmpty() -> {
-                LazyRow(
+                val rowScroll = rememberScrollState()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rowScroll),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(trendingBooks) { trending ->
+                    Spacer(modifier = Modifier.width(16.dp))
+                    trendingBooks.forEach { trending ->
                         SimpleBookItem(
                             book = trending.book,
                             navController = navController
                         )
                     }
+                    Spacer(modifier = Modifier.width(16.dp))
                 }
             }
             else -> {
                 Text(
                     text = "No trending books this week",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp)
                 )
             }
         }

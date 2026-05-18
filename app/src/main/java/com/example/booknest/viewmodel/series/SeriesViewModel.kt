@@ -1,6 +1,7 @@
 package com.example.booknest.viewmodel.series
 
 import androidx.lifecycle.ViewModel
+import com.example.booknest.viewmodel.common.UserFeedback
 import androidx.lifecycle.viewModelScope
 import com.example.booknest.domain.model.request.CreateSeriesRequest
 import com.example.booknest.domain.model.request.UpdateSeriesRequest
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class SeriesViewModel(
+    private val feedback: UserFeedback,
     private val getMySeriesUseCase: GetMySeriesUseCase,
     private val createSeriesUseCase: CreateSeriesUseCase,
     private val updateSeriesUseCase: UpdateSeriesUseCase,
@@ -40,6 +42,9 @@ class SeriesViewModel(
     fun clearError() { _error.value = null }
     fun clearSuccessMessage() { _successMessage.value = null }
 
+    private fun notifyError(message: String) = feedback.error(message, _error)
+    private fun notifySuccess(message: String) = feedback.success(message, _successMessage)
+
     fun loadMySeries() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -47,9 +52,9 @@ class SeriesViewModel(
                 val result = getMySeriesUseCase()
                 result
                     .onSuccess { seriesList -> _series.value = seriesList }
-                    .onFailure { e -> _error.value = e.message ?: "Failed to load series" }
+                    .onFailure { e -> notifyError(e.message ?: "Failed to load series") }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Error loading series"
+                notifyError(e.message ?: "Error loading series")
             } finally {
                 _isLoading.value = false
             }
@@ -63,12 +68,12 @@ class SeriesViewModel(
                 val result = createSeriesUseCase(CreateSeriesRequest(name = name, description = description))
                 result
                     .onSuccess {
-                        _successMessage.value = "Series created successfully!"
+                        notifySuccess("Series created successfully!")
                         loadMySeries()
                     }
-                    .onFailure { e -> _error.value = e.message ?: "Failed to create series" }
+                    .onFailure { e -> notifyError(e.message ?: "Failed to create series") }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Error creating series"
+                notifyError(e.message ?: "Error creating series")
             } finally {
                 _isLoading.value = false
             }
@@ -82,12 +87,12 @@ class SeriesViewModel(
                 val result = updateSeriesUseCase(seriesId, UpdateSeriesRequest(name = name, description = description))
                 result
                     .onSuccess {
-                        _successMessage.value = "Series updated successfully!"
+                        notifySuccess("Series updated successfully!")
                         loadMySeries()
                     }
-                    .onFailure { e -> _error.value = e.message ?: "Failed to update series" }
+                    .onFailure { e -> notifyError(e.message ?: "Failed to update series") }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Error updating series"
+                notifyError(e.message ?: "Error updating series")
             } finally {
                 _isLoading.value = false
             }
@@ -101,13 +106,13 @@ class SeriesViewModel(
                 val result = deleteSeriesUseCase(seriesId)
                 result
                     .onSuccess {
-                        _successMessage.value = "Series deleted successfully!"
+                        notifySuccess("Series deleted successfully!")
                         _seriesBooks.value = _seriesBooks.value - seriesId
                         loadMySeries()
                     }
-                    .onFailure { e -> _error.value = e.message ?: "Failed to delete series" }
+                    .onFailure { e -> notifyError(e.message ?: "Failed to delete series") }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Error deleting series"
+                notifyError(e.message ?: "Error deleting series")
             } finally {
                 _isLoading.value = false
             }

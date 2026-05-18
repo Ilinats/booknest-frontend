@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import kotlin.math.roundToInt
 import androidx.navigation.NavController
 import com.example.booknest.data.session.SessionManager
+import com.example.booknest.port.ToastNotifier
 import com.example.booknest.domain.model.response.*
 import com.example.booknest.viewmodel.applications.ApplicationViewModel
 import com.example.booknest.viewmodel.analytics.ReviewViewModel
@@ -39,7 +40,8 @@ fun ReviewSubmissionScreen(
     applicationId: String,
     reviewId: String? = null,
     reviewViewModel: ReviewViewModel = getViewModel(),
-    applicationViewModel: ApplicationViewModel = getViewModel()
+    applicationViewModel: ApplicationViewModel = getViewModel(),
+    toastNotifier: ToastNotifier = koinInject()
 ) {
     val isEditMode = reviewId != null
     var rating by remember { mutableStateOf(5.0f) }
@@ -60,7 +62,7 @@ fun ReviewSubmissionScreen(
                 application = app
             }
             .onFailure { e ->
-                com.example.booknest.ui.toast.GlobalToastHandler.showError("Failed to load application: ${e.message}")
+                toastNotifier.showError("Failed to load application: ${e.message}")
             }
     }
 

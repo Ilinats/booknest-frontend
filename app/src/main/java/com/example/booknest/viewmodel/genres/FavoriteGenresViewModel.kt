@@ -1,6 +1,7 @@
 package com.example.booknest.viewmodel.genres
 
 import androidx.lifecycle.ViewModel
+import com.example.booknest.viewmodel.common.UserFeedback
 import androidx.lifecycle.viewModelScope
 import com.example.booknest.domain.model.request.UpsertPreferenceRequest
 import com.example.booknest.domain.model.response.GenreResponse
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class FavoriteGenresViewModel(
+    private val feedback: UserFeedback,
     private val getGenresUseCase: GetGenresUseCase,
     private val getGenrePreferencesUseCase: GetGenrePreferencesUseCase,
     private val saveUserGenrePreferenceUseCase: SaveUserGenrePreferenceUseCase
@@ -39,6 +41,9 @@ class FavoriteGenresViewModel(
     fun clearError() { _error.value = null }
     fun clearSuccessMessage() { _successMessage.value = null }
 
+    private fun notifyError(message: String) = feedback.error(message, _error)
+    private fun notifySuccess(message: String) = feedback.success(message, _successMessage)
+
     fun loadGenres() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -51,7 +56,7 @@ class FavoriteGenresViewModel(
                     .onFailure { e ->
                         val errorMsg = e.localizedMessage ?: "Failed to load genres"
                         _message.value = errorMsg
-                        _error.value = errorMsg
+                        notifyError(errorMsg)
                     }
 
                 val preferencesResult = getGenrePreferencesUseCase()
@@ -65,7 +70,7 @@ class FavoriteGenresViewModel(
             } catch (e: Exception) {
                 val errorMsg = e.localizedMessage ?: "Failed to load genres"
                 _message.value = errorMsg
-                _error.value = errorMsg
+                notifyError(errorMsg)
             } finally {
                 _isLoading.value = false
             }
@@ -85,7 +90,7 @@ class FavoriteGenresViewModel(
             if (_selectedGenreIds.value.isEmpty()) {
                 val errorMsg = "Select at least one genre."
                 _message.value = errorMsg
-                _error.value = errorMsg
+                notifyError(errorMsg)
                 return@launch
             }
             _isLoading.value = true
@@ -106,14 +111,14 @@ class FavoriteGenresViewModel(
                 }
                 _message.value = msg
                 if (allSucceeded) {
-                    _successMessage.value = msg
+                    notifySuccess(msg)
                 } else {
-                    _error.value = msg
+                    notifyError(msg)
                 }
             } catch (e: Exception) {
                 val errorMsg = "Failed to save preferences: ${e.localizedMessage}"
                 _message.value = errorMsg
-                _error.value = errorMsg
+                notifyError(errorMsg)
             } finally {
                 _isLoading.value = false
             }

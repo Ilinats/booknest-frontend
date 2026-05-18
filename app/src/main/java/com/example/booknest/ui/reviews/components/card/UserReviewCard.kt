@@ -23,7 +23,7 @@ import com.example.booknest.domain.model.response.ReviewResponse
 import com.example.booknest.ui.reviews.utils.formatDateNullable
 
 @Composable
-fun ReviewCard(
+fun UserReviewCard(
     review: ReviewResponse,
     onBookClick: (String) -> Unit
 ) {
@@ -70,7 +70,7 @@ fun ReviewCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     repeat(review.rating.toInt()) {
                         Icon(
-                            imageVector = Icons.Default.Star,
+                            imageVector = Icons.Filled.Star,
                             contentDescription = "Star",
                             modifier = Modifier.size(20.dp),
                             tint = MaterialTheme.colorScheme.primary
@@ -94,4 +94,3 @@ fun ReviewCard(
         }
     }
 }
-

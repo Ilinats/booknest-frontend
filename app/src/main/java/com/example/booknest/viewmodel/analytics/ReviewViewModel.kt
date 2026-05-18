@@ -1,6 +1,7 @@
 package com.example.booknest.viewmodel.analytics
 
 import androidx.lifecycle.ViewModel
+import com.example.booknest.viewmodel.common.UserFeedback
 import androidx.lifecycle.viewModelScope
 import com.example.booknest.domain.model.request.CreateReviewRequest
 import com.example.booknest.domain.model.request.UpdateReviewRequest
@@ -22,6 +23,7 @@ enum class ReviewType(val value: String) {
 }
 
 class ReviewViewModel(
+    private val feedback: UserFeedback,
     private val getBookReviewsUseCase: GetBookReviewsUseCase,
     private val getUserReviewsUseCase: GetUserReviewsUseCase,
     private val getReviewUseCase: GetReviewUseCase,
@@ -51,6 +53,9 @@ class ReviewViewModel(
     fun clearError() { _error.value = null }
     fun clearSuccessMessage() { _successMessage.value = null }
 
+    private fun notifyError(message: String) = feedback.error(message, _error)
+    private fun notifySuccess(message: String) = feedback.success(message, _successMessage)
+
     fun loadBookReviews(bookId: String) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -67,7 +72,7 @@ class ReviewViewModel(
                                 _bookReviews.value = reviews
                             }
                             .onFailure { fallbackError ->
-                                _error.value = fallbackError.message ?: "Failed to load book reviews"
+                                notifyError(fallbackError.message ?: "Failed to load book reviews")
                             }
                     }
             } catch (e: Exception) {
@@ -78,10 +83,10 @@ class ReviewViewModel(
                             _bookReviews.value = reviews
                         }
                         .onFailure { fallbackError ->
-                            _error.value = "Error loading book reviews: ${fallbackError.message}"
+                            notifyError("Error loading book reviews: ${fallbackError.message}")
                         }
                 } catch (fallbackException: Exception) {
-                    _error.value = "Error loading book reviews: ${e.message}"
+                    notifyError("Error loading book reviews: ${e.message}")
                 }
             } finally {
                 _isLoading.value = false
@@ -99,10 +104,10 @@ class ReviewViewModel(
                         _userReviews.value = reviews
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to load user reviews"
+                        notifyError(e.message ?: "Failed to load user reviews")
                     }
             } catch (e: Exception) {
-                _error.value = "Error loading user reviews: ${e.message}"
+                notifyError("Error loading user reviews: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -119,10 +124,10 @@ class ReviewViewModel(
                         _currentReview.value = review
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to load review"
+                        notifyError(e.message ?: "Failed to load review")
                     }
             } catch (e: Exception) {
-                _error.value = "Error loading review: ${e.message}"
+                notifyError("Error loading review: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -151,16 +156,16 @@ class ReviewViewModel(
                 val result = createReviewUseCase(request)
                 result
                     .onSuccess { review ->
-                        _successMessage.value = "Review submitted successfully!"
+                        notifySuccess("Review submitted successfully!")
                         if (review.application?.bookId != null) {
                             loadBookReviews(review.application.bookId)
                         }
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to submit review"
+                        notifyError(e.message ?: "Failed to submit review")
                     }
             } catch (e: Exception) {
-                _error.value = "Error submitting review: ${e.message}"
+                notifyError("Error submitting review: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -188,17 +193,17 @@ class ReviewViewModel(
                 val result = updateReviewUseCase(reviewId, request)
                 result
                     .onSuccess { review ->
-                        _successMessage.value = "Review updated successfully!"
+                        notifySuccess("Review updated successfully!")
                         _currentReview.value = review
                         if (review.application?.bookId != null) {
                             loadBookReviews(review.application.bookId)
                         }
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to update review"
+                        notifyError(e.message ?: "Failed to update review")
                     }
             } catch (e: Exception) {
-                _error.value = "Error updating review: ${e.message}"
+                notifyError("Error updating review: ${e.message}")
             } finally {
                 _isLoading.value = false
             }

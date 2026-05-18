@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.shape.CircleShape
@@ -29,7 +30,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.booknest.data.session.SessionManager
-import com.example.booknest.navigation.Screen
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.viewmodel.friends.FriendViewModel
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
@@ -83,6 +84,7 @@ fun FriendsScreen(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             Box(
                 modifier = Modifier.shadow(elevation = 4.dp)
@@ -119,152 +121,160 @@ fun FriendsScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
 
-                if (showSearchResults && searchQuery.isNotBlank()) {
-                    SearchResultsList(
-                        results = searchResults.filter { it.userType?.lowercase() == "reader" },
-                        onUserClick = { username: String ->
-                            navController.navigate(Screen.UserProfile.createRoute(username))
-                        },
-                        onAddFriendClick = { username: String ->
-                            friendViewModel.sendFriendRequest(username)
-                            searchQuery = ""
-                            showSearchResults = false
-                        },
-                        isLoading = isLoading
-                    )
-                } else {
-                    SingleChoiceSegmentedButtonRow(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                    ) {
-                        SegmentedButton(
-                            selected = selectedTab == 0,
-                            onClick = { selectedTab = 0 },
-                            modifier = Modifier.weight(1f),
-                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3)
-                        ) {
-                            Text("Friends (${friends.size})")
-                        }
-                        SegmentedButton(
-                            selected = selectedTab == 1,
-                            onClick = { selectedTab = 1 },
-                            modifier = Modifier.weight(1f),
-                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3)
-                        ) {
-                            Text("Sent (${sentRequests.size})")
-                        }
-                        SegmentedButton(
-                            selected = selectedTab == 2,
-                            onClick = { selectedTab = 2 },
-                            modifier = Modifier.weight(1f),
-                            shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                ) {
+                    if (showSearchResults && searchQuery.isNotBlank()) {
+                        SearchResultsList(
+                            results = searchResults.filter { it.userType?.lowercase() == "reader" },
+                            onUserClick = { username: String ->
+                                navController.navigate(Screen.UserProfile.createRoute(username))
+                            },
+                            onAddFriendClick = { username: String ->
+                                friendViewModel.sendFriendRequest(username)
+                                searchQuery = ""
+                                showSearchResults = false
+                            },
+                            isLoading = isLoading
+                        )
+                    } else {
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            SingleChoiceSegmentedButtonRow(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
                             ) {
-                                Text("Received")
-                                if (receivedRequests.isNotEmpty()) {
-                                    Badge {
-                                        Text(receivedRequests.size.toString())
+                                SegmentedButton(
+                                    selected = selectedTab == 0,
+                                    onClick = { selectedTab = 0 },
+                                    modifier = Modifier.weight(1f),
+                                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3)
+                                ) {
+                                    Text("Friends (${friends.size})")
+                                }
+                                SegmentedButton(
+                                    selected = selectedTab == 1,
+                                    onClick = { selectedTab = 1 },
+                                    modifier = Modifier.weight(1f),
+                                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3)
+                                ) {
+                                    Text("Sent (${sentRequests.size})")
+                                }
+                                SegmentedButton(
+                                    selected = selectedTab == 2,
+                                    onClick = { selectedTab = 2 },
+                                    modifier = Modifier.weight(1f),
+                                    shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Text("Received")
+                                        if (receivedRequests.isNotEmpty()) {
+                                            Badge {
+                                                Text(receivedRequests.size.toString())
+                                            }
+                                        }
                                     }
                                 }
                             }
-                        }
-                    }
 
-                    when {
-                        isLoading && selectedTab == 0 && friends.isEmpty() -> {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .weight(1f),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator()
-                            }
-                        }
+                            when {
+                                isLoading && selectedTab == 0 && friends.isEmpty() -> {
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxWidth(),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator()
+                                    }
+                                }
 
-                        selectedTab == 0 -> {
-                            Column(modifier = Modifier.fillMaxSize()) {
-                                if (friends.isEmpty() && suggestedFriends.isNotEmpty()) {
-                                    SuggestedFriendsSection(
-                                        suggestions = suggestedFriends.filter { it.userType?.lowercase() == "reader" },
-                                        onUserClick = { username: String ->
-                                            navController.navigate(
-                                                Screen.UserProfile.createRoute(
-                                                    username
+                                selectedTab == 0 -> {
+                                    Column(modifier = Modifier.fillMaxSize()) {
+                                        if (friends.isEmpty() && suggestedFriends.isNotEmpty()) {
+                                            SuggestedFriendsSection(
+                                                suggestions = suggestedFriends.filter { it.userType?.lowercase() == "reader" },
+                                                onUserClick = { username: String ->
+                                                    navController.navigate(
+                                                        Screen.UserProfile.createRoute(
+                                                            username
+                                                        )
+                                                    )
+                                                },
+                                                onAddFriendClick = { username: String ->
+                                                    friendViewModel.sendFriendRequest(username)
+                                                }
+                                            )
+                                        }
+
+                                        if (friends.isNotEmpty()) {
+                                            FriendsSortOptions(
+                                                selectedOption = sortOption,
+                                                onOptionSelected = { option: FriendsSortOption ->
+                                                    sortOption = option
+                                                },
+                                                modifier = Modifier.padding(
+                                                    horizontal = 16.dp,
+                                                    vertical = 8.dp
                                                 )
                                             )
+                                        }
+
+                                        FriendsList(
+                                            friends = getSortedFriends(friends, sortOption),
+                                            onFriendClick = { username: String ->
+                                                navController.navigate(
+                                                    Screen.UserProfile.createRoute(
+                                                        username
+                                                    )
+                                                )
+                                            },
+                                            onUnfriendClick = { friendId: String ->
+                                                friendViewModel.unfriendUser(friendId)
+                                            },
+                                            onViewProfileClick = { username: String ->
+                                                navController.navigate(
+                                                    Screen.UserProfile.createRoute(
+                                                        username
+                                                    )
+                                                )
+                                            }
+                                        )
+                                    }
+                                }
+
+                                selectedTab == 1 -> {
+                                    SentRequestsList(
+                                        requests = sentRequests,
+                                        onUserClick = { username: String ->
+                                            navController.navigate(Screen.UserProfile.createRoute(username))
                                         },
-                                        onAddFriendClick = { username: String ->
-                                            friendViewModel.sendFriendRequest(username)
+                                        onCancelRequest = { userId: String ->
+                                            friendViewModel.cancelFriendRequest(userId)
                                         }
                                     )
                                 }
 
-                                if (friends.isNotEmpty()) {
-                                    FriendsSortOptions(
-                                        selectedOption = sortOption,
-                                        onOptionSelected = { option: FriendsSortOption ->
-                                            sortOption = option
+                                selectedTab == 2 -> {
+                                    ReceivedRequestsList(
+                                        requests = receivedRequests,
+                                        onUserClick = { username: String ->
+                                            navController.navigate(Screen.UserProfile.createRoute(username))
                                         },
-                                        modifier = Modifier.padding(
-                                            horizontal = 16.dp,
-                                            vertical = 8.dp
-                                        )
+                                        onAcceptClick = { requesterId: String ->
+                                            friendViewModel.acceptFriendRequest(requesterId)
+                                        },
+                                        onDeclineClick = { requesterId: String ->
+                                            friendViewModel.declineFriendRequest(requesterId)
+                                        }
                                     )
                                 }
-
-                                FriendsList(
-                                    friends = getSortedFriends(friends, sortOption),
-                                    onFriendClick = { username: String ->
-                                        navController.navigate(
-                                            Screen.UserProfile.createRoute(
-                                                username
-                                            )
-                                        )
-                                    },
-                                    onUnfriendClick = { friendId: String ->
-                                        friendViewModel.unfriendUser(friendId)
-                                    },
-                                    onViewProfileClick = { username: String ->
-                                        navController.navigate(
-                                            Screen.UserProfile.createRoute(
-                                                username
-                                            )
-                                        )
-                                    }
-                                )
                             }
-                        }
-
-                        selectedTab == 1 -> {
-                            SentRequestsList(
-                                requests = sentRequests,
-                                onUserClick = { username: String ->
-                                    navController.navigate(Screen.UserProfile.createRoute(username))
-                                },
-                                onCancelRequest = { userId: String ->
-                                    friendViewModel.cancelFriendRequest(userId)
-                                }
-                            )
-                        }
-
-                        selectedTab == 2 -> {
-                            ReceivedRequestsList(
-                                requests = receivedRequests,
-                                onUserClick = { username: String ->
-                                    navController.navigate(Screen.UserProfile.createRoute(username))
-                                },
-                                onAcceptClick = { requesterId: String ->
-                                    friendViewModel.acceptFriendRequest(requesterId)
-                                },
-                                onDeclineClick = { requesterId: String ->
-                                    friendViewModel.declineFriendRequest(requesterId)
-                                }
-                            )
                         }
                     }
                 }
