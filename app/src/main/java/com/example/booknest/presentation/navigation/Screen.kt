@@ -1,4 +1,6 @@
-package com.example.booknest.navigation
+package com.example.booknest.presentation.navigation
+
+import android.net.Uri
 
 sealed class Screen(val route: String) {
     data object Splash : Screen("splash")
@@ -7,7 +9,7 @@ sealed class Screen(val route: String) {
     data object EmailVerification : Screen("email_verification") {
         fun createRoute(email: String? = null) =
             if (email != null) {
-                val encodedEmail = android.net.Uri.encode(email)
+                val encodedEmail = Uri.encode(email)
                 "email_verification?email=$encodedEmail"
             } else {
                 "email_verification"
@@ -21,7 +23,7 @@ sealed class Screen(val route: String) {
     data object AccountType : Screen("account_type")
     data object PersonalInfo : Screen("personal_info")
     data object ProfileDetails : Screen("profile_details")
-data object Genres : Screen("genres")
+    data object Genres : Screen("genres")
     data object SocialMedia : Screen("social_media")
     data object Home : Screen("home")
     data object BookList : Screen("book_list")
@@ -81,7 +83,7 @@ data object Genres : Screen("genres")
 
     data object UserReviews : Screen("user_reviews/{userId}") {
         fun createRoute(userId: String, userName: String? = null) =
-            if (userName != null) "user_reviews/$userId?userName=${android.net.Uri.encode(userName)}"
+            if (userName != null) "user_reviews/$userId?userName=${Uri.encode(userName)}"
             else "user_reviews/$userId"
     }
 
@@ -90,7 +92,7 @@ data object Genres : Screen("genres")
     data object Browse : Screen("browse") {
         fun createRoute(searchQuery: String? = null) =
             if (searchQuery != null && searchQuery.isNotBlank()) {
-                val encodedQuery = android.net.Uri.encode(searchQuery)
+                val encodedQuery = Uri.encode(searchQuery)
                 "browse/$encodedQuery"
             } else {
                 "browse"

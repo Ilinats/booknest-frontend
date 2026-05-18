@@ -1,4 +1,4 @@
-package com.example.booknest.navigation
+package com.example.booknest.presentation.navigation
 
 sealed class NavigationEvent {
     data class NavigateTo(
@@ -8,7 +8,7 @@ sealed class NavigationEvent {
         val launchSingleTop: Boolean = false
     ) : NavigationEvent()
 
-    object NavigateBack : NavigationEvent()
+    data object NavigateBack : NavigationEvent()
 
     data class PopBackTo(
         val route: String,
@@ -19,4 +19,3 @@ sealed class NavigationEvent {
         val route: String
     ) : NavigationEvent()
 }
-

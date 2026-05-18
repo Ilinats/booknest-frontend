@@ -2,14 +2,15 @@ package com.example.booknest.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.ui.onboarding.AccountTypeScreen
 import com.example.booknest.ui.onboarding.GenresScreen
 import com.example.booknest.ui.auth.LandingScreen
@@ -34,7 +35,7 @@ fun NavGraph(
     loginViewModel: LoginViewModel
 ) {
     val sessionManager: SessionManager = koinInject()
-    val isLoggedIn by sessionManager.isLoggedIn.collectAsState()
+    val isLoggedIn by sessionManager.isLoggedIn.collectAsStateWithLifecycle()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -97,8 +98,7 @@ fun NavGraph(
         }
         composable(Screen.Main.route) {
             val mainViewModel: MainViewModel = koinInject()
-            val isLoggedIn by sessionManager.isLoggedIn.collectAsState()
-            val isAuthor by mainViewModel.isAuthor.collectAsState()
+            val isAuthor by mainViewModel.isAuthor.collectAsStateWithLifecycle()
 
             LaunchedEffect(isLoggedIn) {
                 if (isLoggedIn == true) {
