@@ -2,20 +2,13 @@ package com.example.booknest.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -27,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.booknest.data.session.SessionManager
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.ui.components.BackgroundDecoration
 import com.example.booknest.ui.home.components.sections.BookSection
 import com.example.booknest.ui.home.components.sections.FriendsActivitySection
@@ -42,7 +36,6 @@ import com.example.booknest.viewmodel.notifications.NotificationViewModel
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
@@ -90,26 +83,18 @@ fun HomeScreen(
         bookViewModel.updateSearchQuery(searchQuery)
     }
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-        ) {
-            BackgroundDecoration(modifier = Modifier.fillMaxSize())
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        BackgroundDecoration(modifier = Modifier.fillMaxSize())
 
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .windowInsetsPadding(WindowInsets.navigationBars)
-                    .windowInsetsPadding(WindowInsets.statusBars)
-                    .padding(paddingValues)
-                    .padding(horizontal = 16.dp),
-                contentPadding = PaddingValues(top = 50.dp, bottom = 40.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
-            ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(top = 15.dp, bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
                 item {
                     SearchSection(
                         searchQuery = searchQuery,
@@ -121,16 +106,20 @@ fun HomeScreen(
                 }
 
                 item {
-                    GreetingSection(currentUser = currentUser)
+                    Column(Modifier.padding(horizontal = 16.dp)) {
+                        GreetingSection(currentUser = currentUser)
+                    }
                 }
 
                 item {
-                    QuickActionsSection(
-                        activeReadingApplications = activeReadingApplications,
-                        pendingApplications = pendingApplications,
-                        unreadCount = unreadCount,
-                        navController = navController
-                    )
+                    Column(Modifier.padding(horizontal = 16.dp)) {
+                        QuickActionsSection(
+                            activeReadingApplications = activeReadingApplications,
+                            pendingApplications = pendingApplications,
+                            unreadCount = unreadCount,
+                            navController = navController
+                        )
+                    }
                 }
 
                 item {
@@ -140,7 +129,7 @@ fun HomeScreen(
                         isLoading = isLoading && recommendedBooks.isEmpty(),
                         navController = navController,
                         onViewAllClick = {
-                            navController.navigate("books/recommended")
+                            navController.navigate(Screen.Books.createRoute("recommended"))
                         }
                     )
                 }
@@ -152,7 +141,7 @@ fun HomeScreen(
                         isLoading = isLoading && newReleases.isEmpty(),
                         navController = navController,
                         onViewAllClick = {
-                            navController.navigate("books/new_releases")
+                            navController.navigate(Screen.Books.createRoute("new_releases"))
                         }
                     )
                 }
@@ -165,7 +154,7 @@ fun HomeScreen(
                         navController = navController,
                         emptyMessage = "Follow some authors to see their latest books here!",
                         onViewAllClick = {
-                            navController.navigate("books/followed_authors")
+                            navController.navigate(Screen.Books.createRoute("followed_authors"))
                         },
                         useSimpleItem = true
                     )
@@ -180,17 +169,14 @@ fun HomeScreen(
                 }
 
                 item {
-                    FriendsActivitySection(
-                        friendsActivity = friendsActivity,
-                        isLoading = friendsActivityLoading,
-                        navController = navController
-                    )
+                    Column(Modifier.padding(horizontal = 16.dp)) {
+                        FriendsActivitySection(
+                            friendsActivity = friendsActivity,
+                            isLoading = friendsActivityLoading,
+                            navController = navController
+                        )
+                    }
                 }
-
-                item {
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-            }
         }
     }
 }

@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.booknest.R
-import com.example.booknest.navigation.Screen
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.ui.onboarding.components.cards.AccountTypeCard
 import com.example.booknest.viewmodel.auth.SignupViewModel
 

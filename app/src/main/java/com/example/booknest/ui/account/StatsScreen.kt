@@ -16,7 +16,7 @@ import com.example.booknest.ui.account.components.stats.StatsContent
 import com.example.booknest.viewmodel.profile.ProfileStatsViewModel
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
-import com.example.booknest.ui.state.UiState
+import com.example.booknest.presentation.common.UiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

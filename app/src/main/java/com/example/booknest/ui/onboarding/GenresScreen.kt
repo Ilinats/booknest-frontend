@@ -29,10 +29,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.booknest.navigation.Screen
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.ui.components.genres.GenreButton
 import com.example.booknest.ui.components.genres.utils.createSmartRows
-import com.example.booknest.ui.toast.GlobalToastHandler
 import com.example.booknest.viewmodel.auth.SignupViewModel
 import com.example.booknest.ui.components.BackgroundDecoration
 import kotlinx.coroutines.launch

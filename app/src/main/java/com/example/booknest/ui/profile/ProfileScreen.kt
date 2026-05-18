@@ -20,7 +20,9 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.model.response.*
-import com.example.booknest.navigation.Screen
+import com.example.booknest.port.ToastNotifier
+import com.example.booknest.presentation.navigation.Screen
+import com.example.booknest.presentation.common.UiState
 import com.example.booknest.viewmodel.profile.ProfileViewModel
 import com.example.booknest.viewmodel.analytics.ReviewViewModel
 import com.example.booknest.viewmodel.author.AuthorFollowViewModel
@@ -38,7 +40,7 @@ import com.example.booknest.ui.profile.components.header.FriendAction
 import com.example.booknest.ui.profile.components.bio.BioSection
 import com.example.booknest.ui.profile.components.bio.hasSocialMediaLinks
 import com.example.booknest.ui.account.components.stats.EnhancedProfileStatsSection
-import com.example.booknest.ui.profile.components.sections.AuthorBooksSection
+import com.example.booknest.ui.profile.components.sections.ProfileRecommendedBooksSection
 import com.example.booknest.ui.profile.components.sections.RecentActivitySection
 import com.example.booknest.ui.profile.components.sections.ReviewsWrittenSection
 import com.example.booknest.ui.profile.components.sections.ProfileDetailsSection
@@ -52,6 +54,7 @@ fun ProfileScreen(
     userId: String? = null,
     username: String? = null,
     profileViewModel: ProfileViewModel = getViewModel(),
+    toastNotifier: ToastNotifier = koinInject(),
 ) {
     val currentUser by sessionManager.currentUser.collectAsState()
     val isOwnProfile =
@@ -118,14 +121,8 @@ fun ProfileScreen(
         }
     ) { paddingValues ->
         val currentState = profileState
-        LaunchedEffect(currentState) {
-            println("DEBUG: ProfileScreen state changed: ${currentState::class.simpleName}")
-            if (currentState is com.example.booknest.ui.state.UiState.Success) {
-                println("DEBUG: ProfileScreen Success state - profile: username=${currentState.data.username}, firstName=${currentState.data.firstName}")
-            }
-        }
         when (currentState) {
-            is com.example.booknest.ui.state.UiState.Loading -> {
+            is UiState.Loading -> {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -136,7 +133,7 @@ fun ProfileScreen(
                 }
             }
 
-            is com.example.booknest.ui.state.UiState.Error -> {
+            is UiState.Error -> {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -171,7 +168,7 @@ fun ProfileScreen(
                 }
             }
 
-            is com.example.booknest.ui.state.UiState.Success -> {
+            is UiState.Success -> {
                 ProfileContent(
                     profile = currentState.data,
                     isOwnProfile = isOwnProfile,
@@ -182,7 +179,7 @@ fun ProfileScreen(
                 )
             }
 
-            is com.example.booknest.ui.state.UiState.Idle -> {
+            is UiState.Idle -> {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -214,7 +211,8 @@ fun ProfileContent(
     currentUser: com.example.booknest.domain.model.response.UserResponse?,
     profileViewModel: ProfileViewModel,
     navController: NavController,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    toastNotifier: ToastNotifier = koinInject(),
 ) {
     val bookViewModel: BookViewModel = getViewModel()
     val authorBooks by bookViewModel.authorBooks.collectAsState()
@@ -227,7 +225,7 @@ fun ProfileContent(
     val myRecentActivity by profileViewModel.myRecentActivity.collectAsState()
     val userActivity = myRecentActivity
 
-    var isBooksExpanded by remember { mutableStateOf(false) }
+    val booksSectionExpanded = remember { mutableStateOf(false) }
     var showReviews by remember { mutableStateOf(false) }
     var showActivity by remember { mutableStateOf(false) }
 
@@ -341,113 +339,125 @@ fun ProfileContent(
 
         Column(
             modifier = modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .padding(top = 16.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            EnhancedProfileHeader(
-                profile = profile,
-                isOwnProfile = isOwnProfile,
-                navController = navController,
-                friendshipStatus = friendshipStatus,
-                isFollowingAuthor = isFollowingAuthor,
-                followerCount = followerCount,
-                unfriendLoading = unfriendLoading,
-                authorFollowLoading = if (profile.userType == "author") {
-                    val authorId = profile.userId ?: profile.id
-                    loadingAuthors.contains(authorId)
-                } else false,
-                currentUserIsAuthor = currentUser?.userType == "author",
-                onFriendAction = { action ->
-                    val targetUserId = profile.userId ?: profile.id
-                    when (action) {
-                        FriendAction.ADD -> friendViewModel.sendFriendRequest(
-                            profile.username ?: ""
-                        )
+            Column(Modifier.padding(horizontal = 16.dp)) {
+                EnhancedProfileHeader(
+                    profile = profile,
+                    isOwnProfile = isOwnProfile,
+                    navController = navController,
+                    friendshipStatus = friendshipStatus,
+                    isFollowingAuthor = isFollowingAuthor,
+                    followerCount = followerCount,
+                    unfriendLoading = unfriendLoading,
+                    authorFollowLoading = if (profile.userType == "author") {
+                        val authorId = profile.userId ?: profile.id
+                        loadingAuthors.contains(authorId)
+                    } else false,
+                    currentUserIsAuthor = currentUser?.userType == "author",
+                    onFriendAction = { action ->
+                        val targetUserId = profile.userId ?: profile.id
+                        when (action) {
+                            FriendAction.ADD -> friendViewModel.sendFriendRequest(
+                                profile.username ?: ""
+                            )
 
-                        FriendAction.UNFRIEND -> {
-                            friendViewModel.unfriendUser(targetUserId)
-                            scope.launch {
-                                delay(800)
-                                friendViewModel.getFriendshipStatus(targetUserId)
-                                com.example.booknest.ui.toast.GlobalToastHandler.showSuccess("User unfriended successfully")
+                            FriendAction.UNFRIEND -> {
+                                friendViewModel.unfriendUser(targetUserId)
+                                scope.launch {
+                                    delay(800)
+                                    friendViewModel.getFriendshipStatus(targetUserId)
+                                    toastNotifier.showSuccess("User unfriended successfully")
+                                }
                             }
                         }
+                    },
+                    onFollowAction = { follow ->
+                        val authorId = profile.userId ?: profile.id
+                        isFollowingAuthor = follow
+                        if (follow) {
+                            authorFollowViewModel.followAuthor(authorId)
+                        } else {
+                            authorFollowViewModel.unfollowAuthor(authorId)
+                        }
                     }
-                },
-                onFollowAction = { follow ->
-                    val authorId = profile.userId ?: profile.id
-                    isFollowingAuthor = follow
-                    if (follow) {
-                        authorFollowViewModel.followAuthor(authorId)
-                    } else {
-                        authorFollowViewModel.unfollowAuthor(authorId)
-                    }
-                }
-            )
+                )
+            }
 
             if (!profile.bio.isNullOrBlank() || (profile.socialMedia != null && hasSocialMediaLinks(
                     profile.socialMedia
                 ))
             ) {
-                BioSection(
-                    bio = profile.bio,
-                    socialMedia = profile.socialMedia
-                )
+                Column(Modifier.padding(horizontal = 16.dp)) {
+                    BioSection(
+                        bio = profile.bio,
+                        socialMedia = profile.socialMedia
+                    )
+                }
             }
 
             profile.stats?.let { stats ->
-                EnhancedProfileStatsSection(
-                    stats = stats,
-                    isOwnProfile = isOwnProfile,
-                    profile = profile,
-                    favoriteGenres = if (isOwnProfile && profile.userType == "reader") favoriteGenres else emptyList(),
-                    followerCount = if (!isOwnProfile && profile.userType == "author") followerCount else null
-                )
+                Column(Modifier.padding(horizontal = 16.dp)) {
+                    EnhancedProfileStatsSection(
+                        stats = stats,
+                        isOwnProfile = isOwnProfile,
+                        profile = profile,
+                        favoriteGenres = if (isOwnProfile && profile.userType == "reader") favoriteGenres else emptyList(),
+                        followerCount = if (!isOwnProfile && profile.userType == "author") followerCount else null
+                    )
+                }
             }
 
             if (profile.userType == "author") {
-                AuthorBooksSection(
+                ProfileRecommendedBooksSection(
                     books = authorBooks,
                     isLoading = authorBooksLoading,
-                    isExpanded = isBooksExpanded,
-                    onExpandToggle = { isBooksExpanded = !isBooksExpanded },
+                    isExpanded = booksSectionExpanded.value,
+                    onExpandToggle = { booksSectionExpanded.value = !booksSectionExpanded.value },
                     navController = navController
                 )
             }
 
             if (userActivity.isNotEmpty()) {
-                RecentActivitySection(
-                    activities = userActivity.take(5),
-                    onViewAll = { showActivity = true },
-                    navController = navController
-                )
+                Column(Modifier.padding(horizontal = 16.dp)) {
+                    RecentActivitySection(
+                        activities = userActivity.take(5),
+                        onViewAll = { showActivity = true },
+                        navController = navController
+                    )
+                }
             }
 
             if (!isOwnProfile) {
                 val reviews = reviewViewModel.userReviews.collectAsState().value
                 if (reviews.isNotEmpty()) {
-                    ReviewsWrittenSection(
-                        reviews = reviews,
-                        onViewAll = {
-                            val targetUserId = profile.userId ?: profile.id
-                            val userName = listOfNotNull(profile.firstName, profile.lastName)
-                                .joinToString(" ")
-                                .ifBlank { profile.username ?: "User" }
-                            navController.navigate(
-                                Screen.UserReviews.createRoute(
-                                    targetUserId,
-                                    userName
+                    Column(Modifier.padding(horizontal = 16.dp)) {
+                        ReviewsWrittenSection(
+                            reviews = reviews,
+                            onViewAll = {
+                                val targetUserId = profile.userId ?: profile.id
+                                val userName = listOfNotNull(profile.firstName, profile.lastName)
+                                    .joinToString(" ")
+                                    .ifBlank { profile.username ?: "User" }
+                                navController.navigate(
+                                    Screen.UserReviews.createRoute(
+                                        targetUserId,
+                                        userName
+                                    )
                                 )
-                            )
-                        }
-                    )
+                            }
+                        )
+                    }
                 }
             }
 
             if (profile.birthDate != null) {
-                ProfileDetailsSection(profile = profile)
+                Column(Modifier.padding(horizontal = 16.dp)) {
+                    ProfileDetailsSection(profile = profile)
+                }
             }
         }
 

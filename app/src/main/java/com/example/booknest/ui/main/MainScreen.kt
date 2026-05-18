@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -43,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
@@ -54,11 +56,14 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
+import com.example.booknest.R
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.repository.AuthRepository
 import com.example.booknest.navigation.BottomBarScreen
 import com.example.booknest.navigation.HomeNavGraph
-import com.example.booknest.navigation.Screen
+import com.example.booknest.navigation.consumeNotificationLaunchExtras
+import com.example.booknest.navigation.readNotificationLaunchExtras
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.domain.model.response.UserResponse
 import com.example.booknest.viewmodel.main.MainViewModel
 import com.example.booknest.viewmodel.notifications.NotificationViewModel
@@ -92,24 +97,18 @@ fun MainScreen(
     val context = LocalContext.current
 
     androidx.compose.runtime.LaunchedEffect(isLoggedIn) {
-        if (isLoggedIn == true && context is android.app.Activity) {
-            val intent = context.intent
-            val notificationId = intent?.getStringExtra("notificationId")
-            val notificationType = intent?.getStringExtra("notificationType")
-            val hasNotificationExtras = notificationId != null || notificationType != null
-
-            if (hasNotificationExtras) {
-                kotlinx.coroutines.delay(500)
-                try {
-                    navController.navigate(Screen.Notifications.route) {
-                        popUpTo(BottomBarScreen.Home.route) { inclusive = false }
-                        launchSingleTop = true
-                    }
-                    intent.removeExtra("notificationId")
-                    intent.removeExtra("notificationType")
-                } catch (_: Exception) {
-                }
+        if (isLoggedIn != true) return@LaunchedEffect
+        val intent = (context as? android.app.Activity)?.intent ?: return@LaunchedEffect
+        val extras = readNotificationLaunchExtras(intent)
+        if (!extras.hasNotificationDeepLink) return@LaunchedEffect
+        kotlinx.coroutines.delay(500)
+        try {
+            navController.navigate(Screen.Notifications.route) {
+                popUpTo(BottomBarScreen.Home.route) { inclusive = false }
+                launchSingleTop = true
             }
+            intent.consumeNotificationLaunchExtras()
+        } catch (_: Exception) {
         }
     }
 
@@ -139,6 +138,7 @@ fun MainScreen(
             (currentRoute != null && currentRoute.startsWith("browse/"))
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             if (shouldShowBars) {
                 MainTopBar(
@@ -174,7 +174,9 @@ fun MainScreen(
     ) { paddingValues ->
         HomeNavGraph(
             navController = navController,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
         )
     }
 }
@@ -217,10 +219,15 @@ fun RowScope.AddItem(
     val isSelected = currentDestination?.hierarchy?.any {
         it.route == screen.route
     } == true
-    
+
     NavigationBarItem(
         label = { Text(text = screen.title) },
-        icon = { Icon(imageVector = screen.icon, contentDescription = "Navigation Icon") },
+        icon = {
+            Icon(
+                imageVector = screen.icon,
+                contentDescription = screen.title
+            )
+        },
         selected = isSelected,
         onClick = {
             navController.navigate(screen.route) {
@@ -252,6 +259,9 @@ private fun MainTopBar(
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+    val cdNotifications = stringResource(R.string.cd_notifications)
+    val cdFriends = stringResource(R.string.cd_friends)
+    val cdProfileMenu = stringResource(R.string.cd_profile_menu)
 
     Surface(
         tonalElevation = 2.dp,
@@ -289,23 +299,33 @@ private fun MainTopBar(
                         }
                     }
                 ) {
-                    IconButton(onClick = onNotificationsClick) {
+                    IconButton(
+                        onClick = onNotificationsClick,
+                        modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                    ) {
                         Icon(
                             imageVector = Icons.Outlined.Notifications,
-                            contentDescription = "Notifications"
+                            contentDescription = cdNotifications
                         )
                     }
                 }
 
-                IconButton(onClick = onFriendsClick) {
+                IconButton(
+                    onClick = onFriendsClick,
+                    modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                ) {
                     Icon(
                         imageVector = Icons.Outlined.Group,
-                        contentDescription = "Friends"
+                        contentDescription = cdFriends
                     )
                 }
 
-                Box {
-                    ProfileAvatar(user = currentUser, onClick = { menuExpanded = true })
+                Box(modifier = Modifier.size(48.dp)) {
+                    ProfileAvatar(
+                        user = currentUser,
+                        contentDescription = cdProfileMenu,
+                        onClick = { menuExpanded = true }
+                    )
                     DropdownMenu(
                         expanded = menuExpanded,
                         onDismissRequest = { menuExpanded = false },
@@ -357,7 +377,11 @@ private fun MainTopBar(
 }
 
 @Composable
-private fun ProfileAvatar(user: UserResponse?, onClick: () -> Unit) {
+private fun ProfileAvatar(
+    user: UserResponse?,
+    contentDescription: String,
+    onClick: () -> Unit
+) {
     val placeholderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
     val initials = remember(user) {
         val source = when {
@@ -370,18 +394,17 @@ private fun ProfileAvatar(user: UserResponse?, onClick: () -> Unit) {
 
     Box(
         modifier = Modifier
-            .size(40.dp)
+            .fillMaxSize()
             .clip(CircleShape)
             .background(placeholderColor)
-            .clickable { onClick() }
-            .padding(2.dp),
+            .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         val avatarUrl = user?.profilePictureUrl ?: user?.avatarUrl
         if (!avatarUrl.isNullOrEmpty()) {
             AsyncImage(
                 model = avatarUrl,
-                contentDescription = "Profile",
+                contentDescription = contentDescription,
                 modifier = Modifier
                     .fillMaxSize()
                     .clip(CircleShape),
@@ -390,9 +413,9 @@ private fun ProfileAvatar(user: UserResponse?, onClick: () -> Unit) {
         } else {
             Box(
                 modifier = Modifier
+                    .fillMaxSize()
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary)
-                    .matchParentSize(),
+                    .background(MaterialTheme.colorScheme.primary),
                 contentAlignment = Alignment.Center
             ) {
                 Text(

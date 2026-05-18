@@ -56,7 +56,7 @@ import com.example.booknest.viewmodel.genres.FavoriteGenresViewModel
 import org.koin.androidx.compose.getViewModel
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.model.enums.NotificationType
-import com.example.booknest.navigation.Screen
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.ui.account.components.privacy.NotificationPreferenceCard
 import com.example.booknest.ui.account.components.privacy.PrivacySettingCard
 import com.example.booknest.ui.account.components.privacy.address.AddressManagementSection
