@@ -1,6 +1,7 @@
 package com.example.booknest.viewmodel.author
 
 import androidx.lifecycle.ViewModel
+import com.example.booknest.viewmodel.common.UserFeedback
 import androidx.lifecycle.viewModelScope
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.model.response.AuthorFollowResponse
@@ -19,6 +20,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class AuthorFollowViewModel(
+    private val feedback: UserFeedback,
     private val getFollowedAuthorsUseCase: GetFollowedAuthorsUseCase,
     private val getAuthorFollowersUseCase: GetAuthorFollowersUseCase,
     private val getBooksFromFollowedAuthorsUseCase: GetBooksFromFollowedAuthorsUseCase,
@@ -53,6 +55,9 @@ class AuthorFollowViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    private fun notifyError(message: String) = feedback.error(message, _error)
+    private fun notifySuccess(message: String) = feedback.success(message)
+
     private val _followingStatus = MutableStateFlow<Map<String, Boolean>>(emptyMap())
     val followingStatus: StateFlow<Map<String, Boolean>> = _followingStatus.asStateFlow()
 
@@ -71,10 +76,10 @@ class AuthorFollowViewModel(
                         _followedAuthors.value = authors
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to load followed authors"
+                        notifyError(e.message ?: "Failed to load followed authors")
                     }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
+                notifyError(e.message ?: "Unknown error occurred")
             } finally {
                 _isLoading.value = false
             }
@@ -92,10 +97,10 @@ class AuthorFollowViewModel(
                         _authorFollowers.value = followers
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to load author followers"
+                        notifyError(e.message ?: "Failed to load author followers")
                     }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
+                notifyError(e.message ?: "Unknown error occurred")
             } finally {
                 _isLoading.value = false
             }
@@ -113,10 +118,10 @@ class AuthorFollowViewModel(
                         _booksFromFollowedAuthors.value = books
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to load books from followed authors"
+                        notifyError(e.message ?: "Failed to load books from followed authors")
                     }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
+                notifyError(e.message ?: "Unknown error occurred")
             } finally {
                 _isLoading.value = false
             }
@@ -137,20 +142,24 @@ class AuthorFollowViewModel(
                     createdAt = System.currentTimeMillis().toString()
                 )
                 _followedAuthors.value = _followedAuthors.value + optimisticFollow
+                _followingStatus.value = _followingStatus.value + (authorId to true)
 
                 val result = followAuthorUseCase(authorId)
                 result
                     .onSuccess {
+                        notifySuccess("Now following author")
                         loadFollowedAuthors()
                     }
                     .onFailure { e ->
                         _followedAuthors.value =
                             _followedAuthors.value.filter { it.authorId != authorId }
-                        _error.value = e.message ?: "Failed to follow author"
+                        _followingStatus.value = _followingStatus.value + (authorId to false)
+                        notifyError(e.message ?: "Failed to follow author")
                     }
             } catch (e: Exception) {
                 _followedAuthors.value = _followedAuthors.value.filter { it.authorId != authorId }
-                _error.value = e.message ?: "Unknown error occurred"
+                _followingStatus.value = _followingStatus.value + (authorId to false)
+                notifyError(e.message ?: "Unknown error occurred")
             } finally {
                 _loadingAuthors.value = _loadingAuthors.value - authorId
                 _isLoading.value = false
@@ -168,24 +177,27 @@ class AuthorFollowViewModel(
                 val itemToRemove = _followedAuthors.value.find { it.authorId == authorId }
 
                 _followedAuthors.value = _followedAuthors.value.filter { it.authorId != authorId }
+                _followingStatus.value = _followingStatus.value + (authorId to false)
 
                 val result = unfollowAuthorUseCase(authorId)
                 result
                     .onSuccess {
+                        notifySuccess("Unfollowed author")
                         loadFollowedAuthors()
                     }
                     .onFailure { e ->
                         itemToRemove?.let {
                             _followedAuthors.value = _followedAuthors.value + it
                         }
-                        _error.value = e.message ?: "Failed to unfollow author"
+                        _followingStatus.value = _followingStatus.value + (authorId to true)
+                        notifyError(e.message ?: "Failed to unfollow author")
                     }
             } catch (e: Exception) {
                 val itemToRestore = _followedAuthors.value.find { it.authorId == authorId }
                 if (itemToRestore == null) {
                     loadFollowedAuthors()
                 }
-                _error.value = e.message ?: "Unknown error occurred"
+                notifyError(e.message ?: "Unknown error occurred")
             } finally {
                 _loadingAuthors.value = _loadingAuthors.value - authorId
                 _isLoading.value = false

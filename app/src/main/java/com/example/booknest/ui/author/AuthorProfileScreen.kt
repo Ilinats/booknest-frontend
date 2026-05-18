@@ -1,7 +1,14 @@
 package com.example.booknest.ui.author
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -13,7 +20,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -22,9 +28,9 @@ import com.example.booknest.ui.theme.SkyBluePeriwinkle
 import androidx.navigation.NavController
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.ui.author.components.profile.AuthorProfileHeader
-import com.example.booknest.navigation.Screen
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.ui.author.components.profile.AuthorStatisticsSection
-import com.example.booknest.ui.author.components.AuthorBooksSection
+import com.example.booknest.ui.author.components.AuthorProfileMyBooksSection
 import com.example.booknest.viewmodel.author.AuthorBooksViewModel
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
@@ -57,6 +63,7 @@ fun AuthorProfileScreen(
     val joinYear = myProfile?.createdAt?.take(4) ?: "N/A"
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             Surface(
                 shadowElevation = 4.dp,
@@ -136,8 +143,7 @@ fun AuthorProfileScreen(
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
                         .padding(paddingValues)
-                        .padding(16.dp)
-                        .padding(bottom = 80.dp),
+                        .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     AuthorProfileHeader(
@@ -152,7 +158,7 @@ fun AuthorProfileScreen(
 
                     AuthorStatisticsSection(stats = myProfile?.stats)
 
-                    AuthorBooksSection(
+                    AuthorProfileMyBooksSection(
                         myBooks = myBooks,
                         navController = navController
                     )

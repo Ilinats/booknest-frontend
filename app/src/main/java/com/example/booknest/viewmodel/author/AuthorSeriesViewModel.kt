@@ -1,6 +1,7 @@
 package com.example.booknest.viewmodel.author
 
 import androidx.lifecycle.ViewModel
+import com.example.booknest.viewmodel.common.UserFeedback
 import androidx.lifecycle.viewModelScope
 import com.example.booknest.domain.model.request.CreateSeriesRequest
 import com.example.booknest.domain.model.request.UpdateSeriesRequest
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class AuthorSeriesViewModel(
+    private val feedback: UserFeedback,
     private val getMySeriesUseCase: GetMySeriesUseCase,
     private val createSeriesUseCase: CreateSeriesUseCase,
     private val updateSeriesUseCase: UpdateSeriesUseCase
@@ -30,6 +32,9 @@ class AuthorSeriesViewModel(
 
     fun clearError() { _error.value = null }
 
+    private fun notifyError(message: String) = feedback.error(message, _error)
+    private fun notifySuccess(message: String) = feedback.success(message)
+
     fun loadMySeries() {
         viewModelScope.launch {
             try {
@@ -37,9 +42,9 @@ class AuthorSeriesViewModel(
                 val result = getMySeriesUseCase()
                 result
                     .onSuccess { series -> _mySeries.value = series }
-                    .onFailure { e -> _error.value = e.message ?: "Failed to load series" }
+                    .onFailure { e -> notifyError(e.message ?: "Failed to load series") }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Error loading series"
+                notifyError(e.message ?: "Error loading series")
             } finally {
                 _isLoadingSeries.value = false
             }
@@ -51,10 +56,13 @@ class AuthorSeriesViewModel(
             try {
                 val result = createSeriesUseCase(series)
                 result
-                    .onSuccess { loadMySeries() }
-                    .onFailure { e -> _error.value = e.message ?: "Failed to create series" }
+                    .onSuccess {
+                        notifySuccess("Series created successfully")
+                        loadMySeries()
+                    }
+                    .onFailure { e -> notifyError(e.message ?: "Failed to create series") }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Error creating series"
+                notifyError(e.message ?: "Error creating series")
             }
         }
     }
@@ -64,10 +72,13 @@ class AuthorSeriesViewModel(
             try {
                 val result = updateSeriesUseCase(seriesId, series)
                 result
-                    .onSuccess { loadMySeries() }
-                    .onFailure { e -> _error.value = e.message ?: "Failed to update series" }
+                    .onSuccess {
+                        notifySuccess("Series updated successfully")
+                        loadMySeries()
+                    }
+                    .onFailure { e -> notifyError(e.message ?: "Failed to update series") }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Error updating series"
+                notifyError(e.message ?: "Error updating series")
             }
         }
     }

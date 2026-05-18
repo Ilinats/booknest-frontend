@@ -23,7 +23,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.model.response.SocialMediaResponse
-import com.example.booknest.navigation.Screen
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.ui.components.social.SocialMediaLinkChip
 import org.koin.compose.koinInject
 

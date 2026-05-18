@@ -1,6 +1,7 @@
 package com.example.booknest.viewmodel.author
 
 import androidx.lifecycle.ViewModel
+import com.example.booknest.viewmodel.common.UserFeedback
 import androidx.lifecycle.viewModelScope
 import com.example.booknest.domain.model.response.ApplicationResponse
 import com.example.booknest.domain.model.response.ReviewResponse
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class AuthorDashboardViewModel(
+    private val feedback: UserFeedback,
     private val getMyStatsUseCase: GetMyStatsUseCase,
     private val getAuthorLatestReviewsUseCase: GetAuthorLatestReviewsUseCase,
     private val getOverdueReviewsUseCase: GetOverdueReviewsUseCase
@@ -54,6 +56,8 @@ class AuthorDashboardViewModel(
 
     fun clearError() { _error.value = null }
 
+    private fun notifyError(message: String) = feedback.error(message, _error)
+
     fun loadAuthorStats() {
         viewModelScope.launch {
             try {
@@ -64,9 +68,9 @@ class AuthorDashboardViewModel(
                         _authorStats.value = stats
                         updateQuickStatsFromStats(stats)
                     }
-                    .onFailure { e -> _error.value = e.message ?: "Failed to load stats" }
+                    .onFailure { e -> notifyError(e.message ?: "Failed to load stats") }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Error loading stats"
+                notifyError(e.message ?: "Error loading stats")
             } finally {
                 _isLoadingStats.value = false
             }
@@ -80,9 +84,9 @@ class AuthorDashboardViewModel(
                 val result = getAuthorLatestReviewsUseCase(limit = 3)
                 result
                     .onSuccess { reviews -> _recentReviews.value = reviews }
-                    .onFailure { e -> _error.value = e.message ?: "Failed to load reviews" }
+                    .onFailure { e -> notifyError(e.message ?: "Failed to load reviews") }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Error loading reviews"
+                notifyError(e.message ?: "Error loading reviews")
             } finally {
                 _isLoadingReviews.value = false
             }

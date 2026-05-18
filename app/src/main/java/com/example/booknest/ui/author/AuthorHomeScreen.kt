@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -24,7 +25,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.repository.AuthRepository
 import com.example.booknest.navigation.AuthorBottomBarScreen
-import com.example.booknest.navigation.Screen
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.ui.author.components.ActiveCampaignsSection
 import com.example.booknest.ui.author.components.ActionNeededSection
 import com.example.booknest.ui.author.components.AuthorTopBar
@@ -72,6 +73,7 @@ fun AuthorHomeScreen(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             Box(
                 modifier = Modifier
@@ -109,7 +111,7 @@ fun AuthorHomeScreen(
                     start = 16.dp,
                     top = 32.dp,
                     end = 16.dp,
-                    bottom = 80.dp
+                    bottom = 16.dp
                 ),
                 verticalArrangement = Arrangement.spacedBy(28.dp)
             ) {

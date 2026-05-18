@@ -41,7 +41,7 @@ import com.example.booknest.ui.author.components.analytics.trends.TrendsSection
 import com.example.booknest.viewmodel.analytics.AnalyticsViewModel
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
-import com.example.booknest.ui.state.UiState
+import com.example.booknest.presentation.common.UiState
 import com.example.booknest.ui.components.BackgroundDecoration
 import kotlinx.coroutines.flow.collectLatest
 
@@ -67,6 +67,7 @@ fun AuthorAnalyticsScreen(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             Surface(
                 shadowElevation = 4.dp,
@@ -169,10 +170,10 @@ fun AuthorAnalyticsContent(
 
         Column(
             modifier = modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
-                .padding(bottom = 80.dp),
+                .padding(bottom = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             DateRangeSelector(

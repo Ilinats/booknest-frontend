@@ -1,7 +1,9 @@
 package com.example.booknest.ui.main
 
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -26,7 +28,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.navigation.AuthorBottomBarScreen
 import com.example.booknest.navigation.AuthorNavGraph
-import com.example.booknest.navigation.Screen
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.viewmodel.main.MainViewModel
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
@@ -67,6 +69,7 @@ fun AuthorMainScreen(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             if (shouldShowBottomBar) {
                 AuthorBottomBar(navController = navController)
@@ -75,7 +78,9 @@ fun AuthorMainScreen(
     ) { paddingValues ->
         AuthorNavGraph(
             navController = navController,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
         )
     }
 }
