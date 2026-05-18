@@ -1,6 +1,7 @@
 package com.example.booknest.viewmodel.applications
 
 import androidx.lifecycle.ViewModel
+import com.example.booknest.viewmodel.common.UserFeedback
 import androidx.lifecycle.viewModelScope
 import com.example.booknest.domain.model.request.CreateApplicationRequest
 import com.example.booknest.domain.model.request.UpdateReadingStatusRequest
@@ -51,6 +52,7 @@ data class ApplicationStats(
 )
 
 class ApplicationViewModel(
+    private val feedback: UserFeedback,
     private val getMyApplicationsUseCase: GetMyApplicationsUseCase,
     private val checkApplicationUseCase: CheckApplicationUseCase,
     private val createApplicationUseCase: CreateApplicationUseCase,
@@ -89,6 +91,9 @@ class ApplicationViewModel(
 
     fun clearError() { _error.value = null }
     fun clearSuccessMessage() { _successMessage.value = null }
+
+    private fun notifyError(message: String) = feedback.error(message, _error)
+    private fun notifySuccess(message: String) = feedback.success(message, _successMessage)
 
     // Filter / sort state
     private val _searchQuery = MutableStateFlow("")
@@ -194,10 +199,10 @@ class ApplicationViewModel(
                         _myApplications.value = applications
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to load applications"
+                        notifyError(e.message ?: "Failed to load applications")
                     }
             } catch (e: Exception) {
-                _error.value = "Error loading applications: ${e.message}"
+                notifyError("Error loading applications: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -214,10 +219,10 @@ class ApplicationViewModel(
                         _applicationCheck.value = check
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to check application status"
+                        notifyError(e.message ?: "Failed to check application status")
                     }
             } catch (e: Exception) {
-                _error.value = "Error checking application status: ${e.message}"
+                notifyError("Error checking application status: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -251,7 +256,7 @@ class ApplicationViewModel(
                 val result = createApplicationUseCase(request)
                 result
                     .onSuccess {
-                        _successMessage.value = "Application submitted successfully!"
+                        notifySuccess("Application submitted successfully!")
                         checkApplication(bookId)
                         loadMyApplications()
                     }
@@ -298,7 +303,7 @@ class ApplicationViewModel(
                                 }
                             }
                         }
-                        _error.value = errorMessage
+                        notifyError(errorMessage)
                     }
             } catch (e: Exception) {
                 val errorMessage = when (e) {
@@ -315,7 +320,7 @@ class ApplicationViewModel(
                         }
                     }
                 }
-                _error.value = errorMessage
+                notifyError(errorMessage)
             } finally {
                 _isLoading.value = false
             }
@@ -328,14 +333,14 @@ class ApplicationViewModel(
                 val result = withdrawApplicationUseCase(applicationId)
                 result
                     .onSuccess {
-                        _successMessage.value = "Application withdrawn successfully!"
+                        notifySuccess("Application withdrawn successfully!")
                         loadMyApplications()
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to withdraw application"
+                        notifyError(e.message ?: "Failed to withdraw application")
                     }
             } catch (e: Exception) {
-                _error.value = "Error withdrawing application: ${e.message}"
+                notifyError("Error withdrawing application: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -350,14 +355,14 @@ class ApplicationViewModel(
                 val result = markCopyReceivedUseCase(trimmedId)
                 result
                     .onSuccess {
-                        _successMessage.value = "Copy marked as received!"
+                        notifySuccess("Copy marked as received!")
                         loadMyApplications()
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to mark copy as received"
+                        notifyError(e.message ?: "Failed to mark copy as received")
                     }
             } catch (e: Exception) {
-                _error.value = "Error marking copy as received: ${e.message}"
+                notifyError("Error marking copy as received: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -372,15 +377,15 @@ class ApplicationViewModel(
                 val result = updateReadingStatusUseCase(applicationId, request)
                 result
                     .onSuccess {
-                        _successMessage.value = "Reading status updated!"
+                        notifySuccess("Reading status updated!")
                         loadMyApplications()
                         loadReadingProgress()
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to update reading status"
+                        notifyError(e.message ?: "Failed to update reading status")
                     }
             } catch (e: Exception) {
-                _error.value = "Error updating reading status: ${e.message}"
+                notifyError("Error updating reading status: ${e.message}")
             } finally {
                 _isLoading.value = false
             }

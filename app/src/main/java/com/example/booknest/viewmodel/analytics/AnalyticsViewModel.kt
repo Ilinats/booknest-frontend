@@ -1,6 +1,7 @@
 package com.example.booknest.viewmodel.analytics
 
 import androidx.lifecycle.ViewModel
+import com.example.booknest.viewmodel.common.UserFeedback
 import androidx.lifecycle.viewModelScope
 import com.example.booknest.domain.model.response.AuthorAnalyticsResponse
 import com.example.booknest.domain.model.response.BookPerformanceComparisonResponse
@@ -9,13 +10,14 @@ import com.example.booknest.domain.model.response.RatingDistributionResponse
 import com.example.booknest.domain.usecase.analytics.GetAuthorAnalyticsUseCase
 import com.example.booknest.domain.usecase.analytics.GetBookPerformanceComparisonUseCase
 import com.example.booknest.domain.usecase.analytics.GetDetailedBookAnalyticsUseCase
-import com.example.booknest.ui.state.UiState
+import com.example.booknest.presentation.common.UiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class AnalyticsViewModel(
+    private val feedback: UserFeedback,
     private val getDetailedBookAnalyticsUseCase: GetDetailedBookAnalyticsUseCase,
     private val getAuthorAnalyticsUseCase: GetAuthorAnalyticsUseCase,
     private val getBookPerformanceComparisonUseCase: GetBookPerformanceComparisonUseCase
@@ -52,6 +54,8 @@ class AnalyticsViewModel(
 
     fun clearError() { _error.value = null }
 
+    private fun notifyError(message: String) = feedback.error(message, _error)
+
     fun loadDetailedBookAnalytics(bookId: String) {
         viewModelScope.launch {
             _bookAnalyticsState.value = UiState.Loading
@@ -65,12 +69,12 @@ class AnalyticsViewModel(
                     .onFailure { e ->
                         val errorMessage = e.message ?: "Failed to load book analytics"
                         _bookAnalyticsState.value = UiState.Error(errorMessage, e)
-                        _error.value = errorMessage
+                        notifyError(errorMessage)
                     }
             } catch (e: Exception) {
                 val errorMessage = "Network error: ${e.message}"
                 _bookAnalyticsState.value = UiState.Error(errorMessage, e)
-                _error.value = errorMessage
+                notifyError(errorMessage)
             }
         }
     }
@@ -88,12 +92,12 @@ class AnalyticsViewModel(
                     .onFailure { e ->
                         val errorMessage = e.message ?: "Failed to load author analytics"
                         _authorAnalyticsState.value = UiState.Error(errorMessage, e)
-                        _error.value = errorMessage
+                        notifyError(errorMessage)
                     }
             } catch (e: Exception) {
                 val errorMessage = "Network error: ${e.message}"
                 _authorAnalyticsState.value = UiState.Error(errorMessage, e)
-                _error.value = errorMessage
+                notifyError(errorMessage)
             }
         }
     }
@@ -107,10 +111,10 @@ class AnalyticsViewModel(
                         _bookPerformanceComparison.value = comparison
                     }
                     .onFailure { e ->
-                        _error.value = e.message ?: "Failed to load book performance comparison"
+                        notifyError(e.message ?: "Failed to load book performance comparison")
                     }
             } catch (e: Exception) {
-                _error.value = "Error loading book performance comparison: ${e.message}"
+                notifyError("Error loading book performance comparison: ${e.message}")
             }
         }
     }

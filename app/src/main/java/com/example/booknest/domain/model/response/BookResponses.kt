@@ -164,6 +164,14 @@ data class DownloadBookResponse(
 )
 
 @Serializable
+data class BookLeakFingerprintResponse(
+    val readerId: String,
+    val bookId: String,
+    val issuedAt: Long,
+    val format: String
+)
+
+@Serializable
 data class TrendingBookResponse(
     val book: RecommendedBookResponse,
     val applicationCount: Int

@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.model.response.ApplicationResponse
-import com.example.booknest.navigation.Screen
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.ui.applications.components.detail.BookSummaryHeader
 import com.example.booknest.ui.applications.components.detail.BulkActionsBar
 import com.example.booknest.ui.applications.components.detail.OverdueReviewsCard
@@ -28,7 +28,7 @@ import com.example.booknest.ui.applications.components.list.EnhancedApplicationC
 import com.example.booknest.ui.applications.components.list.EnhancedApprovedApplicationCard
 import com.example.booknest.ui.applications.components.list.RejectedApplicationCard
 import com.example.booknest.ui.applications.components.lottery.LotterySelectionCard
-import com.example.booknest.ui.applications.components.review.ReviewCard
+import com.example.booknest.ui.applications.components.review.ApplicationReaderReviewCard
 import com.example.booknest.ui.applications.components.statistics.StatisticsTabContent
 import com.example.booknest.ui.applications.dialogs.RunLotteryDialog
 import com.example.booknest.ui.applications.models.ApplicationStats
@@ -235,7 +235,7 @@ fun BookApplicationDetailContent(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
-            contentPadding = PaddingValues(bottom = 80.dp),
+            contentPadding = PaddingValues(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
             item {
@@ -606,7 +606,7 @@ fun BookApplicationDetailContent(
                             reviewsApplications.size,
                             key = { reviewsApplications[it].id }
                         ) { index ->
-                            ReviewCard(
+                            ApplicationReaderReviewCard(
                                 application = reviewsApplications[index],
                                 navController = navController
                             )

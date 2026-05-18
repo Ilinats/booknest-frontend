@@ -1,6 +1,7 @@
 package com.example.booknest.viewmodel.applications
 
 import androidx.lifecycle.ViewModel
+import com.example.booknest.viewmodel.common.UserFeedback
 import androidx.lifecycle.viewModelScope
 import com.example.booknest.domain.model.request.BulkActionRequest
 import com.example.booknest.domain.model.request.UpdateApplicationCompleteRequest
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class BookApplicationViewModel(
+    private val feedback: UserFeedback,
     private val getBookApplicationsUseCase: GetBookApplicationsUseCase,
     private val updateApplicationCompleteUseCase: UpdateApplicationCompleteUseCase,
     private val bulkActionApplicationsUseCase: BulkActionApplicationsUseCase,
@@ -43,6 +45,9 @@ class BookApplicationViewModel(
     fun clearError() { _error.value = null }
     fun clearSuccessMessage() { _successMessage.value = null }
 
+    private fun notifyError(message: String) = feedback.error(message, _error)
+    private fun notifySuccess(message: String) = feedback.success(message, _successMessage)
+
     fun loadBookApplications(bookId: String) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -50,9 +55,9 @@ class BookApplicationViewModel(
                 val result = getBookApplicationsUseCase(bookId)
                 result
                     .onSuccess { apps -> _bookApplications.value = apps }
-                    .onFailure { e -> _error.value = e.message ?: "Failed to load book applications" }
+                    .onFailure { e -> notifyError(e.message ?: "Failed to load book applications") }
             } catch (e: Exception) {
-                _error.value = "Error loading book applications: ${e.message}"
+                notifyError("Error loading book applications: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -67,13 +72,13 @@ class BookApplicationViewModel(
                 val result = updateApplicationCompleteUseCase(applicationId, request)
                 result
                     .onSuccess {
-                        _successMessage.value = "Application approved!"
+                        notifySuccess("Application approved!")
                         val currentBookId = _bookApplications.value.firstOrNull()?.bookId
                         if (currentBookId != null) loadBookApplications(currentBookId)
                     }
-                    .onFailure { e -> _error.value = e.message ?: "Failed to approve application" }
+                    .onFailure { e -> notifyError(e.message ?: "Failed to approve application") }
             } catch (e: Exception) {
-                _error.value = "Error approving application: ${e.message}"
+                notifyError("Error approving application: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -88,13 +93,13 @@ class BookApplicationViewModel(
                 val result = updateApplicationCompleteUseCase(applicationId, request)
                 result
                     .onSuccess {
-                        _successMessage.value = "Application rejected!"
+                        notifySuccess("Application rejected!")
                         val currentBookId = _bookApplications.value.firstOrNull()?.bookId
                         if (currentBookId != null) loadBookApplications(currentBookId)
                     }
-                    .onFailure { e -> _error.value = e.message ?: "Failed to reject application" }
+                    .onFailure { e -> notifyError(e.message ?: "Failed to reject application") }
             } catch (e: Exception) {
-                _error.value = "Error rejecting application: ${e.message}"
+                notifyError("Error rejecting application: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -111,7 +116,7 @@ class BookApplicationViewModel(
             try {
                 val currentBookId = _bookApplications.value.firstOrNull()?.bookId
                 if (currentBookId == null) {
-                    _error.value = "Error: Book ID not found"
+                    notifyError("Error: Book ID not found")
                     _isLoading.value = false
                     return@launch
                 }
@@ -123,12 +128,12 @@ class BookApplicationViewModel(
                 val result = bulkActionApplicationsUseCase(currentBookId, request)
                 result
                     .onSuccess {
-                        _successMessage.value = "Bulk action completed!"
+                        notifySuccess("Bulk action completed!")
                         loadBookApplications(currentBookId)
                     }
-                    .onFailure { e -> _error.value = e.message ?: "Failed to perform bulk action" }
+                    .onFailure { e -> notifyError(e.message ?: "Failed to perform bulk action") }
             } catch (e: Exception) {
-                _error.value = "Error performing bulk action: ${e.message}"
+                notifyError("Error performing bulk action: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -142,13 +147,13 @@ class BookApplicationViewModel(
                 val result = markCopySentUseCase(applicationId)
                 result
                     .onSuccess {
-                        _successMessage.value = "Copy marked as sent!"
+                        notifySuccess("Copy marked as sent!")
                         val currentBookId = _bookApplications.value.firstOrNull()?.bookId
                         if (currentBookId != null) loadBookApplications(currentBookId)
                     }
-                    .onFailure { e -> _error.value = e.message ?: "Failed to mark copy as sent" }
+                    .onFailure { e -> notifyError(e.message ?: "Failed to mark copy as sent") }
             } catch (e: Exception) {
-                _error.value = "Error marking copy as sent: ${e.message}"
+                notifyError("Error marking copy as sent: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -162,11 +167,11 @@ class BookApplicationViewModel(
                 val result = runLotterySelectionUseCase(bookId)
                 result
                     .onSuccess { lotteryResult ->
-                        _successMessage.value = "Lottery completed: ${lotteryResult.approved} approved, ${lotteryResult.rejected} rejected"
+                        notifySuccess("Lottery completed: ${lotteryResult.approved} approved, ${lotteryResult.rejected} rejected")
                         loadBookApplications(bookId)
                     }
                     .onFailure { e ->
-                        _error.value = when {
+                        notifyError(when {
                             e.message?.contains("deadline", ignoreCase = true) == true ->
                                 "Application deadline has not passed yet. Lottery can only be run after the deadline."
                             e.message?.contains("already been run", ignoreCase = true) == true ->
@@ -174,10 +179,10 @@ class BookApplicationViewModel(
                             e.message?.contains("lottery selection", ignoreCase = true) == true ->
                                 "This book does not use lottery selection method."
                             else -> e.message ?: "Failed to run lottery"
-                        }
+                        })
                     }
             } catch (e: Exception) {
-                _error.value = "Error running lottery: ${e.message}"
+                notifyError("Error running lottery: ${e.message}")
             } finally {
                 _isLoading.value = false
             }

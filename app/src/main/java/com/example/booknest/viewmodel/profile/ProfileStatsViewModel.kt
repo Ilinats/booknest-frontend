@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.booknest.domain.model.response.UserStatsResponse
 import com.example.booknest.domain.usecase.profile.GetAuthorStatsUseCase
 import com.example.booknest.domain.usecase.profile.GetMyStatsUseCase
-import com.example.booknest.ui.state.UiState
+import com.example.booknest.presentation.common.UiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

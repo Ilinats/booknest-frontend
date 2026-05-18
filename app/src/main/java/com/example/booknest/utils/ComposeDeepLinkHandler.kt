@@ -1,7 +1,7 @@
 package com.example.booknest.utils
 
 import androidx.navigation.NavController
-import com.example.booknest.navigation.Screen
+import com.example.booknest.presentation.navigation.Screen
 
 object ComposeDeepLinkHandler {
 

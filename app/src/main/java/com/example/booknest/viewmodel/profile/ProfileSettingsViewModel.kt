@@ -1,5 +1,6 @@
 package com.example.booknest.viewmodel.profile
 import com.example.booknest.viewmodel.common.BaseViewModel
+import com.example.booknest.viewmodel.common.UserFeedback
 
 import com.example.booknest.domain.model.request.CustomSocialLink
 import com.example.booknest.domain.model.enums.NotificationType
@@ -15,10 +16,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class ProfileSettingsViewModel(
+    feedback: UserFeedback,
     private val updateSocialMediaUseCase: UpdateSocialMediaUseCase,
     private val updatePrivacySettingsUseCase: UpdatePrivacySettingsUseCase,
     private val updateNotificationSettingsUseCase: UpdateNotificationSettingsUseCase
-) : BaseViewModel() {
+) : BaseViewModel(feedback) {
 
     private val _successMessage = MutableStateFlow<String?>(null)
     val successMessage: StateFlow<String?> = _successMessage.asStateFlow()
@@ -37,7 +39,7 @@ class ProfileSettingsViewModel(
             custom = customLinks
         )
         launchWithLoading<Unit>(
-            onSuccess = { _successMessage.value = "Social media updated successfully" },
+            onSuccess = { feedback.success("Social media updated successfully", _successMessage) },
             block = { updateSocialMediaUseCase(request).map {} }
         )
     }
@@ -55,7 +57,7 @@ class ProfileSettingsViewModel(
             reviewsPrivacy = reviewsPrivacy
         )
         launchWithLoading<Unit>(
-            onSuccess = { _successMessage.value = "Privacy settings updated" },
+            onSuccess = { feedback.success("Privacy settings updated", _successMessage) },
             block = { updatePrivacySettingsUseCase(request).map {} }
         )
     }
@@ -71,7 +73,7 @@ class ProfileSettingsViewModel(
             notificationPreferences = notificationPreferences
         )
         launchWithLoading<Unit>(
-            onSuccess = { _successMessage.value = "Notification settings updated" },
+            onSuccess = { feedback.success("Notification settings updated", _successMessage) },
             block = { updateNotificationSettingsUseCase(request).map {} }
         )
     }

@@ -62,6 +62,7 @@ object Books {
     const val COVER = "$BOOKS/{bookId}/cover"
     const val DELETE_COVER = "$BOOKS/{bookId}/cover"
     const val DOWNLOAD = "$BOOKS/{bookId}/download"
+    const val LEAK_FINGERPRINT = "$BOOKS/{bookId}/leak-fingerprint"
     const val ALL_REVIEWS = "$BOOKS/{bookId}/reviews/all"
 }
 

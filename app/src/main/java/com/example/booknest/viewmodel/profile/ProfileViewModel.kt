@@ -2,6 +2,7 @@ package com.example.booknest.viewmodel.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.booknest.data.error.BNError
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.model.request.UpdateProfileRequest
 import com.example.booknest.domain.model.response.PublicUserProfileResponse
@@ -35,11 +36,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import com.example.booknest.ui.state.UiState
-import com.example.booknest.navigation.NavigationEvent
-import com.example.booknest.navigation.Screen
+import com.example.booknest.presentation.common.UiState
+import com.example.booknest.presentation.effects.ProfileUiEffect
+import com.example.booknest.utils.DebugLog
+import com.example.booknest.viewmodel.common.UserFeedback
 
 class ProfileViewModel(
+    private val feedback: UserFeedback,
     private val sessionManager: SessionManager,
     private val getMyProfileUseCase: GetMyProfileUseCase,
     private val getUserProfileUseCase: GetUserProfileUseCase,
@@ -84,8 +87,8 @@ class ProfileViewModel(
     fun clearError() { _error.value = null }
     fun clearSuccessMessage() { _successMessage.value = null }
 
-    private val _navigationEvent = MutableSharedFlow<NavigationEvent>(replay = 0)
-    val navigationEvent: SharedFlow<NavigationEvent> = _navigationEvent.asSharedFlow()
+    private val _profileUiEffect = MutableSharedFlow<ProfileUiEffect>(replay = 0)
+    val profileUiEffect: SharedFlow<ProfileUiEffect> = _profileUiEffect.asSharedFlow()
 
     private val _avatarRemovalState = MutableStateFlow<UiState<Unit>>(UiState.Idle)
     val avatarRemovalState: StateFlow<UiState<Unit>> = _avatarRemovalState.asStateFlow()
@@ -179,9 +182,7 @@ class ProfileViewModel(
                     }
                     .onFailure { e ->
                         _error.value = e.message ?: "Failed to load user activity"
-                        if (e.message?.contains("private", ignoreCase = true) == true ||
-                            e.message?.contains("403", ignoreCase = true) == true
-                        ) {
+                        if (isHiddenOrForbiddenActivity(e)) {
                             _myRecentActivity.value = emptyList()
                         }
                     }
@@ -241,7 +242,7 @@ class ProfileViewModel(
                     .onSuccess { profile ->
                         onProfileLoaded(profile)
                         _profileEditState.value = UiState.Success(Unit)
-                        _successMessage.value = "Profile updated successfully"
+                        feedback.success("Profile updated successfully", _successMessage)
                     }
                     .onFailure { e ->
                         handleProfileEditError(e.message ?: "Failed to update profile")
@@ -291,13 +292,18 @@ class ProfileViewModel(
                     val result = uploadProfileImageUseCase(multipartBody)
                     result
                         .onSuccess { avatarUrl ->
-                            _successMessage.value = "Image uploaded successfully"
+                            feedback.success("Image uploaded successfully", _successMessage)
                             loadMyProfile()
                             getCurrentUserUseCase()
                                 .onSuccess { user ->
                                     sessionManager.updateUser(user)
                                 }
                                 .onFailure { e ->
+                                    DebugLog.w(
+                                        "ProfileVM",
+                                        "Avatar saved but refreshing session user failed",
+                                        e
+                                    )
                                 }
                         }
                         .onFailure { e ->
@@ -310,6 +316,7 @@ class ProfileViewModel(
                                 file.delete()
                             }
                         } catch (e: Exception) {
+                            DebugLog.w("ProfileVM", "Failed to delete temp avatar file", e)
                         }
                     }
                 }
@@ -333,7 +340,7 @@ class ProfileViewModel(
                     .onSuccess { user ->
                         sessionManager.updateUser(user)
                         loadMyProfile()
-                        _successMessage.value = "Avatar removed successfully"
+                        feedback.success("Avatar removed successfully", _successMessage)
                         _avatarRemovalState.value = UiState.Success(Unit)
                     }
                     .onFailure { e ->
@@ -360,12 +367,10 @@ class ProfileViewModel(
                 val result = deleteAccountUseCase()
                 result
                     .onSuccess {
-                        _successMessage.value = "Account deleted successfully"
+                        feedback.success("Account deleted successfully", _successMessage)
                         sessionManager.logout(authRepository)
 
-                        _navigationEvent.emit(
-                            NavigationEvent.NavigateAndClearStack(Screen.Landing.route)
-                        )
+                        _profileUiEffect.emit(ProfileUiEffect.NavigateToLandingClearingStack)
                     }
                     .onFailure { e ->
                         emitErrorMessage(e.message ?: "Failed to delete account")
@@ -437,7 +442,15 @@ class ProfileViewModel(
         emitErrorMessage(message)
     }
 
+    private fun isHiddenOrForbiddenActivity(throwable: Throwable): Boolean =
+        when (throwable) {
+            is BNError.Unauthorized -> true
+            is BNError.Generic ->
+                throwable.statusCode == 403 || throwable.statusCode == 401
+            else -> false
+        }
+
     private fun emitErrorMessage(message: String) {
-        _error.value = message
+        feedback.error(message, _error)
     }
 }

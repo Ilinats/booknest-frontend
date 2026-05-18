@@ -34,7 +34,7 @@ import androidx.navigation.NavController
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.model.response.CustomSocialLinkResponse
 import com.example.booknest.domain.model.response.SocialMediaResponse
-import com.example.booknest.navigation.Screen
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.ui.components.social.CustomLinkCard
 import com.example.booknest.ui.onboarding.components.fields.SocialMediaInputField
 import com.example.booknest.ui.auth.components.utils.isValidUrl

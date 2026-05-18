@@ -1,6 +1,7 @@
 package com.example.booknest.viewmodel.profile
 
 import androidx.lifecycle.ViewModel
+import com.example.booknest.viewmodel.common.UserFeedback
 import androidx.lifecycle.viewModelScope
 import com.example.booknest.domain.model.request.CreateAddressRequest
 import com.example.booknest.domain.model.request.UpdateAddressRequest
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class AddressViewModel(
+    private val feedback: UserFeedback,
     private val getMyAddressesUseCase: GetMyAddressesUseCase,
     private val addAddressUseCase: AddAddressUseCase,
     private val updateAddressUseCase: UpdateAddressUseCase,
@@ -36,6 +38,9 @@ class AddressViewModel(
     fun clearError() { _error.value = null }
     fun clearSuccessMessage() { _successMessage.value = null }
 
+    private fun notifyError(message: String) = feedback.error(message, _error)
+    private fun notifySuccess(message: String) = feedback.success(message, _successMessage)
+
     fun loadAddresses() {
         viewModelScope.launch {
             try {
@@ -44,9 +49,9 @@ class AddressViewModel(
                 val result = getMyAddressesUseCase()
                 result
                     .onSuccess { addresses -> _addresses.value = addresses }
-                    .onFailure { e -> _error.value = e.message ?: "Failed to load addresses" }
+                    .onFailure { e -> notifyError(e.message ?: "Failed to load addresses") }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
+                notifyError(e.message ?: "Unknown error occurred")
             } finally {
                 _isLoading.value = false
             }
@@ -75,11 +80,11 @@ class AddressViewModel(
                 result
                     .onSuccess {
                         loadAddresses()
-                        _successMessage.value = "Address added successfully"
+                        notifySuccess("Address added successfully")
                     }
-                    .onFailure { e -> _error.value = e.message ?: "Failed to add address" }
+                    .onFailure { e -> notifyError(e.message ?: "Failed to add address") }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
+                notifyError(e.message ?: "Unknown error occurred")
             } finally {
                 _isLoading.value = false
             }
@@ -109,11 +114,11 @@ class AddressViewModel(
                 result
                     .onSuccess {
                         loadAddresses()
-                        _successMessage.value = "Address updated successfully"
+                        notifySuccess("Address updated successfully")
                     }
-                    .onFailure { e -> _error.value = e.message ?: "Failed to update address" }
+                    .onFailure { e -> notifyError(e.message ?: "Failed to update address") }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
+                notifyError(e.message ?: "Unknown error occurred")
             } finally {
                 _isLoading.value = false
             }
@@ -129,11 +134,11 @@ class AddressViewModel(
                 result
                     .onSuccess {
                         loadAddresses()
-                        _successMessage.value = "Address deleted successfully"
+                        notifySuccess("Address deleted successfully")
                     }
-                    .onFailure { e -> _error.value = e.message ?: "Failed to delete address" }
+                    .onFailure { e -> notifyError(e.message ?: "Failed to delete address") }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error occurred"
+                notifyError(e.message ?: "Unknown error occurred")
             } finally {
                 _isLoading.value = false
             }

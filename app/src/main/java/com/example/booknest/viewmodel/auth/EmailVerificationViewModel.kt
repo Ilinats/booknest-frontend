@@ -1,9 +1,12 @@
 package com.example.booknest.viewmodel.auth
 
 import androidx.lifecycle.ViewModel
+import com.example.booknest.viewmodel.common.UserFeedback
 import androidx.lifecycle.viewModelScope
+import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.usecase.auth.ResendVerificationCodeUseCase
 import com.example.booknest.domain.usecase.auth.VerifyEmailUseCase
+import com.example.booknest.domain.usecase.profile.GetCurrentUserUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,8 +19,11 @@ data class EmailVerificationUiState(
 )
 
 class EmailVerificationViewModel(
+    private val feedback: UserFeedback,
     private val verifyEmailUseCase: VerifyEmailUseCase,
     private val resendVerificationCodeUseCase: ResendVerificationCodeUseCase,
+    private val getCurrentUserUseCase: GetCurrentUserUseCase,
+    private val sessionManager: SessionManager,
     private val userEmail: String? = null
 ) : ViewModel() {
 
@@ -30,21 +36,32 @@ class EmailVerificationViewModel(
 
             try {
                 val result = verifyEmailUseCase(code)
-                result.onSuccess { _ ->
+                result.onSuccess { verifiedUser ->
+                    sessionManager.updateUser(verifiedUser)
+                    getCurrentUserUseCase()
+                        .onSuccess { freshUser ->
+                            sessionManager.updateUser(freshUser)
+                        }
+                    feedback.success("Email verified successfully")
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        isVerificationSuccessful = true
+                        isVerificationSuccessful = true,
+                        error = null
                     )
                 }.onFailure { exception ->
+                    val message = getErrorMessage(exception.message)
+                    feedback.error(message)
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        error = getErrorMessage(exception.message)
+                        error = message
                     )
                 }
             } catch (e: Exception) {
+                val message = getErrorMessage(e.message)
+                feedback.error(message)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = getErrorMessage(e.message)
+                    error = message
                 )
             }
         }
@@ -66,17 +83,22 @@ class EmailVerificationViewModel(
             try {
                 val result = resendVerificationCodeUseCase(email)
                 result.onSuccess {
-                    _uiState.value = _uiState.value.copy(isLoading = false)
+                    feedback.success("Verification code sent")
+                    _uiState.value = _uiState.value.copy(isLoading = false, error = null)
                 }.onFailure { exception ->
+                    val message = getErrorMessage(exception.message)
+                    feedback.error(message)
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        error = getErrorMessage(exception.message)
+                        error = message
                     )
                 }
             } catch (e: Exception) {
+                val message = getErrorMessage(e.message)
+                feedback.error(message)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = getErrorMessage(e.message)
+                    error = message
                 )
             }
         }
