@@ -1,10 +1,9 @@
 package com.example.booknest.data.session
 
-import android.content.Context
 import com.example.booknest.data.constants.Auth
 import com.example.booknest.data.constants.RetrofitConstants
-import com.example.booknest.dataStore
 import com.example.booknest.domain.usecase.auth.RefreshTokenUseCase
+import com.example.booknest.port.SessionWriter
 import kotlinx.coroutines.runBlocking
 import okhttp3.Authenticator
 import okhttp3.Request
@@ -13,7 +12,7 @@ import okhttp3.Route
 
 class TokenAuthenticator(
     private val refreshTokenUseCase: RefreshTokenUseCase,
-    private val context: Context
+    private val sessionWriter: SessionWriter,
 ) : Authenticator {
 
     private val loginURL = "${RetrofitConstants.BASE_URL}${Auth.LOGIN}"
@@ -34,7 +33,7 @@ class TokenAuthenticator(
         }
 
         if (requestUrl == refreshTokenURL) {
-            SessionManager.getInstance(dataStore = context.dataStore).logout()
+            sessionWriter.logout()
             return null
         }
 
@@ -47,21 +46,18 @@ class TokenAuthenticator(
                 val requestBuilder = response.request.newBuilder()
                 val token = tokenResponse.accessToken
 
-                SessionManager
-                    .getInstance(dataStore = context.dataStore)
-                    .updateTokens(
-                        accessToken = tokenResponse.accessToken,
-                        refreshToken = tokenResponse.refreshToken
-                    )
+                sessionWriter.updateTokens(
+                    accessToken = tokenResponse.accessToken,
+                    refreshToken = tokenResponse.refreshToken
+                )
 
                 requestBuilder.header("Authorization", "Bearer $token")
                 requestBuilder.build()
             },
             onFailure = {
-                SessionManager.getInstance(dataStore = context.dataStore).logout()
+                sessionWriter.logout()
                 null
             }
         )
     }
 }
-

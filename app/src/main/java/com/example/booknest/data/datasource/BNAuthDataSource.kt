@@ -1,11 +1,9 @@
 package com.example.booknest.data.datasource
 
-import android.content.Context
 import com.example.booknest.data.error.BNError
 import com.example.booknest.data.service.AuthService
 import com.example.booknest.data.service.ProfilesService
-import com.example.booknest.data.session.SessionManager
-import com.example.booknest.dataStore
+import com.example.booknest.port.SessionWriter
 import com.example.booknest.domain.model.request.LoginRequest
 import com.example.booknest.domain.model.request.RefreshTokenRequest
 import com.example.booknest.domain.model.request.RegisterRequest
@@ -21,7 +19,7 @@ import com.example.booknest.domain.model.response.UserResponse
 class BNAuthDataSource(
     private val authService: AuthService,
     private val profilesService: ProfilesService,
-    private val context: Context
+    private val sessionWriter: SessionWriter,
 ) : AuthDataSource {
 
     override suspend fun login(body: LoginRequest): Result<LoginDataResponse> {
@@ -56,8 +54,7 @@ class BNAuthDataSource(
             val registerResponse = authService.register(body)
             if (registerResponse.isSuccessful && registerResponse.body() != null) {
                 val authResponse = registerResponse.body()!!
-                val sessionManager = SessionManager.getInstance(context.dataStore)
-                sessionManager.updateTokens(
+                sessionWriter.updateTokens(
                     accessToken = authResponse.accessToken,
                     refreshToken = authResponse.refreshToken
                 )
@@ -117,16 +114,23 @@ class BNAuthDataSource(
             val response = authService.verifyEmail(VerifyEmailRequest(code))
             if (response.isSuccessful && response.body() != null) {
                 val verifyResponse = response.body()!!
-                if (verifyResponse.user != null) {
-                    Result.success(verifyResponse.user)
+                val userFromBody = verifyResponse.user
+                if (userFromBody != null) {
+                    Result.success(userFromBody)
                 } else {
-                    Result.failure(
-                        BNError.Generic(
-                            messageString = verifyResponse.message ?: "Email verification failed",
-                            error = null,
-                            statusCode = null
+                    val meResponse = profilesService.getMe()
+                    if (meResponse.isSuccessful && meResponse.body() != null) {
+                        Result.success(meResponse.body()!!)
+                    } else {
+                        Result.failure(
+                            BNError.Generic(
+                                messageString = verifyResponse.message
+                                    ?: "Email verified but failed to refresh your profile",
+                                error = null,
+                                statusCode = meResponse.code().takeIf { it > 0 }
+                            )
                         )
-                    )
+                    }
                 }
             } else {
                 Result.failure(

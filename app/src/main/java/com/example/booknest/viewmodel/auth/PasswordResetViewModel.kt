@@ -1,6 +1,7 @@
 package com.example.booknest.viewmodel.auth
 
 import androidx.lifecycle.ViewModel
+import com.example.booknest.viewmodel.common.UserFeedback
 import androidx.lifecycle.viewModelScope
 import com.example.booknest.domain.usecase.auth.RequestPasswordResetUseCase
 import com.example.booknest.domain.usecase.auth.ResetPasswordUseCase
@@ -17,6 +18,7 @@ data class PasswordResetUiState(
 )
 
 class PasswordResetViewModel(
+    private val feedback: UserFeedback,
     private val resetPasswordUseCase: ResetPasswordUseCase,
     private val requestPasswordResetUseCase: RequestPasswordResetUseCase
 ) : ViewModel() {
@@ -48,21 +50,26 @@ class PasswordResetViewModel(
                 val result = resetPasswordUseCase(code, newPassword)
                 result
                     .onSuccess {
+                        feedback.success("Password reset successfully")
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
                             isPasswordResetSuccessful = true
                         )
                     }
                     .onFailure { exception ->
+                        val message = getErrorMessage(exception.message)
+                        feedback.error(message)
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
-                            error = getErrorMessage(exception.message)
+                            error = message
                         )
                     }
             } catch (e: Exception) {
+                val message = getErrorMessage(e.message)
+                feedback.error(message)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = getErrorMessage(e.message)
+                    error = message
                 )
             }
         }
@@ -75,21 +82,26 @@ class PasswordResetViewModel(
                 val result = requestPasswordResetUseCase(email)
                 result
                     .onSuccess {
+                        feedback.success("Reset code sent")
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
                             isCodeSent = true
                         )
                     }
                     .onFailure { exception ->
+                        val message = getErrorMessage(exception.message)
+                        feedback.error(message)
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
-                            error = getErrorMessage(exception.message)
+                            error = message
                         )
                     }
             } catch (e: Exception) {
+                val message = getErrorMessage(e.message)
+                feedback.error(message)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = getErrorMessage(e.message)
+                    error = message
                 )
             }
         }
@@ -100,6 +112,7 @@ class PasswordResetViewModel(
     }
 
     fun setClientValidationError(message: String) {
+        feedback.error(message)
         _uiState.value = _uiState.value.copy(error = message)
     }
 

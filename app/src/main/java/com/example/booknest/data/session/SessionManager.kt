@@ -3,48 +3,52 @@ package com.example.booknest.data.session
 import androidx.datastore.core.DataStore
 import com.example.booknest.domain.model.response.UserResponse
 import com.example.booknest.domain.repository.AuthRepository
+import com.example.booknest.port.SessionReader
+import com.example.booknest.port.SessionWriter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-object SessionManager {
-    private var currentDataStore: DataStore<AppSettings>? = null
-    private var appSettings: Flow<AppSettings>? = null
+/**
+ * Holds auth session state and persists credentials via [dataStore].
+ * Single instance is provided by Koin; do not construct manually.
+ */
+class SessionManager(
+    private val dataStore: DataStore<AppSettings>
+) : SessionReader, SessionWriter {
+
+    private val appSettings: Flow<AppSettings> = dataStore.data
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     private var currentToken: String = ""
     private var currentRefreshToken: String = ""
     private var currentUserId: String = ""
 
-    private var sessionManager: SessionManager? = null
-
     private val _isLoggedIn = MutableStateFlow<Boolean?>(null)
-    val isLoggedIn = _isLoggedIn.asStateFlow()
+    override val isLoggedIn = _isLoggedIn.asStateFlow()
 
     private val _currentUser = MutableStateFlow<UserResponse?>(null)
-    val currentUser = _currentUser.asStateFlow()
+    override val currentUser = _currentUser.asStateFlow()
 
-    fun getInstance(dataStore: DataStore<AppSettings>): SessionManager {
-        if (sessionManager == null) {
-            currentDataStore = dataStore
-            appSettings = dataStore.data
-            sessionManager = SessionManager
-
-            CoroutineScope(Dispatchers.Main).launch {
-                val token = fetchAuthToken()
-                currentToken = token
-                currentRefreshToken = fetchAuthRefreshToken()
-                currentUserId = fetchUserId()
-                _isLoggedIn.value = token.isNotEmpty()
-            }
+    init {
+        scope.launch {
+            hydrateFromDisk()
         }
-        return sessionManager as SessionManager
     }
 
-    suspend fun logout(authRepository: AuthRepository? = null) {
+    private suspend fun hydrateFromDisk() {
+        currentToken = fetchAuthToken()
+        currentRefreshToken = fetchAuthRefreshToken()
+        currentUserId = fetchUserId()
+        _isLoggedIn.value = currentToken.isNotEmpty()
+    }
+
+    override suspend fun logout(authRepository: AuthRepository?) {
         android.util.Log.d("SessionManager", "logout() called")
 
         val refreshToken = currentRefreshToken
@@ -65,19 +69,19 @@ object SessionManager {
         android.util.Log.d("SessionManager", "logout() completed, isLoggedIn=${_isLoggedIn.value}")
     }
 
-    suspend fun setLoggedIn() {
+    override suspend fun setLoggedIn() {
         _isLoggedIn.value = true
     }
 
-    suspend fun setAuthEntities(
+    override suspend fun setAuthEntities(
         token: String,
         refreshToken: String,
-        userId: String = "",
-        username: String = "",
-        email: String = "",
-        userType: String = ""
+        userId: String,
+        username: String,
+        email: String,
+        userType: String
     ) {
-        currentDataStore?.updateData {
+        dataStore.updateData {
             it.copy(
                 token = token,
                 refreshToken = refreshToken,
@@ -95,8 +99,8 @@ object SessionManager {
         }
     }
 
-    suspend fun updateTokens(accessToken: String, refreshToken: String) {
-        currentDataStore?.updateData {
+    override suspend fun updateTokens(accessToken: String, refreshToken: String) {
+        dataStore.updateData {
             it.copy(
                 token = accessToken,
                 refreshToken = refreshToken
@@ -109,9 +113,9 @@ object SessionManager {
         }
     }
 
-    suspend fun updateUser(user: UserResponse) {
+    override suspend fun updateUser(user: UserResponse) {
         _currentUser.emit(user)
-        currentDataStore?.updateData {
+        dataStore.updateData {
             it.copy(
                 userId = user.id,
                 username = user.username,
@@ -122,37 +126,37 @@ object SessionManager {
     }
 
     suspend fun fetchAuthToken(): String {
-        return appSettings?.first()?.token ?: ""
+        return appSettings.first().token
     }
 
     suspend fun fetchAuthRefreshToken(): String {
-        return appSettings?.first()?.refreshToken ?: ""
+        return appSettings.first().refreshToken
     }
 
     suspend fun fetchUserId(): String {
-        return appSettings?.first()?.userId ?: ""
+        return appSettings.first().userId
     }
 
     suspend fun fetchUserType(): String {
-        return appSettings?.first()?.userType ?: ""
+        return appSettings.first().userType
     }
 
-    suspend fun setTokens() {
+    /** Refreshes in-memory tokens from disk (e.g. after process start). */
+    override suspend fun setTokens() {
         currentToken = fetchAuthToken()
         currentRefreshToken = fetchAuthRefreshToken()
         currentUserId = fetchUserId()
     }
 
-    fun getToken(): String {
+    override fun getToken(): String {
         return currentToken
     }
 
-    fun getRefreshToken(): String {
+    override fun getRefreshToken(): String {
         return currentRefreshToken
     }
 
-    fun getUserId(): String {
+    override fun getUserId(): String {
         return currentUserId
     }
 }
-

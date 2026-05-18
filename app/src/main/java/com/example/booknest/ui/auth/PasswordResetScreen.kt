@@ -33,8 +33,8 @@ import com.example.booknest.ui.components.auth.CodeInputField
 import com.example.booknest.ui.components.auth.ResendCodeButton
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.viewmodel.auth.PasswordResetViewModel
-import com.example.booknest.navigation.Screen
-import com.example.booknest.ui.auth.components.AuthBackgroundDecoration
+import com.example.booknest.presentation.navigation.Screen
+import com.example.booknest.ui.components.BackgroundDecoration
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,7 +87,7 @@ fun PasswordResetScreen(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            AuthBackgroundDecoration(modifier = Modifier.fillMaxSize())
+            BackgroundDecoration(modifier = Modifier.fillMaxSize())
 
             Column(
                 modifier = Modifier
