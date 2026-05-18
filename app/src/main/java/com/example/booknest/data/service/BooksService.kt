@@ -5,16 +5,17 @@ import com.example.booknest.data.constants.PathConstants
 import com.example.booknest.data.constants.QueryConstants
 import com.example.booknest.domain.model.request.CreateBookRequest
 import com.example.booknest.domain.model.request.UpdateBookRequest
+import com.example.booknest.domain.model.response.BookLeakFingerprintResponse
 import com.example.booknest.domain.model.response.BookResponse
 import com.example.booknest.domain.model.response.BookStatsResponse
 import com.example.booknest.domain.model.response.DetailedBookAnalyticsResponse
 import com.example.booknest.domain.model.response.AuthorAnalyticsResponse
 import com.example.booknest.domain.model.response.RecommendedBookResponse
 import com.example.booknest.domain.model.response.UploadBookFileResponse
-import com.example.booknest.domain.model.response.DownloadBookResponse
 import com.example.booknest.domain.model.response.PaginatedResponse
 import com.example.booknest.domain.model.response.ReviewResponse
 import okhttp3.MultipartBody
+import okhttp3.ResponseBody
 import okhttp3.RequestBody
 import retrofit2.Response
 import retrofit2.http.Body
@@ -27,6 +28,7 @@ import retrofit2.http.PUT
 import retrofit2.http.Part
 import retrofit2.http.Path
 import retrofit2.http.Query
+import retrofit2.http.Streaming
 
 interface BooksService {
     @GET(Books.LIST)
@@ -92,7 +94,7 @@ interface BooksService {
     ): Response<BookResponse>
 
     @GET(Books.MY_BOOKS)
-    suspend fun getMyBooks(): Response<List<BookResponse>>
+    suspend fun getMyBooks(): Response<PaginatedResponse<BookResponse>>
 
     @PATCH(Books.BY_ID)
     suspend fun updateBook(
@@ -152,10 +154,18 @@ interface BooksService {
         @Path(PathConstants.BOOK_ID) bookId: String
     ): Response<BookResponse>
 
+    @Streaming
     @GET(Books.DOWNLOAD)
-    suspend fun getBookDownloadUrl(
+    suspend fun downloadBook(
         @Path(PathConstants.BOOK_ID) bookId: String
-    ): Response<DownloadBookResponse>
+    ): Response<ResponseBody>
+
+    @Multipart
+    @POST(Books.LEAK_FINGERPRINT)
+    suspend fun decodeLeakFingerprint(
+        @Path(PathConstants.BOOK_ID) bookId: String,
+        @Part file: MultipartBody.Part
+    ): Response<BookLeakFingerprintResponse>
 
     @GET(Books.ALL_REVIEWS)
     suspend fun getBookAllReviews(

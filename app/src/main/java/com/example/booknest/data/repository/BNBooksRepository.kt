@@ -5,10 +5,11 @@ import com.example.booknest.data.datasource.resultBody
 import com.example.booknest.domain.model.request.CreateBookRequest
 import com.example.booknest.domain.model.request.UpdateBookRequest
 import com.example.booknest.domain.model.response.AuthorAnalyticsResponse
+import com.example.booknest.domain.model.response.BookLeakFingerprintResponse
 import com.example.booknest.domain.model.response.BookResponse
 import com.example.booknest.domain.model.response.BookStatsResponse
 import com.example.booknest.domain.model.response.DetailedBookAnalyticsResponse
-import com.example.booknest.domain.model.response.DownloadBookResponse
+import com.example.booknest.domain.model.BookDownloadPayload
 import com.example.booknest.domain.model.response.RecommendedBookResponse
 import com.example.booknest.domain.model.response.ReviewResponse
 import com.example.booknest.domain.model.response.TrendingBookResponse
@@ -17,7 +18,6 @@ import com.example.booknest.domain.repository.BooksRepository
 import okhttp3.MultipartBody
 
 class BNBooksRepository(private val booksDataSource: BooksDataSource) : BooksRepository {
-
     override suspend fun browseBooks(
         search: String?,
         genres: List<Int>?,
@@ -132,8 +132,15 @@ class BNBooksRepository(private val booksDataSource: BooksDataSource) : BooksRep
         return resultBody(booksDataSource.removeBookCoverImage(bookId))
     }
 
-    override suspend fun getBookDownloadUrl(bookId: String): Result<DownloadBookResponse> {
-        return resultBody(booksDataSource.getBookDownloadUrl(bookId))
+    override suspend fun getBookDownload(bookId: String): Result<BookDownloadPayload> {
+        return resultBody(booksDataSource.getBookDownload(bookId))
+    }
+
+    override suspend fun decodeLeakFingerprint(
+        bookId: String,
+        file: MultipartBody.Part
+    ): Result<BookLeakFingerprintResponse> {
+        return resultBody(booksDataSource.decodeLeakFingerprint(bookId, file))
     }
 
     override suspend fun getBookAllReviews(

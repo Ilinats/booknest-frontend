@@ -28,7 +28,7 @@ import com.example.booknest.ui.analytics.components.book.*
 import com.example.booknest.viewmodel.analytics.AnalyticsViewModel
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
-import com.example.booknest.ui.state.UiState
+import com.example.booknest.presentation.common.UiState
 import com.example.booknest.ui.components.BackgroundDecoration
 import kotlinx.coroutines.flow.collectLatest
 

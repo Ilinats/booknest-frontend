@@ -15,17 +15,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.booknest.data.session.SessionManager
+import com.example.booknest.domain.repository.GenresRepository
 import com.example.booknest.domain.model.request.CreateBookRequest
 import com.example.booknest.domain.model.request.CreateSeriesRequest
 import com.example.booknest.domain.model.response.GenreResponse
 import com.example.booknest.domain.model.response.SeriesResponse
-import com.example.booknest.domain.repository.GenresRepository
+import com.example.booknest.port.ToastNotifier
 import com.example.booknest.ui.author.components.wizard.*
 import com.example.booknest.ui.author.components.common.*
 import com.example.booknest.ui.components.BackButton
 import com.example.booknest.viewmodel.author.AuthorBooksViewModel
 import com.example.booknest.viewmodel.author.AuthorSeriesViewModel
-import com.example.booknest.ui.state.UiState
+import com.example.booknest.presentation.common.UiState
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
@@ -41,6 +42,7 @@ fun BookCreationWizard(
     navController: NavController,
     sessionManager: SessionManager = koinInject(),
     genresRepository: GenresRepository = koinInject(),
+    toastNotifier: ToastNotifier = koinInject(),
     authorBooksViewModel: AuthorBooksViewModel = getViewModel(),
     authorSeriesViewModel: AuthorSeriesViewModel = getViewModel()
 ) {
@@ -131,14 +133,13 @@ fun BookCreationWizard(
             result
                 .onSuccess { genreList ->
                     genres = genreList
-                    println("Genres loaded successfully: ${genreList.size} genres")
                 }
                 .onFailure { e ->
-                    com.example.booknest.ui.toast.GlobalToastHandler.showError(e)
+                    toastNotifier.showError(e)
                     genres = emptyList()
                 }
         } catch (e: Exception) {
-            com.example.booknest.ui.toast.GlobalToastHandler.showError(e)
+            toastNotifier.showError(e)
             genres = emptyList()
         }
     }
@@ -166,7 +167,7 @@ fun BookCreationWizard(
                 start = 16.dp,
                 top = 16.dp,
                 end = 16.dp,
-                bottom = 100.dp
+                bottom = 16.dp
             ),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -205,12 +206,10 @@ fun BookCreationWizard(
                                 coverImageUrl = url
                             },
                             onValidationChange = { tErr, sdErr, fdErr, pcErr ->
-                                println("DEBUG: BookCreationWizard onValidationChange called with pcErr: $pcErr")
                                 titleError = tErr
                                 shortDescriptionError = sdErr
                                 fullDescriptionError = fdErr
                                 pageCountError = pcErr
-                                println("DEBUG: BookCreationWizard pageCountError set to: $pageCountError")
                             }
                         )
                     }
@@ -548,7 +547,7 @@ fun BookCreationWizard(
                         },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Keep as Draft")
+                        Text("Keep Draft")
                     }
                     Button(
                         onClick = {

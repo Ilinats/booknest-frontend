@@ -1,12 +1,15 @@
 package com.example.booknest.viewmodel.author
 
 import androidx.lifecycle.ViewModel
+import com.example.booknest.viewmodel.common.UserFeedback
 import androidx.lifecycle.viewModelScope
 import com.example.booknest.domain.model.request.CreateBookRequest
 import com.example.booknest.domain.model.request.UpdateBookRequest
+import com.example.booknest.domain.model.response.BookLeakFingerprintResponse
 import com.example.booknest.domain.model.response.BookResponse
 import com.example.booknest.domain.model.response.BookStatsResponse
 import com.example.booknest.domain.usecase.author.CreateBookUseCase
+import com.example.booknest.domain.usecase.author.DecodeBookLeakFingerprintUseCase
 import com.example.booknest.domain.usecase.author.DeleteBookUseCase
 import com.example.booknest.domain.usecase.author.GetBookStatsUseCase
 import com.example.booknest.domain.usecase.author.GetMyBooksUseCase
@@ -15,7 +18,8 @@ import com.example.booknest.domain.usecase.author.UpdateBookUseCase
 import com.example.booknest.domain.usecase.files.RemoveBookCoverImageUseCase
 import com.example.booknest.domain.usecase.files.UploadBookCoverImageUseCase
 import com.example.booknest.domain.usecase.files.UploadBookFileUseCase
-import com.example.booknest.ui.state.UiState
+import com.example.booknest.presentation.common.UiState
+import com.example.booknest.utils.DebugLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,6 +54,7 @@ private data class BooksFilterState(
 )
 
 class AuthorBooksViewModel(
+    private val feedback: UserFeedback,
     private val getMyBooksUseCase: GetMyBooksUseCase,
     private val getBookStatsUseCase: GetBookStatsUseCase,
     private val createBookUseCase: CreateBookUseCase,
@@ -58,7 +63,8 @@ class AuthorBooksViewModel(
     private val publishBookUseCase: PublishBookUseCase,
     private val uploadBookFileUseCase: UploadBookFileUseCase,
     private val uploadBookCoverImageUseCase: UploadBookCoverImageUseCase,
-    private val removeBookCoverImageUseCase: RemoveBookCoverImageUseCase
+    private val removeBookCoverImageUseCase: RemoveBookCoverImageUseCase,
+    private val decodeBookLeakFingerprintUseCase: DecodeBookLeakFingerprintUseCase
 ) : ViewModel() {
 
     private val _myBooks = MutableStateFlow<List<BookResponse>>(emptyList())
@@ -82,6 +88,11 @@ class AuthorBooksViewModel(
     private val _bookFileUploadState = MutableStateFlow<UiState<String>>(UiState.Idle)
     val bookFileUploadState: StateFlow<UiState<String>> = _bookFileUploadState.asStateFlow()
 
+    private val _leakFingerprintState =
+        MutableStateFlow<UiState<BookLeakFingerprintResponse>>(UiState.Idle)
+    val leakFingerprintState: StateFlow<UiState<BookLeakFingerprintResponse>> =
+        _leakFingerprintState.asStateFlow()
+
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
@@ -90,6 +101,12 @@ class AuthorBooksViewModel(
 
     fun clearError() { _error.value = null }
     fun clearSuccessMessage() { _successMessage.value = null }
+
+    private fun notifyError(message: String) = feedback.error(message, _error)
+    private fun notifySuccess(message: String) = feedback.success(message, _successMessage)
+    fun clearLeakFingerprintState() {
+        _leakFingerprintState.value = UiState.Idle
+    }
 
     // Filter / sort state owned by ViewModel so config changes don't reset it
     private val _searchQuery = MutableStateFlow("")
@@ -147,6 +164,64 @@ class AuthorBooksViewModel(
         }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
+    fun decodeLeakFingerprint(
+        bookId: String,
+        fileUri: android.net.Uri,
+        context: android.content.Context
+    ) {
+        viewModelScope.launch(NonCancellable) {
+            try {
+                _leakFingerprintState.value = UiState.Loading
+                val mimeType = withContext(Dispatchers.IO) { context.contentResolver.getType(fileUri) }
+                val file = withContext(Dispatchers.IO) { uriToFileForBook(context, fileUri, mimeType) }
+                    ?: run {
+                        _leakFingerprintState.value =
+                            UiState.Error("Only PDF and EPUB files are supported")
+                        return@launch
+                    }
+                val uploadManager = com.example.booknest.utils.FileUploadManager(context)
+                val validationResult = uploadManager.validateBookFile(file)
+                if (validationResult is com.example.booknest.utils.FileUploadManager.ValidationResult.Error) {
+                    _leakFingerprintState.value = UiState.Error(validationResult.message)
+                    withContext(Dispatchers.IO) {
+                        try {
+                            if (file.exists()) file.delete()
+                        } catch (e: Exception) {
+                            DebugLog.w("AuthorBooksVM", "Temp file delete failed", e)
+                        }
+                    }
+                    return@launch
+                }
+                val multipartBody = uploadManager.createMultipartBody(file)
+                val result = decodeBookLeakFingerprintUseCase(bookId, multipartBody)
+                result
+                    .onSuccess { data ->
+                        _leakFingerprintState.value = UiState.Success(data)
+                    }
+                    .onFailure { e ->
+                        if (e !is kotlinx.coroutines.CancellationException) {
+                            _leakFingerprintState.value =
+                                UiState.Error(e.message ?: "Could not read fingerprint from file", e)
+                        }
+                    }
+                withContext(Dispatchers.IO) {
+                    try {
+                        if (file.exists()) file.delete()
+                    } catch (e: Exception) {
+                        DebugLog.w("AuthorBooksVM", "Temp file delete failed after leak decode", e)
+                    }
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (e !is kotlinx.coroutines.CancellationException) {
+                    _leakFingerprintState.value =
+                        UiState.Error(e.message ?: "Could not read fingerprint from file", e)
+                }
+            }
+        }
+    }
+
     fun loadMyBooks() {
         viewModelScope.launch {
             try {
@@ -157,9 +232,9 @@ class AuthorBooksViewModel(
                         _myBooks.value = books
                         books.forEach { book -> getBookStats(book.id) }
                     }
-                    .onFailure { e -> _error.value = e.message ?: "Failed to load books" }
+                    .onFailure { e -> notifyError(e.message ?: "Failed to load books") }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Error loading books"
+                notifyError(e.message ?: "Error loading books")
             } finally {
                 _isLoadingBooks.value = false
             }
@@ -172,9 +247,9 @@ class AuthorBooksViewModel(
                 val result = getBookStatsUseCase(bookId)
                 result
                     .onSuccess { stats -> _bookStats.value = _bookStats.value + (bookId to stats) }
-                    .onFailure { e -> _error.value = e.message ?: "Failed to load book stats" }
+                    .onFailure { e -> notifyError(e.message ?: "Failed to load book stats") }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Error loading book stats"
+                notifyError(e.message ?: "Error loading book stats")
             }
         }
     }
@@ -220,7 +295,7 @@ class AuthorBooksViewModel(
                         coverImageUri?.let { uri ->
                             uploadBookCoverImage(createdBook.id, uri, context!!)
                         }
-                        _successMessage.value = "Book created successfully!"
+                        notifySuccess("Book created successfully!")
                         _bookCreationState.value = UiState.Success(createdBook)
                         loadMyBooks()
                     }
@@ -239,12 +314,12 @@ class AuthorBooksViewModel(
                 val result = updateBookUseCase(bookId, book)
                 result
                     .onSuccess {
-                        _successMessage.value = "Book updated successfully!"
+                        notifySuccess("Book updated successfully!")
                         loadMyBooks()
                     }
-                    .onFailure { e -> _error.value = e.message ?: "Failed to update book" }
+                    .onFailure { e -> notifyError(e.message ?: "Failed to update book") }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Error updating book"
+                notifyError(e.message ?: "Error updating book")
             }
         }
     }
@@ -255,12 +330,12 @@ class AuthorBooksViewModel(
                 val result = deleteBookUseCase(bookId)
                 result
                     .onSuccess {
-                        _successMessage.value = "Book deleted successfully!"
+                        notifySuccess("Book deleted successfully!")
                         loadMyBooks()
                     }
-                    .onFailure { e -> _error.value = e.message ?: "Failed to delete book" }
+                    .onFailure { e -> notifyError(e.message ?: "Failed to delete book") }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Error deleting book"
+                notifyError(e.message ?: "Error deleting book")
             }
         }
     }
@@ -271,9 +346,9 @@ class AuthorBooksViewModel(
                 val result = publishBookUseCase(bookId)
                 result
                     .onSuccess { loadMyBooks() }
-                    .onFailure { e -> _error.value = e.message ?: "Failed to publish book" }
+                    .onFailure { e -> notifyError(e.message ?: "Failed to publish book") }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Error publishing book"
+                notifyError(e.message ?: "Error publishing book")
             }
         }
     }
@@ -308,7 +383,13 @@ class AuthorBooksViewModel(
                     .onSuccess {
                         _bookFileUploadState.value = UiState.Success(bookId)
                         onSuccess()
-                        withContext(Dispatchers.IO) { try { if (file.exists()) file.delete() } catch (e: Exception) { } }
+                        withContext(Dispatchers.IO) {
+                            try {
+                                if (file.exists()) file.delete()
+                            } catch (e: Exception) {
+                                DebugLog.w("AuthorBooksVM", "Temp file delete failed after book upload", e)
+                            }
+                        }
                     }
                     .onFailure { e ->
                         if (e !is kotlinx.coroutines.CancellationException) {
@@ -363,9 +444,15 @@ class AuthorBooksViewModel(
                     .onSuccess { bookResponse ->
                         val coverUrl = bookResponse.coverImageUrl ?: ""
                         _coverImageUploadState.value = UiState.Success(bookId to coverUrl)
-                        _successMessage.value = "Cover image uploaded successfully"
+                        notifySuccess("Cover image uploaded successfully")
                         loadMyBooks()
-                        withContext(Dispatchers.IO) { try { if (file.exists()) file.delete() } catch (e: Exception) { } }
+                        withContext(Dispatchers.IO) {
+                            try {
+                                if (file.exists()) file.delete()
+                            } catch (e: Exception) {
+                                DebugLog.w("AuthorBooksVM", "Temp file delete failed after cover upload", e)
+                            }
+                        }
                     }
                     .onFailure { e ->
                         if (e !is kotlinx.coroutines.CancellationException) {
@@ -390,7 +477,7 @@ class AuthorBooksViewModel(
                 result
                     .onSuccess {
                         _coverImageRemovalState.value = UiState.Success(Unit)
-                        _successMessage.value = "Cover image removed successfully"
+                        notifySuccess("Cover image removed successfully")
                         loadMyBooks()
                     }
                     .onFailure { e ->

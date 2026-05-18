@@ -3,14 +3,24 @@ package com.example.booknest.ui.author
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.*
@@ -26,7 +36,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.booknest.data.session.SessionManager
-import com.example.booknest.navigation.Screen
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.navigation.AuthorBottomBarScreen
 import com.example.booknest.ui.components.BackgroundDecoration
 import com.example.booknest.ui.author.components.books.EnhancedBookCard
@@ -67,6 +77,8 @@ fun MyBooksScreen(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        floatingActionButtonPosition = FabPosition.EndOverlay,
         topBar = {
             Surface(
                 shadowElevation = 4.dp,
@@ -233,10 +245,12 @@ fun MyBooksScreen(
                     } else {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 90.dp),
+                            contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            item { BookStatusInfoCard() }
+                            if (selectedTab == 0) {
+                                item { BookStatusInfoCard() }
+                            }
                             items(filteredBooks) { book ->
                                 EnhancedBookCard(
                                     book = book,

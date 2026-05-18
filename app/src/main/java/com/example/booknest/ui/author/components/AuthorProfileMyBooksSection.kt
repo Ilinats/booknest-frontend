@@ -15,18 +15,18 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.booknest.domain.model.response.BookResponse
 import com.example.booknest.navigation.AuthorBottomBarScreen
-import com.example.booknest.navigation.Screen
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.ui.components.books.BookCoverCard
 
 @Composable
-fun AuthorBooksSection(
+fun AuthorProfileMyBooksSection(
     myBooks: List<BookResponse>,
     navController: NavController
 ) {
     if (myBooks.isEmpty()) return
-    
+
     val portfolioBooks = myBooks.take(5)
-    
+
     Card(
         modifier = Modifier
             .fillMaxWidth()

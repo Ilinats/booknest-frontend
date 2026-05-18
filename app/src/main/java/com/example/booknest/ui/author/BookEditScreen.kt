@@ -1,10 +1,12 @@
 package com.example.booknest.ui.author
 
 import android.net.Uri
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.collectAsState
@@ -16,25 +18,35 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.booknest.data.session.SessionManager
+import com.example.booknest.domain.repository.GenresRepository
+import com.example.booknest.domain.model.request.CreateSeriesRequest
 import com.example.booknest.domain.model.request.UpdateBookRequest
 import com.example.booknest.domain.model.response.GenreResponse
 import com.example.booknest.domain.model.response.SeriesResponse
-import com.example.booknest.domain.repository.GenresRepository
+import com.example.booknest.port.ToastNotifier
+import com.example.booknest.ui.author.components.bookedit.BookEditPublishedWarningCard
+import com.example.booknest.ui.author.components.bookedit.BookEditSaveErrorBanner
+import com.example.booknest.ui.author.components.bookedit.bookEditWizardSteps
+import com.example.booknest.ui.author.components.bookedit.validateDeadlines
 import com.example.booknest.ui.author.components.BookEditNavigation
-import com.example.booknest.ui.author.components.wizard.*
-import com.example.booknest.ui.author.components.common.*
+import com.example.booknest.ui.author.components.LeakFingerprintDecodeSection
+import com.example.booknest.ui.author.components.common.AgeRating
+import com.example.booknest.ui.author.components.common.DatePickerDialog
+import com.example.booknest.ui.author.components.common.DistributionType
+import com.example.booknest.ui.author.components.common.SelectionMethod
+import com.example.booknest.ui.author.components.wizard.WizardStepIndicator
 import com.example.booknest.ui.components.BackButton
 import com.example.booknest.viewmodel.author.AuthorBooksViewModel
 import com.example.booknest.viewmodel.author.AuthorSeriesViewModel
 import com.example.booknest.viewmodel.author.BookStatus
 import com.example.booknest.viewmodel.books.BookViewModel
-import com.example.booknest.ui.state.UiState
+import com.example.booknest.presentation.common.UiState
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
 import java.text.SimpleDateFormat
-import java.util.*
-import com.example.booknest.ui.author.components.common.SelectionMethod
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +55,7 @@ fun BookEditScreen(
     bookId: String,
     sessionManager: SessionManager = koinInject(),
     genresRepository: GenresRepository = koinInject(),
+    toastNotifier: ToastNotifier = koinInject(),
     authorBooksViewModel: AuthorBooksViewModel = getViewModel(),
     authorSeriesViewModel: AuthorSeriesViewModel = getViewModel(),
     bookViewModel: BookViewModel = getViewModel()
@@ -54,6 +67,7 @@ fun BookEditScreen(
     val coverImageRemovalState by authorBooksViewModel.coverImageRemovalState.collectAsState()
     val coverImageUploadState by authorBooksViewModel.coverImageUploadState.collectAsState()
     val bookFileUploadState by authorBooksViewModel.bookFileUploadState.collectAsState()
+    val leakFingerprintState by authorBooksViewModel.leakFingerprintState.collectAsState()
     var isLoading by remember { mutableStateOf(true) }
     var isSaving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf<String?>(null) }
@@ -160,8 +174,14 @@ fun BookEditScreen(
         initialSelectedDateMillis = null
     )
 
+    val showLeakFingerprintTool =
+        bookDetails?.let { b ->
+            !b.fileUrl.isNullOrBlank() && b.distributionType != DistributionType.PHYSICAL.value
+        } == true
+
     LaunchedEffect(bookId) {
         bookViewModel.getBookDetails(bookId)
+        authorBooksViewModel.clearLeakFingerprintState()
     }
 
     LaunchedEffect(Unit) {
@@ -173,11 +193,11 @@ fun BookEditScreen(
                     genres = genreList
                 }
                 .onFailure { e ->
-                    com.example.booknest.ui.toast.GlobalToastHandler.showError(e)
+                    toastNotifier.showError(e)
                     genres = emptyList()
                 }
         } catch (e: Exception) {
-            com.example.booknest.ui.toast.GlobalToastHandler.showError(e)
+            toastNotifier.showError(e)
             genres = emptyList()
         }
     }
@@ -360,40 +380,19 @@ fun BookEditScreen(
             ) {
                 if (isPublished) {
                     item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.errorContainer
-                            )
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    Icons.Filled.Warning,
-                                    contentDescription = "Warning",
-                                    tint = MaterialTheme.colorScheme.onErrorContainer,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "This book is published",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onErrorContainer
-                                    )
-                                    Text(
-                                        text = "Changes will affect the live listing and may impact existing applications and reviews.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onErrorContainer
-                                    )
-                                }
-                            }
-                        }
+                        BookEditPublishedWarningCard()
+                    }
+                }
+
+                if (showLeakFingerprintTool) {
+                    item {
+                        LeakFingerprintDecodeSection(
+                            leakFingerprintState = leakFingerprintState,
+                            onFileChosen = { uri ->
+                                authorBooksViewModel.decodeLeakFingerprint(bookId, uri, context)
+                            },
+                            onDismissResult = { authorBooksViewModel.clearLeakFingerprintState() }
+                        )
                     }
                 }
 
@@ -409,172 +408,111 @@ fun BookEditScreen(
                     )
                 }
 
-                when (currentStep) {
-                    1 -> {
-                        item {
-                            BasicInfoStep(
-                                title = title,
-                                shortDescription = shortDescription,
-                                fullDescription = fullDescription,
-                                pageCount = pageCount,
-                                coverImageUri = coverImageUri,
-                                coverImageUrl = coverImageUrl,
-                                titleError = titleError,
-                                shortDescriptionError = shortDescriptionError,
-                                fullDescriptionError = fullDescriptionError,
-                                pageCountError = pageCountError,
-                                onUpdate = { t, sd, fd, pc, uri, url ->
-                                    title = t
-                                    shortDescription = sd
-                                    fullDescription = fd
-                                    pageCount = pc
-                                    coverImageUri = uri
-                                    coverImageUrl = url
-                                    shouldRemoveCoverImage =
-                                        initialCoverImageUrl != null && uri == null && url == null
-                                },
-                                onValidationChange = { tErr, sdErr, fdErr, pcErr ->
-                                    titleError = tErr
-                                    shortDescriptionError = sdErr
-                                    fullDescriptionError = fdErr
-                                    pageCountError = pcErr
-                                }
+                bookEditWizardSteps(
+                    currentStep = currentStep,
+                    bookDetails = bookDetails,
+                    title = title,
+                    shortDescription = shortDescription,
+                    fullDescription = fullDescription,
+                    pageCount = pageCount,
+                    coverImageUri = coverImageUri,
+                    coverImageUrl = coverImageUrl,
+                    titleError = titleError,
+                    shortDescriptionError = shortDescriptionError,
+                    fullDescriptionError = fullDescriptionError,
+                    pageCountError = pageCountError,
+                    onBasicInfoUpdate = { t, sd, fd, pc, uri, url ->
+                        title = t
+                        shortDescription = sd
+                        fullDescription = fd
+                        pageCount = pc
+                        coverImageUri = uri
+                        coverImageUrl = url
+                        shouldRemoveCoverImage =
+                            initialCoverImageUrl != null && uri == null && url == null
+                    },
+                    onBasicInfoValidationChange = { tErr, sdErr, fdErr, pcErr ->
+                        titleError = tErr
+                        shortDescriptionError = sdErr
+                        fullDescriptionError = fdErr
+                        pageCountError = pcErr
+                    },
+                    selectedGenres = selectedGenres,
+                    selectedSeries = selectedSeries,
+                    seriesOrder = seriesOrder,
+                    mySeries = mySeries,
+                    genres = genres,
+                    seriesOrderError = seriesOrderError,
+                    onGenresUpdate = { sg, ss, so ->
+                        selectedGenres = sg
+                        selectedSeries = ss
+                        seriesOrder = so
+                    },
+                    onCreateSeries = { name: String, description: String ->
+                        authorSeriesViewModel.createSeries(
+                            CreateSeriesRequest(
+                                name = name,
+                                description = description.ifBlank { null }
                             )
-                        }
-                    }
-
-                    2 -> {
-                        item {
-                            GenresAndSeriesStep(
-                                selectedGenres = selectedGenres,
-                                selectedSeries = selectedSeries,
-                                seriesOrder = seriesOrder,
-                                mySeries = mySeries,
-                                genres = genres,
-                                seriesOrderError = seriesOrderError,
-                                onUpdate = { sg, ss, so ->
-                                    selectedGenres = sg
-                                    selectedSeries = ss
-                                    seriesOrder = so
-                                },
-                                onCreateSeries = { name: String, description: String ->
-                                    authorSeriesViewModel.createSeries(
-                                        com.example.booknest.domain.model.request.CreateSeriesRequest(
-                                            name = name,
-                                            description = description.ifBlank { null }
-                                        )
-                                    )
-                                    showCreateSeriesDialog = false
-                                },
-                                onShowCreateSeriesDialog = { showCreateSeriesDialog = true },
-                                showCreateSeriesDialog = showCreateSeriesDialog,
-                                onDismissCreateSeriesDialog = { showCreateSeriesDialog = false },
-                                onValidationChange = { err ->
-                                    seriesOrderError = err
-                                }
-                            )
-                        }
-                    }
-
-                    3 -> {
-                        item {
-                            DistributionStep(
-                                selectedAgeRating = selectedAgeRating,
-                                selectedDistributionType = selectedDistributionType,
-                                totalCopies = totalCopies,
-                                totalCopiesError = totalCopiesError,
-                                onUpdate = { ar, dt, tc ->
-                                    selectedAgeRating = ar
-                                    selectedDistributionType = dt
-                                    totalCopies = tc
-                                },
-                                onValidationChange = { err ->
-                                    totalCopiesError = err
-                                }
-                            )
-                        }
-                    }
-
-                    4 -> {
-                        item {
-                            ReviewConfigStep(
-                                applicationDeadline = applicationDeadline,
-                                reviewDeadline = reviewDeadline,
-                                selectedSelectionMethod = selectedSelectionMethod,
-                                selectionCriteria = selectionCriteria,
-                                showApplicationDatePicker = showApplicationDatePicker,
-                                showReviewDatePicker = showReviewDatePicker,
-                                applicationDatePickerState = applicationDatePickerState,
-                                reviewDatePickerState = reviewDatePickerState,
-                                applicationDeadlineError = applicationDeadlineError,
-                                reviewDeadlineError = reviewDeadlineError,
-                                onUpdate = { ad, rd, ssm, sc ->
-                                    applicationDeadline = ad
-                                    reviewDeadline = rd
-                                    selectedSelectionMethod = ssm
-                                    selectionCriteria = sc
-                                    val (appErr, revErr) = validateDeadlines(ad, rd)
-                                    applicationDeadlineError = appErr
-                                    reviewDeadlineError = revErr
-                                },
-                                onShowApplicationDatePicker = { showApplicationDatePicker = true },
-                                onShowReviewDatePicker = { showReviewDatePicker = true },
-                                onDismissApplicationDatePicker = {
-                                    showApplicationDatePicker = false
-                                },
-                                onDismissReviewDatePicker = { showReviewDatePicker = false },
-                                onValidationChange = { appErr, revErr ->
-                                    applicationDeadlineError = appErr
-                                    reviewDeadlineError = revErr
-                                }
-                            )
-                        }
-                    }
-
-                    5 -> {
-                        item {
-                            FileUploadStepEdit(
-                                bookFileUri = bookFileUri,
-                                bookFileName = bookFileName,
-                                bookFileSize = bookFileSize,
-                                distributionType = selectedDistributionType,
-                                existingFileUrl = bookDetails?.fileUrl,
-                                existingFileName = bookDetails?.fileUrl?.substringAfterLast("/")
-                                    ?.substringBefore("?"),
-                                existingFileSize = bookDetails?.fileSize?.toLongOrNull(),
-                                onFileSelected = { uri, name, size ->
-                                    bookFileUri = uri
-                                    bookFileName = name
-                                    bookFileSize = size
-                                }
-                            )
-                        }
-                    }
-
-                    6 -> {
-                        item {
-                            PreviewStep(
-                                title = title,
-                                shortDescription = shortDescription,
-                                fullDescription = fullDescription,
-                                pageCount = pageCount,
-                                ageRating = selectedAgeRating,
-                                distributionType = selectedDistributionType,
-                                totalCopies = totalCopies,
-                                genres = selectedGenres,
-                                genreList = genres,
-                                series = selectedSeries,
-                                seriesOrder = seriesOrder,
-                                applicationDeadline = applicationDeadline,
-                                reviewDeadline = reviewDeadline,
-                                selectionMethod = selectedSelectionMethod,
-                                selectionCriteria = selectionCriteria,
-                                hasCoverImage = coverImageUri != null || !coverImageUrl.isNullOrBlank(),
-                                hasBookFile = bookFileUri != null || !bookDetails?.fileUrl.isNullOrBlank()
-                            )
-                        }
-                    }
-                }
+                        )
+                        showCreateSeriesDialog = false
+                    },
+                    showCreateSeriesDialog = showCreateSeriesDialog,
+                    onShowCreateSeriesDialog = { showCreateSeriesDialog = true },
+                    onDismissCreateSeriesDialog = { showCreateSeriesDialog = false },
+                    onSeriesOrderValidationChange = { err ->
+                        seriesOrderError = err
+                    },
+                    selectedAgeRating = selectedAgeRating,
+                    selectedDistributionType = selectedDistributionType,
+                    totalCopies = totalCopies,
+                    totalCopiesError = totalCopiesError,
+                    onDistributionUpdate = { ar, dt, tc ->
+                        selectedAgeRating = ar
+                        selectedDistributionType = dt
+                        totalCopies = tc
+                    },
+                    onDistributionValidationChange = { err ->
+                        totalCopiesError = err
+                    },
+                    applicationDeadline = applicationDeadline,
+                    reviewDeadline = reviewDeadline,
+                    selectedSelectionMethod = selectedSelectionMethod,
+                    selectionCriteria = selectionCriteria,
+                    showApplicationDatePicker = showApplicationDatePicker,
+                    showReviewDatePicker = showReviewDatePicker,
+                    applicationDatePickerState = applicationDatePickerState,
+                    reviewDatePickerState = reviewDatePickerState,
+                    applicationDeadlineError = applicationDeadlineError,
+                    reviewDeadlineError = reviewDeadlineError,
+                    onReviewConfigUpdate = { ad, rd, ssm, sc ->
+                        applicationDeadline = ad
+                        reviewDeadline = rd
+                        selectedSelectionMethod = ssm
+                        selectionCriteria = sc
+                        val (appErr, revErr) = validateDeadlines(ad, rd)
+                        applicationDeadlineError = appErr
+                        reviewDeadlineError = revErr
+                    },
+                    onShowApplicationDatePicker = { showApplicationDatePicker = true },
+                    onShowReviewDatePicker = { showReviewDatePicker = true },
+                    onDismissApplicationDatePicker = {
+                        showApplicationDatePicker = false
+                    },
+                    onDismissReviewDatePicker = { showReviewDatePicker = false },
+                    onReviewDeadlineValidationChange = { appErr, revErr ->
+                        applicationDeadlineError = appErr
+                        reviewDeadlineError = revErr
+                    },
+                    bookFileUri = bookFileUri,
+                    bookFileName = bookFileName,
+                    bookFileSize = bookFileSize,
+                    onBookFileSelected = { uri, name, size ->
+                        bookFileUri = uri
+                        bookFileName = name
+                        bookFileSize = size
+                    },
+                )
 
                 item {
                     BookEditNavigation(
@@ -675,18 +613,7 @@ fun BookEditScreen(
 
                 saveError?.let { error ->
                     item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.errorContainer
-                            )
-                        ) {
-                            Text(
-                                text = error,
-                                modifier = Modifier.padding(16.dp),
-                                color = MaterialTheme.colorScheme.onErrorContainer
-                            )
-                        }
+                        BookEditSaveErrorBanner(message = error)
                     }
                 }
             }
@@ -728,29 +655,4 @@ fun BookEditScreen(
             datePickerState = reviewDatePickerState
         )
     }
-}
-
-private fun validateDeadlines(
-    applicationDeadline: String?,
-    reviewDeadline: String?
-): Pair<String?, String?> {
-    val appError = if (applicationDeadline.isNullOrBlank()) {
-        "Application deadline is required"
-    } else null
-
-    val revError = if (!reviewDeadline.isNullOrBlank()) {
-        try {
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-            val appDate = dateFormat.parse(applicationDeadline!!)
-            val revDate = dateFormat.parse(reviewDeadline)
-
-            if (appDate != null && revDate != null && revDate.before(appDate)) {
-                "Review deadline must be after application deadline"
-            } else null
-        } catch (e: Exception) {
-            "Invalid date format"
-        }
-    } else null
-
-    return Pair(appError, revError)
 }

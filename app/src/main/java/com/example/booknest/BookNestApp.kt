@@ -6,44 +6,30 @@ import android.app.NotificationManager
 import android.os.Build
 import coil.ImageLoader
 import coil.ImageLoaderFactory
-import com.example.booknest.data.session.SessionManager
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
-import org.koin.android.ext.android.get
+import com.example.booknest.di.koinModules
+import com.example.booknest.utils.DebugLog
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.GlobalContext
 import org.koin.core.context.startKoin
 
 class BookNestApp : Application(), ImageLoaderFactory {
 
-    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-
     override fun onCreate() {
         super.onCreate()
 
-        SessionManager.getInstance(dataStore)
-
-        applicationScope.launch {
-            SessionManager.setTokens()
-        }
-
         startKoin {
             androidContext(this@BookNestApp)
-            modules(appModule)
+            modules(*koinModules.toTypedArray())
         }
 
         createNotificationChannel()
     }
 
     override fun newImageLoader(): ImageLoader {
-        return try {
-            GlobalContext.get().get<ImageLoader>()
-        } catch (e: Exception) {
-            ImageLoader.Builder(this)
-                .build()
-        }
+        return runCatching { GlobalContext.get().get<ImageLoader>() }
+            .getOrElse {
+                ImageLoader.Builder(this).build()
+            }
     }
 
     private fun createNotificationChannel() {
@@ -61,7 +47,7 @@ class BookNestApp : Application(), ImageLoaderFactory {
 
             val notificationManager = getSystemService(NotificationManager::class.java)
             notificationManager.createNotificationChannel(channel)
-            println("FCM: Notification channel created: $channelId")
+            DebugLog.d("FCM", "Notification channel created: $channelId")
         }
     }
 }
