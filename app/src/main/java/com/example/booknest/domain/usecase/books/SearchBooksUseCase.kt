@@ -8,9 +8,9 @@ class SearchBooksUseCase(
 ) {
     suspend operator fun invoke(
         query: String,
-        skip: Int? = null,
-        take: Int? = null
+        page: Int? = null,
+        limit: Int? = null
     ): Result<List<RecommendedBookResponse>> {
-        return booksRepository.searchBooks(query, skip, take)
+        return booksRepository.searchBooks(query, page, limit)
     }
 }

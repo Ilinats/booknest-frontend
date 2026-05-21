@@ -35,34 +35,41 @@ fun ApplicationStatisticsSection(applicationStatistics: ApplicationAnalyticsResp
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    ApplicationStatCard(
-                        title = "Total Applications",
-                        value = applicationStatistics.totalApplications.toString(),
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.weight(1f)
-                    )
-                    ApplicationStatCard(
-                        title = "Approved",
-                        value = applicationStatistics.approvedApplications.toString(),
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.weight(1f)
-                    )
-                    ApplicationStatCard(
-                        title = "Pending",
-                        value = applicationStatistics.pendingApplications.toString(),
-                        color = MaterialTheme.colorScheme.tertiary,
-                        modifier = Modifier.weight(1f)
-                    )
-                    ApplicationStatCard(
-                        title = "Rejected",
-                        value = applicationStatistics.rejectedApplications.toString(),
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.weight(1f)
-                    )
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        ApplicationStatCard(
+                            title = "Total Applications",
+                            value = applicationStatistics.totalApplications.toString(),
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        ApplicationStatCard(
+                            title = "Approved",
+                            value = applicationStatistics.approvedApplications.toString(),
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        ApplicationStatCard(
+                            title = "Pending",
+                            value = applicationStatistics.pendingApplications.toString(),
+                            color = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        ApplicationStatCard(
+                            title = "Rejected",
+                            value = applicationStatistics.rejectedApplications.toString(),
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
 
                 if (applicationStatistics.applicationsThisMonth != null ||
@@ -80,30 +87,34 @@ fun ApplicationStatisticsSection(applicationStatistics: ApplicationAnalyticsResp
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        applicationStatistics.applicationsThisMonth?.let {
-                            StatCard(
-                                title = "Applications",
-                                value = it.toString(),
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                        applicationStatistics.approvedApplicationsThisMonth?.let {
-                            StatCard(
-                                title = "Approved",
-                                value = it.toString(),
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                        applicationStatistics.rejectedApplicationsThisMonth?.let {
-                            StatCard(
-                                title = "Rejected",
-                                value = it.toString(),
-                                modifier = Modifier.weight(1f)
-                            )
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        val monthStats = listOfNotNull(
+                            applicationStatistics.applicationsThisMonth?.let {
+                                "Applications" to it.toString()
+                            },
+                            applicationStatistics.approvedApplicationsThisMonth?.let {
+                                "Approved" to it.toString()
+                            },
+                            applicationStatistics.rejectedApplicationsThisMonth?.let {
+                                "Rejected" to it.toString()
+                            },
+                        )
+                        monthStats.chunked(2).forEach { row ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                row.forEach { (title, value) ->
+                                    StatCard(
+                                        title = title,
+                                        value = value,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                                if (row.size == 1) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
                         }
                     }
                 }

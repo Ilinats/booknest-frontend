@@ -43,7 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.booknest.domain.model.response.BookResponse
-import com.example.booknest.ui.author.utils.AuthorHomeUtils
+import com.example.booknest.ui.author.utils.DeadlineDisplayUtils
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -182,21 +182,24 @@ fun ActiveCampaignCard(
                 color = MaterialTheme.colorScheme.onBackground
             )
 
-            book.applicationDeadline?.let { deadline ->
-                val daysLeft: Long = AuthorHomeUtils.calculateDaysUntilDeadline(deadline)
-                Surface(
-                    color = Color(0xFFFFE5E5),
-                    shape = RoundedCornerShape(6.dp)
-                ) {
-                    Text(
-                        text = if (daysLeft < 0) "Deadline passed" else "$daysLeft ${if (daysLeft == 1L) "day" else "days"} left",
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Medium,
-                        color = Color(0xFFD32F2F)
-                    )
+            book.applicationDeadline
+                ?.takeIf { DeadlineDisplayUtils.hasDisplayableDeadline(it) }
+                ?.let { deadline ->
+                    DeadlineDisplayUtils.formatDaysLeftText(deadline)?.let { label ->
+                        Surface(
+                            color = Color(0xFFFFE5E5),
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text(
+                                text = label,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Medium,
+                                color = Color(0xFFD32F2F)
+                            )
+                        }
+                    }
                 }
-            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),

@@ -331,7 +331,11 @@ fun ApplicationInfoSection(
                             )
                         } else {
                             Text(
-                                text = if (userApplication?.status == "approved") "Read Now" else "Apply",
+                                text = if (userApplication?.status == "approved") {
+                                    "Read Now"
+                                } else {
+                                    "Apply"
+                                },
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
