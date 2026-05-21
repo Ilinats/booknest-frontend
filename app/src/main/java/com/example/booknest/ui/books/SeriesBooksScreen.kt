@@ -29,7 +29,7 @@ import androidx.navigation.NavController
 import com.example.booknest.ui.components.BackButton
 import com.example.booknest.ui.books.components.list.BookItem
 import com.example.booknest.ui.components.BackgroundDecoration
-import com.example.booknest.viewmodel.books.BookViewModel
+import com.example.booknest.viewmodel.books.BrowseBooksViewModel
 import org.koin.androidx.compose.getViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,15 +38,15 @@ fun SeriesBooksScreen(
     navController: NavController,
     seriesId: String,
     seriesName: String? = null,
-    bookViewModel: BookViewModel = getViewModel()
+    browseBooksViewModel: BrowseBooksViewModel = getViewModel()
 ) {
-    val seriesBooksMap by bookViewModel.seriesBooksBySeriesId.collectAsState()
-    val loadingIds by bookViewModel.seriesBooksLoadingIds.collectAsState()
-    val seriesErrors by bookViewModel.seriesBooksLoadError.collectAsState()
+    val seriesBooksMap by browseBooksViewModel.seriesBooksBySeriesId.collectAsState()
+    val loadingIds by browseBooksViewModel.seriesBooksLoadingIds.collectAsState()
+    val seriesErrors by browseBooksViewModel.seriesBooksLoadError.collectAsState()
 
     LaunchedEffect(seriesId) {
-        bookViewModel.clearSeriesBooksLoadError(seriesId)
-        bookViewModel.ensureSeriesBooksLoaded(
+        browseBooksViewModel.clearSeriesBooksLoadError(seriesId)
+        browseBooksViewModel.ensureSeriesBooksLoaded(
             seriesId = seriesId,
             forceRefresh = false,
             treatFailureAsEmptyCatalog = false
@@ -102,8 +102,8 @@ fun SeriesBooksScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = {
-                            bookViewModel.clearSeriesBooksLoadError(seriesId)
-                            bookViewModel.ensureSeriesBooksLoaded(
+                            browseBooksViewModel.clearSeriesBooksLoadError(seriesId)
+                            browseBooksViewModel.ensureSeriesBooksLoaded(
                                 seriesId = seriesId,
                                 forceRefresh = true,
                                 treatFailureAsEmptyCatalog = false

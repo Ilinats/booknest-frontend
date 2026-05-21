@@ -26,7 +26,7 @@ import com.example.booknest.ui.books.components.list.BookItem
 import com.example.booknest.ui.components.BackButton
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.viewmodel.author.AuthorFollowViewModel
-import com.example.booknest.viewmodel.books.BookViewModel
+import com.example.booknest.viewmodel.books.HomeBooksViewModel
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
 
@@ -34,18 +34,18 @@ import org.koin.compose.koinInject
 fun BookCategoryScreen(
     navController: NavController,
     category: String,
-    bookViewModel: BookViewModel = getViewModel(),
+    homeBooksViewModel: HomeBooksViewModel = getViewModel(),
     authorFollowViewModel: AuthorFollowViewModel = getViewModel(),
     sessionManager: SessionManager = koinInject(),
 ) {
     val isLoggedIn by sessionManager.isLoggedIn.collectAsState()
-    val recommendedBooks by bookViewModel.recommendedBooks.collectAsState()
-    val newReleases by bookViewModel.newReleases.collectAsState()
-    val trendingBooks by bookViewModel.trendingBooks.collectAsState()
+    val recommendedBooks by homeBooksViewModel.recommendedBooks.collectAsState()
+    val newReleases by homeBooksViewModel.newReleases.collectAsState()
+    val trendingBooks by homeBooksViewModel.trendingBooks.collectAsState()
     val booksFromFollowedAuthors by authorFollowViewModel.booksFromFollowedAuthors.collectAsState()
-    val recommendedLoading by bookViewModel.recommendedLoading.collectAsState()
-    val newReleasesLoading by bookViewModel.newReleasesLoading.collectAsState()
-    val trendingLoading by bookViewModel.trendingLoading.collectAsState()
+    val recommendedLoading by homeBooksViewModel.recommendedLoading.collectAsState()
+    val newReleasesLoading by homeBooksViewModel.newReleasesLoading.collectAsState()
+    val trendingLoading by homeBooksViewModel.trendingLoading.collectAsState()
     val followedAuthorsLoading by authorFollowViewModel.isLoading.collectAsState()
 
     val screenTitle = when (category) {
@@ -74,12 +74,12 @@ fun BookCategoryScreen(
 
     LaunchedEffect(category, isLoggedIn) {
         when (category) {
-            "recommended" -> if (isLoggedIn == true) bookViewModel.getRecommendedBooks()
-            "new_releases" -> bookViewModel.getNewReleases()
+            "recommended" -> if (isLoggedIn == true) homeBooksViewModel.getRecommendedBooks()
+            "new_releases" -> homeBooksViewModel.getNewReleases()
             "followed_authors" -> if (isLoggedIn == true) {
                 authorFollowViewModel.loadBooksFromFollowedAuthors()
             }
-            "trending" -> bookViewModel.getTrendingBooks()
+            "trending" -> homeBooksViewModel.getTrendingBooks()
         }
     }
 

@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
+import com.example.booknest.viewmodel.author.AuthorBookEditorViewModel
 import com.example.booknest.viewmodel.author.AuthorBooksViewModel
 import com.example.booknest.viewmodel.author.AuthorDashboardViewModel
 import org.koin.androidx.compose.getViewModel
@@ -21,6 +22,10 @@ inline fun <reified T : ViewModel> rememberAuthorNavGraphViewModel(
 
 @Composable
 fun rememberAuthorBooksViewModel(navController: NavController): AuthorBooksViewModel =
+    rememberAuthorNavGraphViewModel(navController)
+
+@Composable
+fun rememberAuthorBookEditorViewModel(navController: NavController): AuthorBookEditorViewModel =
     rememberAuthorNavGraphViewModel(navController)
 
 @Composable

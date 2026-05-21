@@ -1,6 +1,7 @@
 package com.example.booknest.viewmodel.applications
 
 import androidx.lifecycle.ViewModel
+import com.example.booknest.viewmodel.common.RequestGate
 import com.example.booknest.viewmodel.common.UserFeedback
 import androidx.lifecycle.viewModelScope
 import com.example.booknest.domain.model.request.BulkActionRequest
@@ -27,6 +28,8 @@ class BookApplicationViewModel(
     private val getOverdueReviewsUseCase: GetOverdueReviewsUseCase
 ) : ViewModel() {
 
+    private val bookApplicationsGate = RequestGate()
+
     private val _bookApplications = MutableStateFlow<List<ApplicationResponse>>(emptyList())
     val bookApplications: StateFlow<List<ApplicationResponse>> = _bookApplications.asStateFlow()
 
@@ -49,17 +52,31 @@ class BookApplicationViewModel(
     private fun notifySuccess(message: String) = feedback.success(message, _successMessage)
 
     fun loadBookApplications(bookId: String) {
+        val token = bookApplicationsGate.nextToken()
+        _bookApplications.value = emptyList()
         viewModelScope.launch {
             _isLoading.value = true
             try {
                 val result = getBookApplicationsUseCase(bookId)
                 result
-                    .onSuccess { apps -> _bookApplications.value = apps }
-                    .onFailure { e -> notifyError(e.message ?: "Failed to load book applications") }
+                    .onSuccess { apps ->
+                        if (bookApplicationsGate.isCurrent(token)) {
+                            _bookApplications.value = apps
+                        }
+                    }
+                    .onFailure { e ->
+                        if (bookApplicationsGate.isCurrent(token)) {
+                            notifyError(e.message ?: "Failed to load book applications")
+                        }
+                    }
             } catch (e: Exception) {
-                notifyError("Error loading book applications: ${e.message}")
+                if (bookApplicationsGate.isCurrent(token)) {
+                    notifyError("Error loading book applications: ${e.message}")
+                }
             } finally {
-                _isLoading.value = false
+                if (bookApplicationsGate.isCurrent(token)) {
+                    _isLoading.value = false
+                }
             }
         }
     }
@@ -189,7 +206,8 @@ class BookApplicationViewModel(
         }
     }
 
-    fun loadOverdueReviews() {
+    fun loadOverdueReviews(force: Boolean = false) {
+        if (!force && _overdueReviews.value.isNotEmpty()) return
         viewModelScope.launch {
             try {
                 val result = getOverdueReviewsUseCase()

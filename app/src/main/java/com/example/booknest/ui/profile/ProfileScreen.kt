@@ -26,7 +26,8 @@ import com.example.booknest.presentation.common.UiState
 import com.example.booknest.viewmodel.profile.ProfileViewModel
 import com.example.booknest.viewmodel.analytics.ReviewViewModel
 import com.example.booknest.viewmodel.author.AuthorFollowViewModel
-import com.example.booknest.viewmodel.books.BookViewModel
+import com.example.booknest.viewmodel.books.ProfileAuthorBooksViewModel
+import com.example.booknest.viewmodel.profile.ProfileActivityViewModel
 import com.example.booknest.viewmodel.friends.FriendViewModel
 import com.example.booknest.viewmodel.genres.FavoriteGenresViewModel
 import org.koin.androidx.compose.getViewModel
@@ -67,7 +68,13 @@ fun ProfileScreen(
 
     val isLoggedIn by sessionManager.isLoggedIn.collectAsState()
 
-    LaunchedEffect(userId, username, isLoggedIn) {
+    val profileTargetKey = when {
+        username != null -> "user:$username"
+        userId != null -> "id:$userId"
+        else -> "me"
+    }
+
+    LaunchedEffect(profileTargetKey, isLoggedIn) {
         if (isLoggedIn != true) {
             return@LaunchedEffect
         }
@@ -89,11 +96,7 @@ fun ProfileScreen(
                 }
             }
 
-            else -> {
-                currentUser?.let { user ->
-                    profileViewModel.loadMyProfile()
-                }
-            }
+            else -> profileViewModel.loadMyProfile()
         }
     }
 
@@ -214,15 +217,16 @@ fun ProfileContent(
     modifier: Modifier = Modifier,
     toastNotifier: ToastNotifier = koinInject(),
 ) {
-    val bookViewModel: BookViewModel = getViewModel()
-    val authorBooks by bookViewModel.authorBooks.collectAsState()
-    val authorBooksLoading by bookViewModel.authorBooksLoading.collectAsState()
+    val profileAuthorBooksViewModel: ProfileAuthorBooksViewModel = getViewModel()
+    val profileActivityViewModel: ProfileActivityViewModel = getViewModel()
+    val authorBooks by profileAuthorBooksViewModel.authorBooks.collectAsState()
+    val authorBooksLoading by profileAuthorBooksViewModel.authorBooksLoading.collectAsState()
     val userReviews by remember {
         mutableStateOf<List<com.example.booknest.domain.model.response.ReviewResponse>>(
             emptyList()
         )
     }
-    val myRecentActivity by profileViewModel.myRecentActivity.collectAsState()
+    val myRecentActivity by profileActivityViewModel.myRecentActivity.collectAsState()
     val userActivity = myRecentActivity
 
     val booksSectionExpanded = remember { mutableStateOf(false) }
@@ -258,7 +262,7 @@ fun ProfileContent(
                 .joinToString(" ")
                 .ifBlank { profile.username ?: "" }
             if (authorName.isNotBlank()) {
-                bookViewModel.loadAuthorBooks(authorId, authorName)
+                profileAuthorBooksViewModel.loadAuthorBooks(authorId, authorName)
             }
         }
     }
@@ -320,12 +324,17 @@ fun ProfileContent(
         }
     }
 
-    LaunchedEffect(profile.userId, profile.id, profile.username, isOwnProfile) {
+    val activityTargetKey = if (isOwnProfile) {
+        "me"
+    } else {
+        profile.username?.let { "user:$it" } ?: "id:${profile.userId ?: profile.id}"
+    }
+    LaunchedEffect(activityTargetKey) {
         if (isOwnProfile) {
-            profileViewModel.loadMyRecentActivity(days = 7)
+            profileActivityViewModel.loadMyRecentActivity(days = 7)
         } else {
             profile.username?.let { username ->
-                profileViewModel.loadUserRecentActivity(username, days = 7)
+                profileActivityViewModel.loadUserRecentActivity(username, days = 7)
             }
         }
     }

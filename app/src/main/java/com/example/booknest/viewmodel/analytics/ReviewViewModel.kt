@@ -11,6 +11,7 @@ import com.example.booknest.domain.usecase.reviews.GetBookReviewsUseCase
 import com.example.booknest.domain.usecase.reviews.GetReviewUseCase
 import com.example.booknest.domain.usecase.reviews.GetUserReviewsUseCase
 import com.example.booknest.domain.usecase.reviews.UpdateReviewUseCase
+import com.example.booknest.viewmodel.common.RequestGate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,6 +30,8 @@ class ReviewViewModel(
     private val createReviewUseCase: CreateReviewUseCase,
     private val updateReviewUseCase: UpdateReviewUseCase,
 ) : ViewModel() {
+
+    private val bookReviewsGate = RequestGate()
 
     private val _bookReviews = MutableStateFlow<List<ReviewResponse>>(emptyList())
     val bookReviews: StateFlow<List<ReviewResponse>> = _bookReviews.asStateFlow()
@@ -55,18 +58,30 @@ class ReviewViewModel(
     private fun notifySuccess(message: String) = feedback.success(message, _successMessage)
 
     fun loadBookReviews(bookId: String) {
+        val token = bookReviewsGate.nextToken()
+        _bookReviews.value = emptyList()
         viewModelScope.launch {
             _isLoading.value = true
             try {
                 getBookReviewsUseCase(bookId)
-                    .onSuccess { reviews -> _bookReviews.value = reviews }
+                    .onSuccess { reviews ->
+                        if (bookReviewsGate.isCurrent(token)) {
+                            _bookReviews.value = reviews
+                        }
+                    }
                     .onFailure { e ->
-                        notifyError(e.message ?: "Failed to load book reviews")
+                        if (bookReviewsGate.isCurrent(token)) {
+                            notifyError(e.message ?: "Failed to load book reviews")
+                        }
                     }
             } catch (e: Exception) {
-                notifyError("Error loading book reviews: ${e.message}")
+                if (bookReviewsGate.isCurrent(token)) {
+                    notifyError("Error loading book reviews: ${e.message}")
+                }
             } finally {
-                _isLoading.value = false
+                if (bookReviewsGate.isCurrent(token)) {
+                    _isLoading.value = false
+                }
             }
         }
     }

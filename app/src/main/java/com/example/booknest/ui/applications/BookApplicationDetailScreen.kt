@@ -5,7 +5,7 @@ import androidx.navigation.NavController
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.ui.applications.components.content.BookApplicationDetailContent
 import com.example.booknest.viewmodel.applications.BookApplicationViewModel
-import com.example.booknest.viewmodel.books.BookViewModel
+import com.example.booknest.viewmodel.books.BookDetailsViewModel
 import com.example.booknest.viewmodel.analytics.ReviewViewModel
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
@@ -16,7 +16,7 @@ fun BookApplicationDetailScreen(
     sessionManager: SessionManager = koinInject(),
     bookId: String,
     bookApplicationViewModel: BookApplicationViewModel = getViewModel(),
-    bookViewModel: BookViewModel = getViewModel(),
+    bookDetailsViewModel: BookDetailsViewModel = getViewModel(),
     reviewViewModel: ReviewViewModel = getViewModel()
 ) {
     BookApplicationDetailContent(
@@ -24,7 +24,7 @@ fun BookApplicationDetailScreen(
         sessionManager = sessionManager,
         bookId = bookId,
         bookApplicationViewModel = bookApplicationViewModel,
-        bookViewModel = bookViewModel,
+        bookDetailsViewModel = bookDetailsViewModel,
         reviewViewModel = reviewViewModel
     )
 }

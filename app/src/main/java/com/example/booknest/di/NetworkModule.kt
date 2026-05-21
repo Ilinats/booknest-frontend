@@ -6,6 +6,7 @@ import com.example.booknest.data.constants.MediaType
 import com.example.booknest.data.constants.RetrofitConstants
 import com.example.booknest.data.session.TokenAuthenticator
 import com.example.booknest.data.session.TokenInterceptor
+import com.example.booknest.data.session.TokenRefreshCoordinator
 import com.example.booknest.data.service.ApplicationsService
 import com.example.booknest.data.service.AuthService
 import com.example.booknest.data.service.AuthorsService
@@ -19,7 +20,6 @@ import com.example.booknest.data.service.SeriesService
 import com.example.booknest.domain.repository.AuthRepository
 import com.example.booknest.domain.usecase.auth.RefreshTokenUseCase
 import com.example.booknest.port.AuthTokenAccessor
-import com.example.booknest.port.SessionWriter
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
@@ -34,6 +34,14 @@ val networkModule = module {
     factory { RefreshTokenUseCase(authRepository = lazy { get<AuthRepository>() }) }
 
     single {
+        TokenRefreshCoordinator(
+            refreshTokenUseCase = get(),
+            sessionWriter = get(),
+            authTokens = get(),
+        )
+    }
+
+    single {
         val interceptor = HttpLoggingInterceptor()
         interceptor.level =
             if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
@@ -42,7 +50,7 @@ val networkModule = module {
         OkHttpClient.Builder()
             .addInterceptor(interceptor)
             .addInterceptor(TokenInterceptor(get<AuthTokenAccessor>()))
-            .authenticator(TokenAuthenticator(get<RefreshTokenUseCase>(), get<SessionWriter>()))
+            .authenticator(TokenAuthenticator(get<TokenRefreshCoordinator>()))
             .connectTimeout(RetrofitConstants.TIME, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
             .writeTimeout(RetrofitConstants.TIME, TimeUnit.SECONDS)

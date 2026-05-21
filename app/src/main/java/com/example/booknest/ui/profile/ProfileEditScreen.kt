@@ -42,6 +42,7 @@ import com.example.booknest.ui.profile.components.edit.sections.PersonalInfoSect
 import com.example.booknest.ui.profile.components.edit.sections.ProfilePictureSection
 import com.example.booknest.ui.profile.components.edit.sections.SocialMediaSection
 import com.example.booknest.data.session.SessionManager
+import com.example.booknest.viewmodel.profile.ProfileEditViewModel
 import com.example.booknest.viewmodel.profile.ProfileViewModel
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.getViewModel
@@ -52,12 +53,13 @@ import org.koin.compose.koinInject
 fun ProfileEditScreen(
     navController: NavController,
     sessionManager: SessionManager = koinInject(),
-    profileViewModel: ProfileViewModel = getViewModel()
+    profileViewModel: ProfileViewModel = getViewModel(),
+    profileEditViewModel: ProfileEditViewModel = getViewModel(),
 ) {
     val context = LocalContext.current
     val currentUser by sessionManager.currentUser.collectAsState()
-    val editState by profileViewModel.profileEditState.collectAsState()
-    val isLoading by profileViewModel.isLoading.collectAsState()
+    val editState by profileEditViewModel.profileEditState.collectAsState()
+    val isLoading by profileEditViewModel.isLoading.collectAsState()
     var firstName by remember { mutableStateOf(currentUser?.firstName ?: "") }
     var lastName by remember { mutableStateOf(currentUser?.lastName ?: "") }
     var username by remember { mutableStateOf(currentUser?.username ?: "") }
@@ -88,7 +90,7 @@ fun ProfileEditScreen(
         uri?.let {
             selectedImageUri = it
             isUploadingImage = true
-            profileViewModel.uploadProfileImage(context, it)
+            profileEditViewModel.uploadProfileImage(context, it)
         }
     }
 
@@ -97,7 +99,7 @@ fun ProfileEditScreen(
     }
 
     LaunchedEffect(Unit) {
-        profileViewModel.profileUiEffect.collectLatest { effect ->
+        profileEditViewModel.profileUiEffect.collectLatest { effect ->
             navController.applyProfileUiEffect(effect)
         }
     }
@@ -300,7 +302,7 @@ fun ProfileEditScreen(
 
         if (isFormValid) {
             if (shouldRemoveAvatar) {
-                profileViewModel.removeAvatar()
+                profileEditViewModel.removeAvatar()
             } else {
                 val usernameToUpdate =
                     if (username.trim() != (initialUsername?.trim()
@@ -310,7 +312,7 @@ fun ProfileEditScreen(
                     } else {
                         null
                     }
-                profileViewModel.updateProfile(
+                profileEditViewModel.updateProfile(
                     username = usernameToUpdate,
                     firstName = firstName.takeIf { it.isNotBlank() },
                     lastName = lastName.takeIf { it.isNotBlank() },
@@ -442,7 +444,7 @@ fun ProfileEditScreen(
 
             if (showDeleteAccountDialog) {
                 ProfileEditDeleteAccountDialog(
-                    profileViewModel = profileViewModel,
+                    profileEditViewModel = profileEditViewModel,
                     onDismiss = { showDeleteAccountDialog = false }
                 )
             }

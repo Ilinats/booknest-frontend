@@ -25,7 +25,9 @@ import com.example.booknest.ui.author.components.wizard.*
 import com.example.booknest.ui.author.components.common.*
 import com.example.booknest.ui.components.BackButton
 import com.example.booknest.ui.components.appListContentPadding
+import com.example.booknest.navigation.rememberAuthorBookEditorViewModel
 import com.example.booknest.navigation.rememberAuthorBooksViewModel
+import com.example.booknest.viewmodel.author.AuthorBookEditorViewModel
 import com.example.booknest.viewmodel.author.AuthorBooksViewModel
 import com.example.booknest.ui.author.components.bookedit.validateDeadlines
 import com.example.booknest.ui.author.components.bookedit.reviewDeadlineSelectableDates
@@ -47,6 +49,7 @@ fun BookCreationWizard(
     sessionManager: SessionManager = koinInject(),
     genresRepository: GenresRepository = koinInject(),
     toastNotifier: ToastNotifier = koinInject(),
+    authorBookEditorViewModel: AuthorBookEditorViewModel = rememberAuthorBookEditorViewModel(navController),
     authorBooksViewModel: AuthorBooksViewModel = rememberAuthorBooksViewModel(navController),
     authorSeriesViewModel: AuthorSeriesViewModel = getViewModel()
 ) {
@@ -127,8 +130,8 @@ fun BookCreationWizard(
     var reviewDeadlineError by remember { mutableStateOf<String?>(null) }
 
     val mySeries by authorSeriesViewModel.mySeries.collectAsState()
-    val bookCreationState by authorBooksViewModel.bookCreationState.collectAsState()
-    val bookFileUploadState by authorBooksViewModel.bookFileUploadState.collectAsState()
+    val bookCreationState by authorBookEditorViewModel.bookCreationState.collectAsState()
+    val bookFileUploadState by authorBookEditorViewModel.bookFileUploadState.collectAsState()
     var genres by remember { mutableStateOf(listOf<GenreResponse>()) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -400,7 +403,7 @@ fun BookCreationWizard(
                             seriesOrder = seriesOrder.toIntOrNull(),
                             coverImageUrl = coverImageUrl
                         )
-                        authorBooksViewModel.createBook(
+                        authorBookEditorViewModel.createBook(
                             book,
                             bookFileUri,
                             coverImageUri,
@@ -429,7 +432,7 @@ fun BookCreationWizard(
                             seriesOrder = seriesOrder.toIntOrNull(),
                             coverImageUrl = coverImageUrl
                         )
-                        authorBooksViewModel.createBook(
+                        authorBookEditorViewModel.createBook(
                             book,
                             bookFileUri,
                             coverImageUri,
@@ -465,7 +468,7 @@ fun BookCreationWizard(
                 createdBookId = state.data.id
                 if (bookFileUri != null) {
                     isUploadingFile = true
-                    authorBooksViewModel.uploadBookFile(
+                    authorBookEditorViewModel.uploadBookFile(
                         bookId = state.data.id,
                         fileUri = bookFileUri!!,
                         context = context,
@@ -484,7 +487,7 @@ fun BookCreationWizard(
                     if (shouldPublishAfterCreation) {
                         showPublishDialog = true
                     } else {
-                        authorBooksViewModel.clearBookCreationState()
+                        authorBookEditorViewModel.clearBookCreationState()
                         navController.popBackStack()
                     }
                 }
@@ -513,7 +516,7 @@ fun BookCreationWizard(
                     if (shouldPublishAfterCreation) {
                         showPublishDialog = true
                     } else {
-                        authorBooksViewModel.clearBookCreationState()
+                        authorBookEditorViewModel.clearBookCreationState()
                         navController.popBackStack()
                     }
                 }
@@ -536,7 +539,7 @@ fun BookCreationWizard(
         androidx.compose.material3.AlertDialog(
             onDismissRequest = {
                 showPublishDialog = false
-                authorBooksViewModel.clearBookCreationState()
+                authorBookEditorViewModel.clearBookCreationState()
                 navController.popBackStack()
             },
             title = { Text("Book Created Successfully!") },
@@ -552,7 +555,7 @@ fun BookCreationWizard(
                     OutlinedButton(
                         onClick = {
                             showPublishDialog = false
-                            authorBooksViewModel.clearBookCreationState()
+                            authorBookEditorViewModel.clearBookCreationState()
                             navController.popBackStack()
                         },
                         modifier = Modifier.weight(1f)
@@ -566,7 +569,7 @@ fun BookCreationWizard(
                             authorBooksViewModel.publishBook(
                                 bookId = bookId,
                                 onSuccess = {
-                                    authorBooksViewModel.clearBookCreationState()
+                                    authorBookEditorViewModel.clearBookCreationState()
                                     navController.popBackStack()
                                 }
                             )

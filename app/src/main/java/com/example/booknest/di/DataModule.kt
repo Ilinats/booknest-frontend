@@ -42,9 +42,16 @@ import com.example.booknest.domain.repository.ReviewsRepository
 import com.example.booknest.domain.repository.SeriesRepository
 import com.example.booknest.port.AuthTokenAccessor
 import com.example.booknest.port.SessionWriter
+import com.example.booknest.viewmodel.author.AuthorBooksCatalogRefresher
+import com.example.booknest.viewmodel.books.BookCatalogCache
+import com.example.booknest.viewmodel.profile.ProfileRefreshBus
 import org.koin.dsl.module
 
 val dataModule = module {
+    single { BookCatalogCache() }
+    single { AuthorBooksCatalogRefresher() }
+    single { ProfileRefreshBus() }
+
     single<AuthDataSource> { BNAuthDataSource(get(), get(), get<SessionWriter>()) }
     single<BooksDataSource> { BNBooksDataSource(get()) }
     single<ApplicationsDataSource> { BNApplicationsDataSource(get()) }

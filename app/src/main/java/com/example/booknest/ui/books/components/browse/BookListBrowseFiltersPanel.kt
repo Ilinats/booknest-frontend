@@ -37,14 +37,14 @@ import com.example.booknest.ui.books.components.filters.DeadlineFilter
 import com.example.booknest.ui.books.components.filters.DistributionTypeFilter
 import com.example.booknest.ui.books.components.filters.SortByFilter
 import com.example.booknest.viewmodel.books.BookListBrowseUiState
-import com.example.booknest.viewmodel.books.BookViewModel
+import com.example.booknest.viewmodel.books.BrowseBooksViewModel
 
 @Composable
 fun BookListBrowseFiltersPanel(
     browseUi: BookListBrowseUiState,
     browseFilterGenres: List<GenreResponse>,
     browseGenresLoading: Boolean,
-    bookViewModel: BookViewModel,
+    browseBooksViewModel: BrowseBooksViewModel,
 ) {
     Card(
         modifier = Modifier
@@ -77,7 +77,7 @@ fun BookListBrowseFiltersPanel(
                 )
                 OutlinedButton(
                     onClick = {
-                        bookViewModel.updateBookListBrowseUi {
+                        browseBooksViewModel.updateBookListBrowseUi {
                             it.copy(
                                 selectedGenres = emptySet(),
                                 selectedAgeRating = null,
@@ -117,7 +117,7 @@ fun BookListBrowseFiltersPanel(
                             FilterChip(
                                 selected = browseUi.selectedGenres.contains(genre.id),
                                 onClick = {
-                                    bookViewModel.updateBookListBrowseUi { s ->
+                                    browseBooksViewModel.updateBookListBrowseUi { s ->
                                         val id = genre.id
                                         val next =
                                             if (s.selectedGenres.contains(id)) {
@@ -138,14 +138,14 @@ fun BookListBrowseFiltersPanel(
             AgeRatingFilter(
                 selectedAgeRating = browseUi.selectedAgeRating,
                 onAgeRatingSelected = { v ->
-                    bookViewModel.updateBookListBrowseUi { it.copy(selectedAgeRating = v) }
+                    browseBooksViewModel.updateBookListBrowseUi { it.copy(selectedAgeRating = v) }
                 }
             )
 
             DistributionTypeFilter(
                 selectedDistributionType = browseUi.selectedDistributionType,
                 onDistributionTypeSelected = { v ->
-                    bookViewModel.updateBookListBrowseUi {
+                    browseBooksViewModel.updateBookListBrowseUi {
                         it.copy(selectedDistributionType = v)
                     }
                 }
@@ -182,7 +182,7 @@ fun BookListBrowseFiltersPanel(
                     Slider(
                         value = browseUi.minRating,
                         onValueChange = { v ->
-                            bookViewModel.updateBookListBrowseUi {
+                            browseBooksViewModel.updateBookListBrowseUi {
                                 it.copy(minRating = v.coerceAtMost(it.maxRating))
                             }
                         },
@@ -204,7 +204,7 @@ fun BookListBrowseFiltersPanel(
                     Slider(
                         value = browseUi.maxRating,
                         onValueChange = { v ->
-                            bookViewModel.updateBookListBrowseUi {
+                            browseBooksViewModel.updateBookListBrowseUi {
                                 it.copy(maxRating = v.coerceAtLeast(it.minRating))
                             }
                         },
@@ -218,7 +218,7 @@ fun BookListBrowseFiltersPanel(
             ApplicationStatusFilter(
                 selectedApplicationStatus = browseUi.selectedApplicationStatus,
                 onApplicationStatusSelected = { v ->
-                    bookViewModel.updateBookListBrowseUi {
+                    browseBooksViewModel.updateBookListBrowseUi {
                         it.copy(selectedApplicationStatus = v)
                     }
                 }
@@ -227,7 +227,7 @@ fun BookListBrowseFiltersPanel(
             DeadlineFilter(
                 selectedDeadlineFilter = browseUi.selectedDeadlineFilter,
                 onDeadlineFilterSelected = { v ->
-                    bookViewModel.updateBookListBrowseUi {
+                    browseBooksViewModel.updateBookListBrowseUi {
                         it.copy(selectedDeadlineFilter = v)
                     }
                 }
@@ -236,7 +236,7 @@ fun BookListBrowseFiltersPanel(
             SortByFilter(
                 selectedSortBy = browseUi.selectedSortBy,
                 onSortBySelected = { v ->
-                    bookViewModel.updateBookListBrowseUi { it.copy(selectedSortBy = v) }
+                    browseBooksViewModel.updateBookListBrowseUi { it.copy(selectedSortBy = v) }
                 }
             )
         }
