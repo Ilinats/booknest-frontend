@@ -112,7 +112,6 @@ val viewModelModule = module {
             getReviewUseCase = get(),
             createReviewUseCase = get(),
             updateReviewUseCase = get(),
-            getBookAllReviewsUseCase = get()
         )
     }
 
@@ -146,7 +145,8 @@ val viewModelModule = module {
     viewModel {
         ProfileStatsViewModel(
             getMyStatsUseCase = get(),
-            getAuthorStatsUseCase = get()
+            getAuthorStatsUseCase = get(),
+            getMyBooksUseCase = get(),
         )
     }
 
@@ -212,6 +212,7 @@ val viewModelModule = module {
             feedback = get(),
             getMyBooksUseCase = get(),
             getBookStatsUseCase = get(),
+            getBookApplicationsUseCase = get(),
             createBookUseCase = get(),
             updateBookUseCase = get(),
             deleteBookUseCase = get(),
@@ -236,6 +237,8 @@ val viewModelModule = module {
         AuthorDashboardViewModel(
             feedback = get(),
             getMyStatsUseCase = get(),
+            getMyBooksUseCase = get(),
+            getBookApplicationsUseCase = get(),
             getAuthorLatestReviewsUseCase = get(),
             getOverdueReviewsUseCase = get()
         )

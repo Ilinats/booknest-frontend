@@ -6,9 +6,15 @@ import androidx.lifecycle.viewModelScope
 import com.example.booknest.domain.model.response.ApplicationResponse
 import com.example.booknest.domain.model.response.ReviewResponse
 import com.example.booknest.domain.model.response.UserStatsResponse
+import com.example.booknest.domain.usecase.applications.GetBookApplicationsUseCase
 import com.example.booknest.domain.usecase.applications.GetOverdueReviewsUseCase
+import com.example.booknest.domain.usecase.author.GetMyBooksUseCase
 import com.example.booknest.domain.usecase.profile.GetMyStatsUseCase
 import com.example.booknest.domain.usecase.reviews.GetAuthorLatestReviewsUseCase
+import com.example.booknest.viewmodel.applications.pendingCount
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,6 +23,8 @@ import kotlinx.coroutines.launch
 class AuthorDashboardViewModel(
     private val feedback: UserFeedback,
     private val getMyStatsUseCase: GetMyStatsUseCase,
+    private val getMyBooksUseCase: GetMyBooksUseCase,
+    private val getBookApplicationsUseCase: GetBookApplicationsUseCase,
     private val getAuthorLatestReviewsUseCase: GetAuthorLatestReviewsUseCase,
     private val getOverdueReviewsUseCase: GetOverdueReviewsUseCase
 ) : ViewModel() {
@@ -66,7 +74,8 @@ class AuthorDashboardViewModel(
                 result
                     .onSuccess { stats ->
                         _authorStats.value = stats
-                        updateQuickStatsFromStats(stats)
+                        val pendingCount = countPendingApplicationsAcrossBooks()
+                        updateQuickStatsFromStats(stats, pendingApplicationsOverride = pendingCount)
                     }
                     .onFailure { e -> notifyError(e.message ?: "Failed to load stats") }
             } catch (e: Exception) {
@@ -106,7 +115,21 @@ class AuthorDashboardViewModel(
         }
     }
 
-    private fun updateQuickStatsFromStats(stats: UserStatsResponse) {
+    private suspend fun countPendingApplicationsAcrossBooks(): Int? {
+        val books = getMyBooksUseCase().getOrNull() ?: return null
+        return coroutineScope {
+            books.map { book ->
+                async {
+                    getBookApplicationsUseCase(book.id).getOrNull()?.pendingCount() ?: 0
+                }
+            }.awaitAll().sum()
+        }
+    }
+
+    private fun updateQuickStatsFromStats(
+        stats: UserStatsResponse,
+        pendingApplicationsOverride: Int? = null,
+    ) {
         val statsData = stats.stats
         val avgResponseTime = statsData.averageResponseTime?.let {
             if (it < 1) "${(it * 24).toInt()} hours" else "${it.toInt()} days"
@@ -115,7 +138,7 @@ class AuthorDashboardViewModel(
             totalBooks = statsData.totalBooks ?: 0,
             activeBooks = statsData.publishedBooks ?: 0,
             totalApplications = statsData.totalApplications,
-            pendingApplications = statsData.pendingApplications,
+            pendingApplications = pendingApplicationsOverride ?: statsData.pendingApplications,
             applicationsThisMonth = statsData.applicationsThisMonth ?: 0,
             avgResponseTime = avgResponseTime,
             totalReviews = statsData.totalReviews ?: 0,

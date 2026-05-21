@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import com.example.booknest.viewmodel.common.UserFeedback
 import androidx.lifecycle.viewModelScope
 import com.example.booknest.data.session.SessionManager
+import com.example.booknest.domain.model.enums.NotificationType
 import com.example.booknest.domain.model.request.RegisterDeviceTokenRequest
 import com.example.booknest.domain.model.response.NotificationResponse
 import com.example.booknest.domain.repository.FriendsRepository
@@ -55,7 +56,12 @@ class NotificationViewModel(
     private val _processingNotifications = MutableStateFlow<Set<String>>(emptySet())
     val processingNotifications: StateFlow<Set<String>> = _processingNotifications.asStateFlow()
 
-    fun loadNotifications(unreadOnly: Boolean = false, refresh: Boolean = false) {
+    /** Refetch from API and merge (e.g. when the screen becomes visible again). */
+    fun refreshNotifications() {
+        loadNotifications(refresh = true)
+    }
+
+    fun loadNotifications(refresh: Boolean = false) {
         viewModelScope.launch {
             try {
                 val isLoggedIn = sessionManager.isLoggedIn.value == true
@@ -71,16 +77,27 @@ class NotificationViewModel(
                     }
                 }
 
+                if (!refresh && _notifications.value.isNotEmpty()) {
+                    return@launch
+                }
+
                 _isLoading.value = true
                 _error.value = null
 
+                // Omit unreadOnly (backend returns read + unread). Unread tab filters client-side.
                 val result = getNotificationsUseCase(
-                    unreadOnly = unreadOnly
+                    unreadOnly = null,
+                    skip = 0,
+                    take = NOTIFICATIONS_PAGE_SIZE,
                 )
                 result
                     .onSuccess { notificationsResponse ->
-                        _notifications.value = notificationsResponse.notifications
-                        hasMore = false
+                        _notifications.value = mergeNotifications(
+                            current = _notifications.value,
+                            fetched = notificationsResponse.notifications,
+                        )
+                        hasMore = notificationsResponse.hasMore == true
+                        loadUnreadCount()
                     }
                     .onFailure { e ->
                         notifyError(e.message ?: "Failed to load notifications")
@@ -123,21 +140,43 @@ class NotificationViewModel(
     fun markAsRead(notificationId: String) {
         viewModelScope.launch {
             try {
-                val notification = _notifications.value.find { it.id == notificationId }
-                val wasUnread = notification?.isRead == false
+                val notification = _notifications.value.find { it.id == notificationId } ?: return@launch
+                if (notification.isRead) return@launch
+
+                val wasUnread = true
+                val previous = notification
+
+                _notifications.value = _notifications.value.map { n ->
+                    if (n.id == notificationId) {
+                        n.copy(
+                            isRead = true,
+                            readAt = java.time.Instant.now().toString()
+                        )
+                    } else {
+                        n
+                    }
+                }
+                _unreadCount.value = maxOf(0, _unreadCount.value - 1)
 
                 val result = markNotificationAsReadUseCase(notificationId)
                 result
                     .onSuccess { updated ->
                         _notifications.value = _notifications.value.map { n ->
-                            if (n.id == notificationId) updated else n
-                        }
-                        if (wasUnread) {
-                            _unreadCount.value = maxOf(0, _unreadCount.value - 1)
+                            if (n.id == notificationId) {
+                                updated.copy(isRead = true)
+                            } else {
+                                n
+                            }
                         }
                         loadUnreadCount()
                     }
                     .onFailure { e ->
+                        _notifications.value = _notifications.value.map { n ->
+                            if (n.id == notificationId) previous else n
+                        }
+                        if (wasUnread) {
+                            _unreadCount.value = _unreadCount.value + 1
+                        }
                         notifyError(e.message ?: "Failed to mark notification as read")
                     }
             } catch (e: Exception) {
@@ -225,21 +264,18 @@ class NotificationViewModel(
                 _processingNotifications.value = _processingNotifications.value + notificationId
 
                 val notification = _notifications.value.find { it.id == notificationId }
-                val wasUnread = notification?.isRead == false
+                if (notification?.type != NotificationType.FRIEND_REQUEST_RECEIVED) {
+                    if (notification != null && !notification.isRead) markAsRead(notificationId)
+                    _processingNotifications.value =
+                        _processingNotifications.value - notificationId
+                    return@launch
+                }
 
+                val wasUnread = !notification.isRead
                 val result = acceptFriendRequestUseCase(requesterId)
                 result
                     .onSuccess {
-                        val deleteResult =
-                            deleteNotificationUseCase(notificationId)
-                        deleteResult.onSuccess {
-                            _notifications.value =
-                                _notifications.value.filter { it.id != notificationId }
-                            if (wasUnread) {
-                                _unreadCount.value = maxOf(0, _unreadCount.value - 1)
-                            }
-                            loadUnreadCount()
-                        }
+                        removeIncomingFriendRequestNotification(notificationId, wasUnread)
                         _processingNotifications.value =
                             _processingNotifications.value - notificationId
                     }
@@ -261,21 +297,18 @@ class NotificationViewModel(
                 _processingNotifications.value = _processingNotifications.value + notificationId
 
                 val notification = _notifications.value.find { it.id == notificationId }
-                val wasUnread = notification?.isRead == false
+                if (notification?.type != NotificationType.FRIEND_REQUEST_RECEIVED) {
+                    if (notification != null && !notification.isRead) markAsRead(notificationId)
+                    _processingNotifications.value =
+                        _processingNotifications.value - notificationId
+                    return@launch
+                }
 
+                val wasUnread = !notification.isRead
                 val result = declineFriendRequestUseCase(requesterId)
                 result
                     .onSuccess {
-                        val deleteResult =
-                            deleteNotificationUseCase(notificationId)
-                        deleteResult.onSuccess {
-                            _notifications.value =
-                                _notifications.value.filter { it.id != notificationId }
-                            if (wasUnread) {
-                                _unreadCount.value = maxOf(0, _unreadCount.value - 1)
-                            }
-                            loadUnreadCount()
-                        }
+                        removeIncomingFriendRequestNotification(notificationId, wasUnread)
                         _processingNotifications.value =
                             _processingNotifications.value - notificationId
                     }
@@ -289,6 +322,38 @@ class NotificationViewModel(
                 _processingNotifications.value = _processingNotifications.value - notificationId
             }
         }
+    }
+
+    private fun mergeNotifications(
+        current: List<NotificationResponse>,
+        fetched: List<NotificationResponse>,
+    ): List<NotificationResponse> {
+        if (current.isEmpty()) return fetched
+        val fetchedIds = fetched.map { it.id }.toSet()
+        // Prefer server rows; keep local unread-only rows during in-flight mark-read.
+        val pendingLocal = current.filter { it.id !in fetchedIds && !it.isRead }
+        return (fetched + pendingLocal).sortedByDescending { it.createdAt }
+    }
+
+    /** Incoming friend-request rows are removed after Accept/Decline; all other types stay in All. */
+    private suspend fun removeIncomingFriendRequestNotification(
+        notificationId: String,
+        wasUnread: Boolean,
+    ) {
+        deleteNotificationUseCase(notificationId)
+            .onSuccess {
+                _notifications.value =
+                    _notifications.value.filter { it.id != notificationId }
+                if (wasUnread) {
+                    _unreadCount.value = maxOf(0, _unreadCount.value - 1)
+                }
+                loadUnreadCount()
+            }
+    }
+
+    private companion object {
+        /** Backend default take is 20; request enough for the in-app list. */
+        const val NOTIFICATIONS_PAGE_SIZE = 100
     }
 
     fun registerDeviceToken(token: String, deviceId: String? = null, appVersion: String? = null) {

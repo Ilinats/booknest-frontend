@@ -7,7 +7,6 @@ import com.example.booknest.domain.model.request.CreateReviewRequest
 import com.example.booknest.domain.model.request.UpdateReviewRequest
 import com.example.booknest.domain.model.response.ReviewResponse
 import com.example.booknest.domain.usecase.reviews.CreateReviewUseCase
-import com.example.booknest.domain.usecase.reviews.GetBookAllReviewsUseCase
 import com.example.booknest.domain.usecase.reviews.GetBookReviewsUseCase
 import com.example.booknest.domain.usecase.reviews.GetReviewUseCase
 import com.example.booknest.domain.usecase.reviews.GetUserReviewsUseCase
@@ -29,7 +28,6 @@ class ReviewViewModel(
     private val getReviewUseCase: GetReviewUseCase,
     private val createReviewUseCase: CreateReviewUseCase,
     private val updateReviewUseCase: UpdateReviewUseCase,
-    private val getBookAllReviewsUseCase: GetBookAllReviewsUseCase
 ) : ViewModel() {
 
     private val _bookReviews = MutableStateFlow<List<ReviewResponse>>(emptyList())
@@ -60,34 +58,13 @@ class ReviewViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val result = getBookReviewsUseCase(bookId)
-                result
-                    .onSuccess { reviews ->
-                        _bookReviews.value = reviews
-                    }
-                    .onFailure { _ ->
-                        val fallbackResult = getBookAllReviewsUseCase(bookId)
-                        fallbackResult
-                            .onSuccess { reviews ->
-                                _bookReviews.value = reviews
-                            }
-                            .onFailure { fallbackError ->
-                                notifyError(fallbackError.message ?: "Failed to load book reviews")
-                            }
+                getBookReviewsUseCase(bookId)
+                    .onSuccess { reviews -> _bookReviews.value = reviews }
+                    .onFailure { e ->
+                        notifyError(e.message ?: "Failed to load book reviews")
                     }
             } catch (e: Exception) {
-                try {
-                    val fallbackResult = getBookAllReviewsUseCase(bookId)
-                    fallbackResult
-                        .onSuccess { reviews ->
-                            _bookReviews.value = reviews
-                        }
-                        .onFailure { fallbackError ->
-                            notifyError("Error loading book reviews: ${fallbackError.message}")
-                        }
-                } catch (fallbackException: Exception) {
-                    notifyError("Error loading book reviews: ${e.message}")
-                }
+                notifyError("Error loading book reviews: ${e.message}")
             } finally {
                 _isLoading.value = false
             }

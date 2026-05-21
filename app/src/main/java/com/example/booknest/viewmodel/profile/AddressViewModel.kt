@@ -10,6 +10,7 @@ import com.example.booknest.domain.usecase.profile.AddAddressUseCase
 import com.example.booknest.domain.usecase.profile.DeleteAddressUseCase
 import com.example.booknest.domain.usecase.profile.GetMyAddressesUseCase
 import com.example.booknest.domain.usecase.profile.UpdateAddressUseCase
+import com.example.booknest.domain.validation.AddressFormRules
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -65,15 +66,19 @@ class AddressViewModel(
         country: String,
         isPrimary: Boolean
     ) {
+        if (!AddressFormRules.isFormValid(streetAddress, city, postalCode, country)) {
+            notifyError("Please fill in all required address fields.")
+            return
+        }
         viewModelScope.launch {
             try {
                 _isLoading.value = true
                 _error.value = null
                 val request = CreateAddressRequest(
-                    streetAddress = streetAddress,
-                    city = city,
-                    postalCode = postalCode,
-                    country = country,
+                    streetAddress = streetAddress.trim(),
+                    city = city.trim(),
+                    postalCode = postalCode.trim(),
+                    country = AddressFormRules.normalizeCountryForCreate(country),
                     isPrimary = isPrimary
                 )
                 val result = addAddressUseCase(request)
@@ -99,15 +104,29 @@ class AddressViewModel(
         country: String? = null,
         isPrimary: Boolean? = null
     ) {
+        val trimmedStreet = streetAddress?.trim()
+        val trimmedCity = city?.trim()
+        val trimmedPostal = postalCode?.trim()
+        val trimmedCountry = country?.trim()
+
+        if ((trimmedStreet != null && !AddressFormRules.isStreetValid(trimmedStreet)) ||
+            (trimmedCity != null && !AddressFormRules.isCityValid(trimmedCity)) ||
+            (trimmedPostal != null && !AddressFormRules.isPostalValid(trimmedPostal)) ||
+            (trimmedCountry != null && !AddressFormRules.isCountryValid(trimmedCountry))
+        ) {
+            notifyError("Please correct the address fields before saving.")
+            return
+        }
+
         viewModelScope.launch {
             try {
                 _isLoading.value = true
                 _error.value = null
                 val request = UpdateAddressRequest(
-                    streetAddress = streetAddress,
-                    city = city,
-                    postalCode = postalCode,
-                    country = country,
+                    streetAddress = trimmedStreet,
+                    city = trimmedCity,
+                    postalCode = trimmedPostal,
+                    country = trimmedCountry?.let { AddressFormRules.countryForUpdate(it) },
                     isPrimary = isPrimary
                 )
                 val result = updateAddressUseCase(addressId, request)

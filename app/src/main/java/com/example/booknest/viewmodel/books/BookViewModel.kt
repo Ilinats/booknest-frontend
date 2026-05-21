@@ -109,6 +109,18 @@ class BookViewModel(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    private val _recommendedLoading = MutableStateFlow(false)
+    val recommendedLoading: StateFlow<Boolean> = _recommendedLoading.asStateFlow()
+
+    private val _newReleasesLoading = MutableStateFlow(false)
+    val newReleasesLoading: StateFlow<Boolean> = _newReleasesLoading.asStateFlow()
+
+    private val _trendingLoading = MutableStateFlow(false)
+    val trendingLoading: StateFlow<Boolean> = _trendingLoading.asStateFlow()
+
+    private val _homeSearchLoading = MutableStateFlow(false)
+    val homeSearchLoading: StateFlow<Boolean> = _homeSearchLoading.asStateFlow()
+
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
@@ -138,8 +150,7 @@ class BookViewModel(
     private val _browseListHasMore = MutableStateFlow(false)
     val browseListHasMore: StateFlow<Boolean> = _browseListHasMore.asStateFlow()
 
-    private val _browseListSkip = MutableStateFlow(0)
-    val browseListSkip: StateFlow<Int> = _browseListSkip.asStateFlow()
+    private val _browseListPage = MutableStateFlow(1)
 
     private val _browseListPageSize = MutableStateFlow(20)
     val browseListPageSize: StateFlow<Int> = _browseListPageSize.asStateFlow()
@@ -261,8 +272,8 @@ class BookViewModel(
                 distributionType = distributionType,
                 minAvgRating = minAvgRating,
                 maxAvgRating = maxAvgRating,
-                skip = 0,
-                take = pageSize,
+                page = 1,
+                limit = pageSize,
                 applicationStatus = applicationStatus,
                 deadlineFilter = deadlineFilter,
                 sortBy = sortBy,
@@ -271,7 +282,7 @@ class BookViewModel(
                     books = books,
                     append = false,
                     pageSize = pageSize,
-                    newSkip = 0,
+                    newPage = 1,
                 )
                 lastAppliedBrowseFilters = snap
             }.onFailure { e ->
@@ -294,7 +305,7 @@ class BookViewModel(
             _browseListLoadingMore.value = true
             try {
                 val pageSize = _browseListPageSize.value
-                val nextSkip = _browseListSkip.value + pageSize
+                val nextPage = _browseListPage.value + 1
                 val snap = BrowseFilterSnapshot.from(_bookListBrowseUi.value)
                 val query = snap.debouncedSearch.takeIf { it.isNotBlank() }
                 val genreList = snap.genres.takeIf { it.isNotEmpty() }?.toList()
@@ -312,8 +323,8 @@ class BookViewModel(
                     distributionType = distributionType,
                     minAvgRating = minAvgRating,
                     maxAvgRating = maxAvgRating,
-                    skip = nextSkip,
-                    take = pageSize,
+                    page = nextPage,
+                    limit = pageSize,
                     applicationStatus = applicationStatus,
                     deadlineFilter = deadlineFilter,
                     sortBy = sortBy,
@@ -322,7 +333,7 @@ class BookViewModel(
                         books = books,
                         append = true,
                         pageSize = pageSize,
-                        newSkip = nextSkip,
+                        newPage = nextPage,
                     )
                 }.onFailure { e ->
                     _error.value = e.message ?: "Failed to load more books"
@@ -337,15 +348,15 @@ class BookViewModel(
         books: List<RecommendedBookResponse>,
         append: Boolean,
         pageSize: Int,
-        newSkip: Int,
+        newPage: Int,
     ) {
-        if (append && newSkip > 0) {
+        if (append && newPage > 1) {
             _books.value = _books.value + books
         } else {
             _books.value = books
         }
         _lastFetchCount.value = books.size
-        _browseListSkip.value = newSkip
+        _browseListPage.value = newPage
         _browseListHasMore.value = books.size >= pageSize
     }
 
@@ -365,8 +376,8 @@ class BookViewModel(
         createdTo: String? = null,
         minAvgRating: Double? = null,
         maxAvgRating: Double? = null,
-        skip: Int? = null,
-        take: Int? = null,
+        page: Int? = null,
+        limit: Int? = null,
         status: String? = null,
         applicationStatus: String? = null,
         deadlineFilter: String? = null,
@@ -388,8 +399,8 @@ class BookViewModel(
             createdTo = createdTo,
             minAvgRating = minAvgRating,
             maxAvgRating = maxAvgRating,
-            skip = skip,
-            take = take,
+            page = page,
+            limit = limit,
             status = status,
             applicationStatus = applicationStatus,
             deadlineFilter = deadlineFilter,
@@ -399,7 +410,7 @@ class BookViewModel(
     fun onBrowseListRouteChanged(category: String?, searchQuery: String?, pageSize: Int) {
         viewModelScope.launch {
             _browseListFiltersReady.value = false
-            _browseListSkip.value = 0
+            _browseListPage.value = 1
             _browseListHasMore.value = false
             _browseListPageSize.value = pageSize
             try {
@@ -412,13 +423,13 @@ class BookViewModel(
                             _browseListFiltersReady.value = true
                             return@launch
                         }
-                        runBrowseBooks(query = q, skip = 0, take = pageSize)
+                        runBrowseBooks(query = q, page = 1, limit = pageSize)
                             .onSuccess { books ->
                                 applyBrowseListPageResult(
                                     books = books,
                                     append = false,
                                     pageSize = pageSize,
-                                    newSkip = 0,
+                                    newPage = 1,
                                 )
                                 applyBrowseFilterSnapshotFromCurrentUi()
                                 _browseListFiltersReady.value = true
@@ -431,13 +442,13 @@ class BookViewModel(
                     }
 
                     null -> {
-                        runBrowseBooks(query = null, skip = 0, take = pageSize)
+                        runBrowseBooks(query = null, page = 1, limit = pageSize)
                             .onSuccess { books ->
                                 applyBrowseListPageResult(
                                     books = books,
                                     append = false,
                                     pageSize = pageSize,
-                                    newSkip = 0,
+                                    newPage = 1,
                                 )
                                 applyBrowseFilterSnapshotFromCurrentUi()
                                 _browseListFiltersReady.value = true
@@ -485,7 +496,9 @@ class BookViewModel(
     fun ensureSeriesBooksLoaded(
         seriesId: String,
         forceRefresh: Boolean = false,
-        treatFailureAsEmptyCatalog: Boolean = true
+        treatFailureAsEmptyCatalog: Boolean = true,
+        /** When null, all statuses are requested (author series management). */
+        status: String? = "active",
     ) {
         if (seriesId.isBlank()) return
         viewModelScope.launch {
@@ -504,10 +517,13 @@ class BookViewModel(
             try {
                 browseBooksUseCase(
                     seriesId = seriesId,
-                    status = "active",
-                    take = 100
+                    status = status?.takeIf { it.isNotBlank() },
+                    page = 1,
+                    limit = 100,
                 ).onSuccess { bookList ->
-                    val sorted = bookList.sortedBy { it.seriesOrder ?: Int.MAX_VALUE }
+                    val sorted = bookList
+                        .filter { it.seriesId == seriesId }
+                        .sortedBy { it.seriesOrder ?: Int.MAX_VALUE }
                     _seriesBooksBySeriesId.update { it + (seriesId to sorted) }
                     _seriesBooksLoadError.update { it - seriesId }
                 }.onFailure { e ->
@@ -534,7 +550,7 @@ class BookViewModel(
                 .debounce(500)
                 .collect { query ->
                     if (query.isNotBlank()) {
-                        searchForHomeScreen(query = query, take = 20)
+                        searchForHomeScreen(query = query, limit = 20)
                     } else {
                         clearHomeSearchResults()
                     }
@@ -563,7 +579,7 @@ class BookViewModel(
     fun getRecommendedBooks() {
         viewModelScope.launch {
             try {
-                _isLoading.value = true
+                _recommendedLoading.value = true
                 val result = getRecommendedBooksUseCase(10)
                 result
                     .onSuccess { books ->
@@ -575,7 +591,7 @@ class BookViewModel(
             } catch (e: Exception) {
                 _error.value = e.message ?: "Failed to load recommendations"
             } finally {
-                _isLoading.value = false
+                _recommendedLoading.value = false
             }
         }
     }
@@ -583,8 +599,8 @@ class BookViewModel(
     fun getNewReleases() {
         viewModelScope.launch {
             try {
-                _isLoading.value = true
-                val result = getNewReleasesUseCase(daysBack = 30, take = 10)
+                _newReleasesLoading.value = true
+                val result = getNewReleasesUseCase(daysBack = 30, limit = 10)
                 result
                     .onSuccess { books ->
                         _newReleases.value = books
@@ -595,7 +611,7 @@ class BookViewModel(
             } catch (e: Exception) {
                 _error.value = e.message ?: "Failed to load new releases"
             } finally {
-                _isLoading.value = false
+                _newReleasesLoading.value = false
             }
         }
     }
@@ -616,8 +632,8 @@ class BookViewModel(
         createdTo: String? = null,
         minAvgRating: Double? = null,
         maxAvgRating: Double? = null,
-        skip: Int? = null,
-        take: Int? = null,
+        page: Int? = null,
+        limit: Int? = null,
         status: String? = null,
         applicationStatus: String? = null,
         deadlineFilter: String? = null,
@@ -643,15 +659,15 @@ class BookViewModel(
                     createdTo = createdTo,
                     minAvgRating = minAvgRating,
                     maxAvgRating = maxAvgRating,
-                    skip = skip,
-                    take = take,
+                    page = page,
+                    limit = limit,
                     status = status,
                     applicationStatus = applicationStatus,
                     deadlineFilter = deadlineFilter,
                     sortBy = sortBy,
                 )
                     .onSuccess { books ->
-                        if (append && skip != null && skip > 0) {
+                        if (append && page != null && page > 1) {
                             _books.value = _books.value + books
                         } else {
                             _books.value = books
@@ -678,10 +694,10 @@ class BookViewModel(
     private val _authorBooksLoading = MutableStateFlow(false)
     val authorBooksLoading: StateFlow<Boolean> = _authorBooksLoading.asStateFlow()
 
-    private fun searchBooks(query: String, skip: Int? = null, take: Int? = null) {
+    private fun searchBooks(query: String, page: Int? = null, limit: Int? = null) {
         viewModelScope.launch {
             try {
-                val result = searchBooksUseCase(query, skip, take)
+                val result = searchBooksUseCase(query, page, limit)
                 result
                     .onSuccess { books ->
                         _books.value = books
@@ -723,12 +739,14 @@ class BookViewModel(
         }
     }
 
-    fun searchForHomeScreen(query: String, take: Int = 20) {
+    fun searchForHomeScreen(query: String, limit: Int = 20) {
         viewModelScope.launch {
             try {
+                _homeSearchLoading.value = true
                 val result = browseBooksUseCase(
                     query = query,
-                    take = take,
+                    page = 1,
+                    limit = limit,
                     status = "active"
                 )
                 result
@@ -740,6 +758,8 @@ class BookViewModel(
                     }
             } catch (e: Exception) {
                 _error.value = e.message ?: "Search failed"
+            } finally {
+                _homeSearchLoading.value = false
             }
         }
     }
@@ -799,10 +819,9 @@ class BookViewModel(
             try {
                 _authorBooksLoading.value = true
                 val result = browseBooksUseCase(
-                    authorName = authorName,
                     authorId = authorId,
-                    take = 100,
-                    status = null
+                    page = 1,
+                    limit = 100,
                 )
                 result
                     .onSuccess { books -> _authorBooks.value = books }
@@ -818,7 +837,7 @@ class BookViewModel(
     fun getTrendingBooks() {
         viewModelScope.launch {
             try {
-                _isLoading.value = true
+                _trendingLoading.value = true
                 val result = getTrendingBooksUseCase(10)
                 result.onSuccess { trendingBooks ->
                     _trendingBooks.value = trendingBooks
@@ -828,7 +847,7 @@ class BookViewModel(
             } catch (e: Exception) {
                 _error.value = e.message ?: "Error loading trending books"
             } finally {
-                _isLoading.value = false
+                _trendingLoading.value = false
             }
         }
     }

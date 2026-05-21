@@ -15,11 +15,14 @@ import com.example.booknest.domain.usecase.author.GetBookStatsUseCase
 import com.example.booknest.domain.usecase.author.GetMyBooksUseCase
 import com.example.booknest.domain.usecase.author.PublishBookUseCase
 import com.example.booknest.domain.usecase.author.UpdateBookUseCase
+import com.example.booknest.domain.usecase.applications.GetBookApplicationsUseCase
 import com.example.booknest.domain.usecase.files.RemoveBookCoverImageUseCase
+import com.example.booknest.viewmodel.applications.pendingCount
 import com.example.booknest.domain.usecase.files.UploadBookCoverImageUseCase
 import com.example.booknest.domain.usecase.files.UploadBookFileUseCase
 import com.example.booknest.presentation.common.UiState
 import com.example.booknest.utils.DebugLog
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -57,6 +60,7 @@ class AuthorBooksViewModel(
     private val feedback: UserFeedback,
     private val getMyBooksUseCase: GetMyBooksUseCase,
     private val getBookStatsUseCase: GetBookStatsUseCase,
+    private val getBookApplicationsUseCase: GetBookApplicationsUseCase,
     private val createBookUseCase: CreateBookUseCase,
     private val updateBookUseCase: UpdateBookUseCase,
     private val deleteBookUseCase: DeleteBookUseCase,
@@ -246,7 +250,13 @@ class AuthorBooksViewModel(
             try {
                 val result = getBookStatsUseCase(bookId)
                 result
-                    .onSuccess { stats -> _bookStats.value = _bookStats.value + (bookId to stats) }
+                    .onSuccess { stats ->
+                        val applications = getBookApplicationsUseCase(bookId).getOrNull().orEmpty()
+                        val corrected = stats.copy(
+                            pendingApplications = applications.pendingCount()
+                        )
+                        _bookStats.value = _bookStats.value + (bookId to corrected)
+                    }
                     .onFailure { e -> notifyError(e.message ?: "Failed to load book stats") }
             } catch (e: Exception) {
                 notifyError(e.message ?: "Error loading book stats")
@@ -260,7 +270,7 @@ class AuthorBooksViewModel(
         coverImageUri: android.net.Uri? = null,
         context: android.content.Context? = null
     ) {
-        viewModelScope.launch {
+        viewModelScope.launch(NonCancellable) {
             try {
                 _bookCreationState.value = UiState.Loading
 
@@ -300,10 +310,16 @@ class AuthorBooksViewModel(
                         loadMyBooks()
                     }
                     .onFailure { e ->
-                        _bookCreationState.value = UiState.Error(e.message ?: "Failed to create book")
+                        if (e !is CancellationException) {
+                            _bookCreationState.value = UiState.Error(e.message ?: "Failed to create book")
+                        }
                     }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                _bookCreationState.value = UiState.Error(e.message ?: "Error creating book")
+                if (e !is CancellationException) {
+                    _bookCreationState.value = UiState.Error(e.message ?: "Error creating book")
+                }
             }
         }
     }
@@ -340,15 +356,35 @@ class AuthorBooksViewModel(
         }
     }
 
-    fun publishBook(bookId: String) {
-        viewModelScope.launch {
+    fun publishBook(
+        bookId: String,
+        onSuccess: (() -> Unit)? = null,
+        onError: ((String) -> Unit)? = null
+    ) {
+        viewModelScope.launch(NonCancellable) {
             try {
                 val result = publishBookUseCase(bookId)
                 result
-                    .onSuccess { loadMyBooks() }
-                    .onFailure { e -> notifyError(e.message ?: "Failed to publish book") }
+                    .onSuccess {
+                        notifySuccess("Book published successfully")
+                        loadMyBooks()
+                        onSuccess?.invoke()
+                    }
+                    .onFailure { e ->
+                        if (e !is CancellationException) {
+                            val message = e.message ?: "Failed to publish book"
+                            notifyError(message)
+                            onError?.invoke(message)
+                        }
+                    }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                notifyError(e.message ?: "Error publishing book")
+                if (e !is CancellationException) {
+                    val message = e.message ?: "Error publishing book"
+                    notifyError(message)
+                    onError?.invoke(message)
+                }
             }
         }
     }

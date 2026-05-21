@@ -67,7 +67,7 @@ class ApplicationViewModel(
     val myApplications: StateFlow<List<ApplicationResponse>> = _myApplications.asStateFlow()
 
     val activeReadingApplications: StateFlow<List<ApplicationResponse>> = _myApplications
-        .map { list -> list.filter { it.status == "approved" && it.readingStatus != "reviewed" } }
+        .map { list -> list.filter { it.isActiveApprovedApplication() } }
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val pendingApplications: StateFlow<List<ApplicationResponse>> = _myApplications
@@ -128,9 +128,7 @@ class ApplicationViewModel(
                 } catch (_: Exception) { false }
             } ?: false
         }
-        val pendingReviews = apps.count {
-            it.status == "approved" && it.reviewSubmittedAt == null && it.readingStatus != "reviewed"
-        }
+        val pendingReviews = apps.count { it.isActiveApprovedApplication() }
         ApplicationStats(total, approvalRate, reviewsThisMonth, pendingReviews)
     }.stateIn(viewModelScope, SharingStarted.Lazily, ApplicationStats(0, 0.0, 0, 0))
 
@@ -138,8 +136,8 @@ class ApplicationViewModel(
         mapOf(
             0 to apps.size,
             1 to apps.count { it.status == "pending" },
-            2 to apps.count { it.status == "approved" && it.reviewSubmittedAt == null },
-            3 to apps.count { it.status == "approved" && (it.readingStatus == "reviewed" || it.reviewSubmittedAt != null) },
+            2 to apps.count { it.isActiveApprovedApplication() },
+            3 to apps.count { it.isCompletedApplication() },
             4 to apps.count { it.status == "rejected" || it.status == "withdrawn" }
         )
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyMap())
@@ -149,8 +147,8 @@ class ApplicationViewModel(
     ) { apps, query, tab, sort ->
         val byTab = when (tab) {
             1 -> apps.filter { it.status == "pending" }
-            2 -> apps.filter { it.status == "approved" && it.reviewSubmittedAt == null }
-            3 -> apps.filter { it.status == "approved" && (it.readingStatus == "reviewed" || it.reviewSubmittedAt != null) }
+            2 -> apps.filter { it.isActiveApprovedApplication() }
+            3 -> apps.filter { it.isCompletedApplication() }
             4 -> apps.filter { it.status == "rejected" || it.status == "withdrawn" }
             else -> apps
         }
@@ -180,7 +178,7 @@ class ApplicationViewModel(
     val approvedApplicationsBySub: StateFlow<Pair<List<ApplicationResponse>, List<ApplicationResponse>>> =
         combine(_myApplications, _selectedTab) { apps, tab ->
             if (tab == 2) {
-                val approved = apps.filter { it.status == "approved" && it.reviewSubmittedAt == null }
+                val approved = apps.filter { it.isActiveApprovedApplication() }
                 val awaitingCopy = approved.filter { it.copyReceivedAt == null }
                 val reading = approved.filter { it.copyReceivedAt != null }
                 Pair(awaitingCopy, reading)

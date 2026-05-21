@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import com.example.booknest.domain.model.request.AddressDto
+import com.example.booknest.domain.validation.AddressFormRules
 import com.example.booknest.presentation.common.UiState
 import com.example.booknest.presentation.effects.AuthUiEffect
 import com.example.booknest.utils.DebugLog
@@ -106,10 +107,11 @@ class SignupViewModel(
         val address =
             if (streetAddress.isNotBlank() && city.isNotBlank() && postalCode.isNotBlank()) {
                 AddressDto(
-                    streetAddress = streetAddress,
-                    city = city,
-                    postalCode = postalCode,
-                    country = country,
+                    streetAddress = streetAddress.trim(),
+                    city = city.trim(),
+                    postalCode = postalCode.trim(),
+                    country = country?.trim()?.takeIf { it.isNotEmpty() }
+                        ?: AddressFormRules.DEFAULT_COUNTRY,
                     isPrimary = isPrimary
                 )
             } else null
