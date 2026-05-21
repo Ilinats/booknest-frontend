@@ -14,12 +14,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-/**
- * Holds auth session state and persists credentials via [dataStore].
- * Single instance is provided by Koin; do not construct manually.
- */
 class SessionManager(
-    private val dataStore: DataStore<AppSettings>
+    private val dataStore: DataStore<AppSettings>,
+    private val secureTokenStore: SecureTokenStore,
 ) : SessionReader, SessionWriter {
 
     private val appSettings: Flow<AppSettings> = dataStore.data
@@ -42,8 +39,8 @@ class SessionManager(
     }
 
     private suspend fun hydrateFromDisk() {
-        currentToken = fetchAuthToken()
-        currentRefreshToken = fetchAuthRefreshToken()
+        currentToken = secureTokenStore.getAccessToken()
+        currentRefreshToken = secureTokenStore.getRefreshToken()
         currentUserId = fetchUserId()
         _isLoggedIn.value = currentToken.isNotEmpty()
     }
@@ -53,9 +50,7 @@ class SessionManager(
 
         val refreshToken = currentRefreshToken
 
-        setAuthEntities("", "", "", "", "", "")
-        _isLoggedIn.emit(false)
-        _currentUser.emit(null)
+        clearLocalSession()
 
         if (authRepository != null && refreshToken.isNotEmpty()) {
             try {
@@ -81,11 +76,26 @@ class SessionManager(
             }
         }
 
-        setAuthEntities("", "", "", "", "", "")
-        _isLoggedIn.emit(false)
-        _currentUser.emit(null)
+        clearLocalSession()
 
         android.util.Log.d("SessionManager", "logoutAll() completed, isLoggedIn=${_isLoggedIn.value}")
+    }
+
+    private suspend fun clearLocalSession() {
+        secureTokenStore.clearTokens()
+        dataStore.updateData {
+            it.copy(
+                userId = "",
+                username = "",
+                email = "",
+                userType = "",
+            )
+        }
+        currentToken = ""
+        currentRefreshToken = ""
+        currentUserId = ""
+        _isLoggedIn.emit(false)
+        _currentUser.emit(null)
     }
 
     override suspend fun setLoggedIn() {
@@ -98,16 +108,15 @@ class SessionManager(
         userId: String,
         username: String,
         email: String,
-        userType: String
+        userType: String,
     ) {
+        secureTokenStore.saveTokens(token, refreshToken)
         dataStore.updateData {
             it.copy(
-                token = token,
-                refreshToken = refreshToken,
                 userId = userId,
                 username = username,
                 email = email,
-                userType = userType
+                userType = userType,
             )
         }
         currentToken = token
@@ -119,12 +128,7 @@ class SessionManager(
     }
 
     override suspend fun updateTokens(accessToken: String, refreshToken: String) {
-        dataStore.updateData {
-            it.copy(
-                token = accessToken,
-                refreshToken = refreshToken
-            )
-        }
+        secureTokenStore.saveTokens(accessToken, refreshToken)
         currentToken = accessToken
         currentRefreshToken = refreshToken
         if (accessToken.isNotEmpty()) {
@@ -139,18 +143,15 @@ class SessionManager(
                 userId = user.id,
                 username = user.username,
                 email = user.email ?: "",
-                userType = user.userType ?: ""
+                userType = user.userType ?: "",
             )
         }
+        currentUserId = user.id
     }
 
-    suspend fun fetchAuthToken(): String {
-        return appSettings.first().token
-    }
+    suspend fun fetchAuthToken(): String = secureTokenStore.getAccessToken()
 
-    suspend fun fetchAuthRefreshToken(): String {
-        return appSettings.first().refreshToken
-    }
+    suspend fun fetchAuthRefreshToken(): String = secureTokenStore.getRefreshToken()
 
     suspend fun fetchUserId(): String {
         return appSettings.first().userId
@@ -160,22 +161,15 @@ class SessionManager(
         return appSettings.first().userType
     }
 
-    /** Refreshes in-memory tokens from disk (e.g. after process start). */
     override suspend fun setTokens() {
-        currentToken = fetchAuthToken()
-        currentRefreshToken = fetchAuthRefreshToken()
+        currentToken = secureTokenStore.getAccessToken()
+        currentRefreshToken = secureTokenStore.getRefreshToken()
         currentUserId = fetchUserId()
     }
 
-    override fun getToken(): String {
-        return currentToken
-    }
+    override fun getToken(): String = currentToken
 
-    override fun getRefreshToken(): String {
-        return currentRefreshToken
-    }
+    override fun getRefreshToken(): String = currentRefreshToken
 
-    override fun getUserId(): String {
-        return currentUserId
-    }
+    override fun getUserId(): String = currentUserId
 }

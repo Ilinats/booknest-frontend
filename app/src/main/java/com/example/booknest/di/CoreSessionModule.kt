@@ -2,6 +2,7 @@ package com.example.booknest.di
 
 import com.example.booknest.dataStore
 import com.example.booknest.data.session.SearchHistoryManager
+import com.example.booknest.data.session.SecureTokenStore
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.data.session.searchHistoryDataStore
 import com.example.booknest.network.NetworkConnectivityMonitor
@@ -16,7 +17,8 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
 val coreSessionModule = module {
-    single { SessionManager(androidContext().dataStore) }
+    single { SecureTokenStore(androidContext()) }
+    single { SessionManager(androidContext().dataStore, get()) }
     single<SessionReader> { get<SessionManager>() }
     single<SessionWriter> { get<SessionManager>() }
     single<AuthTokenAccessor> { get<SessionManager>() }
