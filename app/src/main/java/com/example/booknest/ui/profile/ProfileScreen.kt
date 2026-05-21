@@ -68,13 +68,7 @@ fun ProfileScreen(
 
     val isLoggedIn by sessionManager.isLoggedIn.collectAsState()
 
-    val profileTargetKey = when {
-        username != null -> "user:$username"
-        userId != null -> "id:$userId"
-        else -> "me"
-    }
-
-    LaunchedEffect(profileTargetKey, isLoggedIn) {
+    LaunchedEffect(userId, username, isLoggedIn) {
         if (isLoggedIn != true) {
             return@LaunchedEffect
         }
@@ -96,7 +90,11 @@ fun ProfileScreen(
                 }
             }
 
-            else -> profileViewModel.loadMyProfile()
+            else -> {
+                currentUser?.let { user ->
+                    profileViewModel.loadMyProfile()
+                }
+            }
         }
     }
 
@@ -324,12 +322,7 @@ fun ProfileContent(
         }
     }
 
-    val activityTargetKey = if (isOwnProfile) {
-        "me"
-    } else {
-        profile.username?.let { "user:$it" } ?: "id:${profile.userId ?: profile.id}"
-    }
-    LaunchedEffect(activityTargetKey) {
+    LaunchedEffect(profile.userId, profile.id, profile.username, isOwnProfile) {
         if (isOwnProfile) {
             profileActivityViewModel.loadMyRecentActivity(days = 7)
         } else {

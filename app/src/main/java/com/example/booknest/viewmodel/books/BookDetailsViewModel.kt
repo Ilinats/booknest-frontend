@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.booknest.domain.model.response.BookResponse
 import com.example.booknest.domain.model.response.ReviewResponse
 import com.example.booknest.domain.usecase.books.GetBookDetailsUseCase
-import com.example.booknest.viewmodel.common.RequestGate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,10 +18,7 @@ class BookDetailsViewModel(
     private val _bookDetails = MutableStateFlow<BookResponse?>(null)
     val bookDetails: StateFlow<BookResponse?> = _bookDetails.asStateFlow()
 
-    private val screenGate = RequestGate()
-
     private val _bookDetailsScreenId = MutableStateFlow<String?>(null)
-    val bookDetailsScreenId: StateFlow<String?> = _bookDetailsScreenId.asStateFlow()
     private val _bookDetailsScreenMerged = MutableStateFlow<BookResponse?>(null)
     private val _bookDetailsScreenLoading = MutableStateFlow(false)
     val bookDetailsScreenBook: StateFlow<BookResponse?> = _bookDetailsScreenMerged.asStateFlow()
@@ -43,19 +39,11 @@ class BookDetailsViewModel(
 
     fun beginBookDetailsScreen(bookId: String) {
         if (bookId.isBlank()) return
-        val loadToken = screenGate.nextToken()
-        val idChanged = _bookDetailsScreenId.value != bookId
         _bookDetailsScreenId.value = bookId
-        if (idChanged) {
-            _bookDetailsScreenMerged.value = null
-            _bookDetailsScreenLoading.value = true
-        }
         val cached = bookCatalogCache.findBook(bookId)
-        if (_bookDetailsScreenId.value == bookId && screenGate.isCurrent(loadToken)) {
-            _bookDetailsScreenMerged.value = cached
-            _bookDetailsScreenLoading.value = cached == null
-        }
-        getBookDetails(bookId, syncDetailsScreen = true, loadToken = loadToken)
+        _bookDetailsScreenMerged.value = cached
+        _bookDetailsScreenLoading.value = cached == null
+        getBookDetails(bookId, syncDetailsScreen = true)
     }
 
     fun refreshBookDetailsScreenFromCache() {
@@ -78,22 +66,11 @@ class BookDetailsViewModel(
         }
     }
 
-    fun getBookDetails(
-        bookId: String,
-        syncDetailsScreen: Boolean = false,
-        loadToken: Int? = null,
-    ) {
-        val token = loadToken ?: screenGate.nextToken()
-        if (syncDetailsScreen) {
-            _bookDetailsScreenId.value = bookId
-        } else if (_bookDetails.value?.id != bookId) {
-            _bookDetails.value = null
-        }
+    fun getBookDetails(bookId: String, syncDetailsScreen: Boolean = false) {
         viewModelScope.launch {
             try {
                 getBookDetailsUseCase(bookId)
                     .onSuccess { book ->
-                        if (!screenGate.isCurrent(token)) return@onSuccess
                         bookCatalogCache.registerFull(book)
                         _bookDetails.value = book
                         if (syncDetailsScreen && _bookDetailsScreenId.value == bookId) {
@@ -103,14 +80,12 @@ class BookDetailsViewModel(
                         }
                     }
                     .onFailure { e ->
-                        if (!screenGate.isCurrent(token)) return@onFailure
                         _error.value = e.message ?: "Failed to load book details"
                         if (syncDetailsScreen && _bookDetailsScreenId.value == bookId) {
                             _bookDetailsScreenLoading.value = false
                         }
                     }
             } catch (e: Exception) {
-                if (!screenGate.isCurrent(token)) return@launch
                 _error.value = e.message ?: "Failed to load book details"
                 if (syncDetailsScreen && _bookDetailsScreenId.value == bookId) {
                     _bookDetailsScreenLoading.value = false

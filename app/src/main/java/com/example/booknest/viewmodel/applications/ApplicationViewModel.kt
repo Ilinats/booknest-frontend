@@ -1,7 +1,6 @@
 package com.example.booknest.viewmodel.applications
 
 import androidx.lifecycle.ViewModel
-import com.example.booknest.viewmodel.common.RequestGate
 import com.example.booknest.viewmodel.common.UserFeedback
 import androidx.lifecycle.viewModelScope
 import com.example.booknest.domain.model.request.CreateApplicationRequest
@@ -77,8 +76,6 @@ class ApplicationViewModel(
 
     private val _readingProgress = MutableStateFlow<List<ApplicationResponse>>(emptyList())
     val readingProgress: StateFlow<List<ApplicationResponse>> = _readingProgress.asStateFlow()
-
-    private val applicationCheckGate = RequestGate()
 
     private val _applicationCheck = MutableStateFlow<ApplicationCheckResponse?>(null)
     val applicationCheck: StateFlow<ApplicationCheckResponse?> = _applicationCheck.asStateFlow()
@@ -211,31 +208,21 @@ class ApplicationViewModel(
     }
 
     fun checkApplication(bookId: String) {
-        val token = applicationCheckGate.nextToken()
-        _applicationCheck.value = null
         viewModelScope.launch {
             _isLoading.value = true
             try {
                 val result = checkApplicationUseCase(bookId)
                 result
                     .onSuccess { check ->
-                        if (applicationCheckGate.isCurrent(token)) {
-                            _applicationCheck.value = check
-                        }
+                        _applicationCheck.value = check
                     }
                     .onFailure { e ->
-                        if (applicationCheckGate.isCurrent(token)) {
-                            notifyError(e.message ?: "Failed to check application status")
-                        }
+                        notifyError(e.message ?: "Failed to check application status")
                     }
             } catch (e: Exception) {
-                if (applicationCheckGate.isCurrent(token)) {
-                    notifyError("Error checking application status: ${e.message}")
-                }
+                notifyError("Error checking application status: ${e.message}")
             } finally {
-                if (applicationCheckGate.isCurrent(token)) {
-                    _isLoading.value = false
-                }
+                _isLoading.value = false
             }
         }
     }
