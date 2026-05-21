@@ -69,11 +69,8 @@ fun BookDetailsScreen(
     reviewViewModel: ReviewViewModel = getViewModel(),
     bookDetailsViewModel: BookDetailsViewModel = getViewModel()
 ) {
-    val bookRaw by bookDetailsViewModel.bookDetailsScreenBook.collectAsState()
-    val screenBookId by bookDetailsViewModel.bookDetailsScreenId.collectAsState()
-    val isLoadingRaw by bookDetailsViewModel.bookDetailsScreenLoading.collectAsState()
-    val book = bookRaw?.takeIf { it.id == bookId && screenBookId == bookId }
-    val isLoading = isLoadingRaw || (bookRaw != null && book == null)
+    val book by bookDetailsViewModel.bookDetailsScreenBook.collectAsState()
+    val isLoading by bookDetailsViewModel.bookDetailsScreenLoading.collectAsState()
     var showApplyDialog by remember { mutableStateOf(false) }
     var showWithdrawDialog by remember { mutableStateOf(false) }
     var userApplication by remember { mutableStateOf<ApplicationCheckApplicationResponse?>(null) }
@@ -98,9 +95,6 @@ fun BookDetailsScreen(
     val currentUser by sessionReader.currentUser.collectAsState()
 
     LaunchedEffect(bookId) {
-        userApplication = null
-        isApplying = false
-        applicationViewModel.checkApplication(bookId)
         bookDetailsViewModel.beginBookDetailsScreen(bookId)
         reviewViewModel.loadBookReviews(bookId)
     }
@@ -116,38 +110,35 @@ fun BookDetailsScreen(
         }
     }
 
-    val applicationCheck by applicationViewModel.applicationCheck.collectAsState()
-
     val bookReviews by reviewViewModel.bookReviews.collectAsState()
 
     val calculatedRating = remember(book?.rating, bookReviews) {
         bookDetailsViewModel.calculateRating(book?.rating, bookReviews)
     }
 
-    LaunchedEffect(applicationCheck, bookId) {
+    val applicationCheck by applicationViewModel.applicationCheck.collectAsState()
+    LaunchedEffect(applicationCheck) {
         val check = applicationCheck
-        if (check == null) {
-            userApplication = null
-            return@LaunchedEffect
-        }
-        if (check.hasApplied == true && isApplying) {
-            isApplying = false
-        }
-        userApplication = check.application
+        if (check != null) {
+            if (check.hasApplied == true && isApplying) {
+                isApplying = false
+            }
+            userApplication = check.application
 
-        if (isApplying && check.application != null) {
-            isApplying = false
-        }
+            if (isApplying && check.application != null) {
+                isApplying = false
+            }
 
-        if (book == null && check.application?.book?.id == bookId) {
-            val bookFromApp = check.application.book
-            bookDetailsViewModel.applyBookDetailsFromApplicationCheck(
-                BookResponse(
-                    id = bookFromApp.id,
-                    authorId = bookFromApp.authorId,
-                    title = bookFromApp.title,
-                ),
-            )
+            if (book == null && check.application?.book != null) {
+                val bookFromApp = check.application.book
+                bookDetailsViewModel.applyBookDetailsFromApplicationCheck(
+                    BookResponse(
+                        id = bookFromApp.id,
+                        authorId = bookFromApp.authorId,
+                        title = bookFromApp.title
+                    )
+                )
+            }
         }
     }
 

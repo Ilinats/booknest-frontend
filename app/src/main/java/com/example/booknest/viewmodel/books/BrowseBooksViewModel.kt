@@ -106,11 +106,6 @@ class BrowseBooksViewModel(
 
     fun onBookListRouteArgs(searchQuery: String?, category: String?) {
         val prev = bookListScreenArgs
-        val routeChanged = prev?.first != category || prev?.second != searchQuery
-        if (routeChanged) {
-            _books.value = emptyList()
-            _isLoading.value = true
-        }
         bookListScreenArgs = category to searchQuery
         val categoryChanged = prev?.first != category
         val iq = searchQuery ?: ""

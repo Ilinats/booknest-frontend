@@ -6,7 +6,6 @@ import com.example.booknest.data.error.BNError
 import com.example.booknest.domain.model.response.UserActivityResponse
 import com.example.booknest.domain.usecase.profile.GetMyRecentActivityUseCase
 import com.example.booknest.domain.usecase.profile.GetUserRecentActivityUseCase
-import com.example.booknest.viewmodel.common.RequestGate
 import com.example.booknest.viewmodel.common.UserFeedback
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,8 +17,6 @@ class ProfileActivityViewModel(
     private val getMyRecentActivityUseCase: GetMyRecentActivityUseCase,
     private val getUserRecentActivityUseCase: GetUserRecentActivityUseCase,
 ) : ViewModel() {
-
-    private val activityLoadGate = RequestGate()
 
     private val _myRecentActivity = MutableStateFlow<List<UserActivityResponse>>(emptyList())
     val myRecentActivity: StateFlow<List<UserActivityResponse>> = _myRecentActivity.asStateFlow()
@@ -35,64 +32,44 @@ class ProfileActivityViewModel(
     }
 
     fun loadMyRecentActivity(days: Int = 7) {
-        val token = activityLoadGate.nextToken()
-        _myRecentActivity.value = emptyList()
         viewModelScope.launch {
             try {
                 _isLoading.value = true
                 _error.value = null
                 getMyRecentActivityUseCase(days = days, limit = 50)
                     .onSuccess { activities ->
-                        if (activityLoadGate.isCurrent(token)) {
-                            _myRecentActivity.value = activities
-                        }
+                        _myRecentActivity.value = activities
                     }
                     .onFailure { e ->
-                        if (activityLoadGate.isCurrent(token)) {
-                            feedback.error(e.message ?: "Failed to load recent activity", _error)
-                        }
+                        feedback.error(e.message ?: "Failed to load recent activity", _error)
                     }
             } catch (e: Exception) {
-                if (activityLoadGate.isCurrent(token)) {
-                    feedback.error(e.message ?: "Unknown error occurred", _error)
-                }
+                feedback.error(e.message ?: "Unknown error occurred", _error)
             } finally {
-                if (activityLoadGate.isCurrent(token)) {
-                    _isLoading.value = false
-                }
+                _isLoading.value = false
             }
         }
     }
 
     fun loadUserRecentActivity(username: String, days: Int = 7) {
-        val token = activityLoadGate.nextToken()
-        _myRecentActivity.value = emptyList()
         viewModelScope.launch {
             try {
                 _isLoading.value = true
                 _error.value = null
                 getUserRecentActivityUseCase(username, days = days, limit = 50)
                     .onSuccess { activities ->
-                        if (activityLoadGate.isCurrent(token)) {
-                            _myRecentActivity.value = activities
-                        }
+                        _myRecentActivity.value = activities
                     }
                     .onFailure { e ->
-                        if (activityLoadGate.isCurrent(token)) {
-                            feedback.error(e.message ?: "Failed to load user activity", _error)
-                            if (isHiddenOrForbiddenActivity(e)) {
-                                _myRecentActivity.value = emptyList()
-                            }
+                        feedback.error(e.message ?: "Failed to load user activity", _error)
+                        if (isHiddenOrForbiddenActivity(e)) {
+                            _myRecentActivity.value = emptyList()
                         }
                     }
             } catch (e: Exception) {
-                if (activityLoadGate.isCurrent(token)) {
-                    feedback.error(e.message ?: "Unknown error occurred", _error)
-                }
+                feedback.error(e.message ?: "Unknown error occurred", _error)
             } finally {
-                if (activityLoadGate.isCurrent(token)) {
-                    _isLoading.value = false
-                }
+                _isLoading.value = false
             }
         }
     }

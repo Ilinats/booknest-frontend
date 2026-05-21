@@ -9,7 +9,6 @@ import com.example.booknest.domain.usecase.profile.GetMyProfileUseCase
 import com.example.booknest.domain.usecase.profile.GetPublicUserProfileUseCase
 import com.example.booknest.domain.usecase.profile.GetUserProfileUseCase
 import com.example.booknest.presentation.common.UiState
-import com.example.booknest.viewmodel.common.RequestGate
 import com.example.booknest.viewmodel.common.UserFeedback
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,8 +23,6 @@ class ProfileViewModel(
     private val getPublicUserProfileUseCase: GetPublicUserProfileUseCase,
     profileRefreshBus: ProfileRefreshBus,
 ) : ViewModel() {
-
-    private val profileLoadGate = RequestGate()
 
     private val _myProfile = MutableStateFlow<UserProfileResponse?>(null)
     val myProfile: StateFlow<UserProfileResponse?> = _myProfile.asStateFlow()
@@ -65,65 +62,52 @@ class ProfileViewModel(
     }
 
     fun loadMyProfile() {
-        val token = profileLoadGate.nextToken()
-        _profileState.value = UiState.Loading
         viewModelScope.launch {
-            val sessionToken = sessionManager.getToken()
-            if (sessionToken.isEmpty()) {
+            val token = sessionManager.getToken()
+            if (token.isEmpty()) {
                 return@launch
             }
 
+            _profileState.value = UiState.Loading
             try {
                 _isLoading.value = true
                 _error.value = null
 
                 getMyProfileUseCase()
                     .onSuccess { profile ->
-                        if (!profileLoadGate.isCurrent(token)) return@onSuccess
                         onProfileLoaded(profile)
                     }
                     .onFailure { e ->
-                        if (!profileLoadGate.isCurrent(token)) return@onFailure
                         handleProfileError(e.message ?: "Failed to load profile")
                     }
             } catch (e: Exception) {
-                if (!profileLoadGate.isCurrent(token)) return@launch
                 handleProfileError(e.message ?: "Unknown error occurred")
             } finally {
-                if (profileLoadGate.isCurrent(token)) {
-                    _isLoading.value = false
-                }
+                _isLoading.value = false
             }
         }
     }
 
     fun loadUserProfile(username: String) {
-        val token = profileLoadGate.nextToken()
-        _profileState.value = UiState.Loading
-        _publicProfile.value = null
         viewModelScope.launch {
+            _profileState.value = UiState.Loading
             try {
                 _isLoading.value = true
                 _error.value = null
 
                 getUserProfileUseCase(username)
                     .onSuccess { publicProfile ->
-                        if (!profileLoadGate.isCurrent(token)) return@onSuccess
                         _publicProfile.value = publicProfile
                         val combinedProfile = publicProfile.toFullProfile()
                         _profileState.value = UiState.Success(combinedProfile)
                     }
                     .onFailure { e ->
-                        if (!profileLoadGate.isCurrent(token)) return@onFailure
                         handleProfileError(e.message ?: "Failed to load profile")
                     }
             } catch (e: Exception) {
-                if (!profileLoadGate.isCurrent(token)) return@launch
                 handleProfileError(e.message ?: "Unknown error occurred")
             } finally {
-                if (profileLoadGate.isCurrent(token)) {
-                    _isLoading.value = false
-                }
+                _isLoading.value = false
             }
         }
     }
