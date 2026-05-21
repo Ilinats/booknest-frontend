@@ -2,10 +2,8 @@ package com.example.booknest.data.service
 
 import com.example.booknest.data.constants.Applications
 import com.example.booknest.data.constants.PathConstants
-import com.example.booknest.domain.model.request.ApproveApplicationRequest
 import com.example.booknest.domain.model.request.BulkActionRequest
 import com.example.booknest.domain.model.request.CreateApplicationRequest
-import com.example.booknest.domain.model.request.RejectApplicationRequest
 import com.example.booknest.domain.model.request.UpdateApplicationRequest
 import com.example.booknest.domain.model.request.UpdateApplicationCompleteRequest
 import com.example.booknest.domain.model.request.UpdateReadingStatusRequest
@@ -21,6 +19,7 @@ import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.PATCH
 import retrofit2.http.PUT
+import com.example.booknest.data.constants.QueryConstants
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -30,8 +29,8 @@ interface ApplicationsService {
 
     @GET(Applications.MY_APPLICATIONS)
     suspend fun getMyApplications(
-        @Query("skip") skip: Int? = null,
-        @Query("take") take: Int? = null
+        @Query(QueryConstants.PAGE) page: Int? = null,
+        @Query(QueryConstants.LIMIT) limit: Int? = null,
     ): Response<PaginatedResponse<ApplicationResponse>>
 
     @GET(Applications.CHECK)
@@ -74,7 +73,9 @@ interface ApplicationsService {
 
     @GET(Applications.BOOK_APPLICATIONS)
     suspend fun getBookApplications(
-        @Path(PathConstants.BOOK_ID) bookId: String
+        @Path(PathConstants.BOOK_ID) bookId: String,
+        @Query(QueryConstants.PAGE) page: Int? = null,
+        @Query(QueryConstants.LIMIT) limit: Int? = null,
     ): Response<PaginatedResponse<ApplicationResponse>>
 
     @POST(Applications.BULK_ACTION)

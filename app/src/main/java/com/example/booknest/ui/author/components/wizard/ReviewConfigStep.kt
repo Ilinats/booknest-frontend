@@ -14,6 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.booknest.ui.author.components.bookedit.REVIEW_DEADLINE_MIN_OFFSET_MESSAGE
+import com.example.booknest.ui.author.components.bookedit.validateDeadlines
 import com.example.booknest.ui.author.components.common.DatePickerDialog
 import com.example.booknest.ui.author.components.common.SelectionMethod
 import java.text.SimpleDateFormat
@@ -98,12 +100,10 @@ fun ReviewConfigStep(
                     )
                 }
             } ?: {
-                if (applicationDeadline.isNullOrBlank()) {
-                    Text(
-                        "Application deadline is required",
-                        color = MaterialTheme.colorScheme.error
-                    )
-                } else null
+                Text(
+                    "Must be at least tomorrow",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         )
 
@@ -133,6 +133,11 @@ fun ReviewConfigStep(
                         color = MaterialTheme.colorScheme.error
                     )
                 }
+            } ?: {
+                Text(
+                    REVIEW_DEADLINE_MIN_OFFSET_MESSAGE,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         )
 
@@ -276,24 +281,3 @@ fun ReviewConfigStep(
     }
 }
 
-private fun validateDeadlines(applicationDeadline: String?, reviewDeadline: String?): Pair<String?, String?> {
-    val appError = if (applicationDeadline.isNullOrBlank()) {
-        "Application deadline is required"
-    } else null
-
-    val revError = if (!reviewDeadline.isNullOrBlank()) {
-        try {
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-            val appDate = dateFormat.parse(applicationDeadline!!)
-            val revDate = dateFormat.parse(reviewDeadline)
-            
-            if (appDate != null && revDate != null && revDate.before(appDate)) {
-                "Review deadline must be after application deadline"
-            } else null
-        } catch (e: Exception) {
-            "Invalid date format"
-        }
-    } else null
-
-    return Pair(appError, revError)
-}

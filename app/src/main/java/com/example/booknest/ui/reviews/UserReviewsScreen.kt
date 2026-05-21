@@ -8,13 +8,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.presentation.navigation.Screen
+import com.example.booknest.ui.components.AppScaffoldContentInsets
+import com.example.booknest.ui.components.AppTopBar
 import com.example.booknest.ui.components.BackButton
+import com.example.booknest.ui.components.authorListContentPadding
+import com.example.booknest.ui.components.paddingTopFromScaffold
 import com.example.booknest.viewmodel.analytics.ReviewViewModel
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
@@ -39,37 +42,27 @@ fun UserReviewsScreen(
     }
 
     Scaffold(
+        contentWindowInsets = AppScaffoldContentInsets,
         topBar = {
-            Box(
-                modifier = Modifier.shadow(elevation = 4.dp)
-            ) {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = "${userName ?: "User"}'s Reviews",
-                            fontWeight = FontWeight.Bold
-                        )
-                    },
-                    navigationIcon = {
-                        BackButton(onClick = { navController.popBackStack() })
-                    }
-                )
-            }
-        }
+            AppTopBar(
+                title = "${userName ?: "User"}'s Reviews",
+                navigationIcon = {
+                    BackButton(onClick = { navController.popBackStack() })
+                },
+            )
+        },
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .padding(bottom = 20.dp)
+                .background(MaterialTheme.colorScheme.background),
         ) {
             BackgroundDecoration(modifier = Modifier.fillMaxSize())
 
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(bottom = 16.dp)
+                    .paddingTopFromScaffold(paddingValues),
             ) {
                 when {
                     isLoading && userReviews.isEmpty() -> {
@@ -90,8 +83,8 @@ fun UserReviewsScreen(
                     else -> {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                            contentPadding = authorListContentPadding(),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
                             item {
                                 ReviewStats(reviews = userReviews)

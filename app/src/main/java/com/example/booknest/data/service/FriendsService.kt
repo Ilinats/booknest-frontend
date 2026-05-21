@@ -42,13 +42,11 @@ interface FriendsService {
     ): Response<Unit>
 
     @GET(Friends.LIST)
-    suspend fun getFriends(): Response<List<UserResponse>>
-
-    @GET(Friends.REQUESTS_SENT)
-    suspend fun getSentFriendRequests(): Response<List<UserResponse>>
-
-    @GET(Friends.REQUESTS_RECEIVED)
-    suspend fun getReceivedFriendRequests(): Response<List<UserResponse>>
+    suspend fun getFriends(
+        @Query(QueryConstants.STATUS) status: String? = "accepted",
+        @Query(QueryConstants.TYPE) type: String? = null,
+        @Query(QueryConstants.SORT_BY) sortBy: String? = null,
+    ): Response<List<UserResponse>>
 
     @GET(Friends.STATUS)
     suspend fun getFriendshipStatus(

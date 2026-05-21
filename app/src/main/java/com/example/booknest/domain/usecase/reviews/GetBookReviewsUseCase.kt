@@ -1,13 +1,13 @@
 package com.example.booknest.domain.usecase.reviews
 
 import com.example.booknest.domain.model.response.ReviewResponse
-import com.example.booknest.domain.repository.ReviewsRepository
+import com.example.booknest.domain.repository.BooksRepository
 
 class GetBookReviewsUseCase(
-    private val reviewsRepository: ReviewsRepository
+    private val booksRepository: BooksRepository,
 ) {
     suspend operator fun invoke(bookId: String): Result<List<ReviewResponse>> {
-        return reviewsRepository.getBookReviews(bookId)
+        return booksRepository.getBookAllReviews(bookId)
     }
 }
 
