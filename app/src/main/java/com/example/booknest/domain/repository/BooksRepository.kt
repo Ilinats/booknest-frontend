@@ -31,17 +31,17 @@ interface BooksRepository {
         createdTo: String? = null,
         minAvgRating: Double? = null,
         maxAvgRating: Double? = null,
-        skip: Int? = null,
-        take: Int? = null,
+        page: Int? = null,
+        limit: Int? = null,
         status: String? = null,
         applicationStatus: String? = null,
         deadlineFilter: String? = null,
         sortBy: String? = null
     ): Result<List<RecommendedBookResponse>>
 
-    suspend fun searchBooks(query: String, skip: Int? = null, take: Int? = null): Result<List<RecommendedBookResponse>>
-    suspend fun getRecommendedBooks(take: Int? = null): Result<List<RecommendedBookResponse>>
-    suspend fun getTrendingBooks(limit: Int? = null): Result<List<TrendingBookResponse>>
+    suspend fun searchBooks(query: String, page: Int? = null, limit: Int? = null): Result<List<RecommendedBookResponse>>
+    suspend fun getRecommendedBooks(limit: Int? = null, page: Int? = 1): Result<List<RecommendedBookResponse>>
+    suspend fun getTrendingBooks(limit: Int? = 10): Result<List<TrendingBookResponse>>
     suspend fun getBookDetails(bookId: String): Result<BookResponse>
     suspend fun createBook(book: CreateBookRequest, filePart: MultipartBody.Part? = null): Result<BookResponse>
     suspend fun getMyBooks(): Result<List<BookResponse>>
@@ -51,7 +51,7 @@ interface BooksRepository {
     suspend fun getBookStats(bookId: String): Result<BookStatsResponse>
     suspend fun getBookAnalytics(bookId: String): Result<DetailedBookAnalyticsResponse>
     suspend fun getDetailedBookAnalytics(bookId: String): Result<DetailedBookAnalyticsResponse>
-    suspend fun getBookAllReviews(bookId: String, skip: Int? = null, take: Int? = null): Result<List<ReviewResponse>>
+    suspend fun getBookAllReviews(bookId: String, page: Int? = null, limit: Int? = null): Result<List<ReviewResponse>>
     suspend fun getAuthorAnalytics(dateRange: String? = null): Result<AuthorAnalyticsResponse>
     suspend fun getBookPerformanceComparison(): Result<List<com.example.booknest.domain.model.response.BookPerformanceComparisonResponse>>
     suspend fun uploadBookFile(bookId: String, file: MultipartBody.Part): Result<UploadBookFileResponse>

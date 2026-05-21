@@ -15,7 +15,10 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import com.example.booknest.ui.components.AppScaffoldContentInsets
+import com.example.booknest.ui.components.AppTopBar
 import com.example.booknest.ui.components.BackButton
+import com.example.booknest.ui.components.paddingTopFromScaffold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,28 +70,15 @@ fun AuthorAnalyticsScreen(
     }
 
     Scaffold(
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        contentWindowInsets = AppScaffoldContentInsets,
         topBar = {
-            Surface(
-                shadowElevation = 4.dp,
-                tonalElevation = 2.dp,
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                TopAppBar(
-                    title = {
-                        Text(
-                            "Author Analytics",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                    },
-                    navigationIcon = {
-                        BackButton(onClick = { navController.popBackStack() })
-                    }
-                )
-            }
-        }
+            AppTopBar(
+                title = "Author Analytics",
+                navigationIcon = {
+                    BackButton(onClick = { navController.popBackStack() })
+                },
+            )
+        },
     ) { paddingValues ->
         val currentState = analyticsState
         when (currentState) {
@@ -96,7 +86,7 @@ fun AuthorAnalyticsScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(paddingValues),
+                        .paddingTopFromScaffold(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()
@@ -107,7 +97,7 @@ fun AuthorAnalyticsScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(paddingValues),
+                        .paddingTopFromScaffold(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(
@@ -142,7 +132,7 @@ fun AuthorAnalyticsScreen(
                     selectedDateRange = selectedDateRange,
                     onDateRangeChange = { selectedDateRange = it },
                     navController = navController,
-                    modifier = Modifier.padding(paddingValues)
+                    modifier = Modifier.paddingTopFromScaffold(paddingValues)
                 )
             }
 

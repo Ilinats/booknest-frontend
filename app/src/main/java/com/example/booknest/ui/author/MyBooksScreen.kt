@@ -34,15 +34,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.presentation.navigation.Screen
-import com.example.booknest.navigation.AuthorBottomBarScreen
+import com.example.booknest.ui.components.AppTopBar
 import com.example.booknest.ui.components.BackgroundDecoration
+import com.example.booknest.ui.components.paddingTopFromScaffold
 import com.example.booknest.ui.author.components.books.EnhancedBookCard
 import com.example.booknest.ui.author.components.books.StatusChip
 import com.example.booknest.ui.author.components.books.EmptyBooksState
 import com.example.booknest.ui.author.components.books.BookStatusInfoCard
+import com.example.booknest.navigation.rememberAuthorBooksViewModel
 import com.example.booknest.viewmodel.author.AuthorBooksViewModel
 import com.example.booknest.viewmodel.author.BookSortOption
 import org.koin.androidx.compose.getViewModel
@@ -54,7 +55,7 @@ import org.koin.compose.koinInject
 fun MyBooksScreen(
     navController: NavController,
     sessionManager: SessionManager = koinInject(),
-    authorBooksViewModel: AuthorBooksViewModel = getViewModel()
+    authorBooksViewModel: AuthorBooksViewModel = rememberAuthorBooksViewModel(navController)
 ) {
     val filteredBooks by authorBooksViewModel.filteredBooks.collectAsState()
     val tabCounts by authorBooksViewModel.tabCounts.collectAsState()
@@ -67,46 +68,28 @@ fun MyBooksScreen(
     var showSortMenu by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf<String?>(null) }
 
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
-
-    LaunchedEffect(currentRoute) {
-        if (currentRoute == AuthorBottomBarScreen.MyBooks.route) {
-            authorBooksViewModel.loadMyBooks()
-        }
+    LaunchedEffect(Unit) {
+        authorBooksViewModel.loadMyBooks()
     }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButtonPosition = FabPosition.EndOverlay,
         topBar = {
-            Surface(
-                shadowElevation = 4.dp,
-                tonalElevation = 2.dp,
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                TopAppBar(
-                    title = {
-                        Text(
-                            "My Books",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 24.sp,
-                            color = MaterialTheme.colorScheme.onBackground
+            AppTopBar(
+                title = "My Books",
+                actions = {
+                    IconButton(
+                        onClick = { navController.navigate(Screen.BookCreation.route) }
+                    ) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Create New Book",
+                            tint = MaterialTheme.colorScheme.primary
                         )
-                    },
-                    actions = {
-                        IconButton(
-                            onClick = { navController.navigate(Screen.BookCreation.route) }
-                        ) {
-                            Icon(
-                                Icons.Default.Add,
-                                contentDescription = "Create New Book",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
                     }
-                )
-            }
+                },
+            )
         },
         floatingActionButton = {
             FloatingActionButton(
@@ -127,7 +110,7 @@ fun MyBooksScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
+                    .paddingTopFromScaffold(paddingValues)
             ) {
                 OutlinedTextField(
                     value = searchQuery,
@@ -236,12 +219,6 @@ fun MyBooksScreen(
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             CircularProgressIndicator()
                         }
-                    } else if (filteredBooks.isEmpty()) {
-                        EmptyBooksState(
-                            modifier = Modifier.fillMaxSize(),
-                            onCreateBook = { navController.navigate(Screen.BookCreation.route) },
-                            hasSearchQuery = searchQuery.isNotEmpty()
-                        )
                     } else {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
@@ -249,9 +226,22 @@ fun MyBooksScreen(
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             if (selectedTab == 0) {
-                                item { BookStatusInfoCard() }
+                                item {
+                                    BookStatusInfoCard()
+                                }
                             }
-                            items(filteredBooks) { book ->
+                            if (filteredBooks.isEmpty()) {
+                                item {
+                                    EmptyBooksState(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 32.dp),
+                                        onCreateBook = { navController.navigate(Screen.BookCreation.route) },
+                                        hasSearchQuery = searchQuery.isNotEmpty()
+                                    )
+                                }
+                            } else {
+                                items(filteredBooks) { book ->
                                 EnhancedBookCard(
                                     book = book,
                                     stats = bookStats[book.id],
@@ -266,6 +256,7 @@ fun MyBooksScreen(
                                         navController.navigate(Screen.BookApplicationDetail.createRoute(book.id))
                                     }
                                 )
+                                }
                             }
                         }
                     }

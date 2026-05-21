@@ -36,6 +36,10 @@ class BNAuthRepository(
         return authDataSource.logout(refreshToken)
     }
 
+    override suspend fun logoutAll(): Result<Unit> {
+        return authDataSource.logoutAll()
+    }
+
     override suspend fun verifyEmail(code: String): Result<UserResponse> {
         return resultBody(authDataSource.verifyEmail(code))
     }

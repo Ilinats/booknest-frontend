@@ -15,10 +15,6 @@ class BNGenresRepository(private val genresDataSource: GenresDataSource) : Genre
         return resultBody(genresDataSource.getGenres())
     }
 
-    override suspend fun addGenre(genre: CreateGenreRequest): Result<GenreResponse> {
-        return resultBody(genresDataSource.addGenre(genre))
-    }
-
     override suspend fun getGenrePreferences(): Result<List<GenrePreferenceResponse>> {
         return resultBody(genresDataSource.getGenrePreferences())
     }

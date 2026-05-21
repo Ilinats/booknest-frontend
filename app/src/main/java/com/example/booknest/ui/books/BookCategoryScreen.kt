@@ -24,22 +24,28 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.booknest.ui.books.components.list.BookItem
 import com.example.booknest.ui.components.BackButton
+import com.example.booknest.data.session.SessionManager
 import com.example.booknest.viewmodel.author.AuthorFollowViewModel
 import com.example.booknest.viewmodel.books.BookViewModel
 import org.koin.androidx.compose.getViewModel
+import org.koin.compose.koinInject
 
 @Composable
 fun BookCategoryScreen(
     navController: NavController,
     category: String,
     bookViewModel: BookViewModel = getViewModel(),
-    authorFollowViewModel: AuthorFollowViewModel = getViewModel()
+    authorFollowViewModel: AuthorFollowViewModel = getViewModel(),
+    sessionManager: SessionManager = koinInject(),
 ) {
+    val isLoggedIn by sessionManager.isLoggedIn.collectAsState()
     val recommendedBooks by bookViewModel.recommendedBooks.collectAsState()
     val newReleases by bookViewModel.newReleases.collectAsState()
     val trendingBooks by bookViewModel.trendingBooks.collectAsState()
     val booksFromFollowedAuthors by authorFollowViewModel.booksFromFollowedAuthors.collectAsState()
-    val isLoading by bookViewModel.isLoading.collectAsState()
+    val recommendedLoading by bookViewModel.recommendedLoading.collectAsState()
+    val newReleasesLoading by bookViewModel.newReleasesLoading.collectAsState()
+    val trendingLoading by bookViewModel.trendingLoading.collectAsState()
     val followedAuthorsLoading by authorFollowViewModel.isLoading.collectAsState()
 
     val screenTitle = when (category) {
@@ -59,15 +65,20 @@ fun BookCategoryScreen(
     }
 
     val currentIsLoading = when (category) {
+        "recommended" -> recommendedLoading
+        "new_releases" -> newReleasesLoading
+        "trending" -> trendingLoading
         "followed_authors" -> followedAuthorsLoading
-        else -> isLoading
+        else -> false
     }
 
-    LaunchedEffect(category) {
+    LaunchedEffect(category, isLoggedIn) {
         when (category) {
-            "recommended" -> bookViewModel.getRecommendedBooks()
+            "recommended" -> if (isLoggedIn == true) bookViewModel.getRecommendedBooks()
             "new_releases" -> bookViewModel.getNewReleases()
-            "followed_authors" -> authorFollowViewModel.loadBooksFromFollowedAuthors()
+            "followed_authors" -> if (isLoggedIn == true) {
+                authorFollowViewModel.loadBooksFromFollowedAuthors()
+            }
             "trending" -> bookViewModel.getTrendingBooks()
         }
     }
