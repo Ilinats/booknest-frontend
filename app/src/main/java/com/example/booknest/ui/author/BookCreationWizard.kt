@@ -24,7 +24,11 @@ import com.example.booknest.port.ToastNotifier
 import com.example.booknest.ui.author.components.wizard.*
 import com.example.booknest.ui.author.components.common.*
 import com.example.booknest.ui.components.BackButton
+import com.example.booknest.ui.components.appListContentPadding
+import com.example.booknest.navigation.rememberAuthorBooksViewModel
 import com.example.booknest.viewmodel.author.AuthorBooksViewModel
+import com.example.booknest.ui.author.components.bookedit.validateDeadlines
+import com.example.booknest.ui.author.components.bookedit.reviewDeadlineSelectableDates
 import com.example.booknest.viewmodel.author.AuthorSeriesViewModel
 import com.example.booknest.presentation.common.UiState
 import kotlinx.coroutines.launch
@@ -43,7 +47,7 @@ fun BookCreationWizard(
     sessionManager: SessionManager = koinInject(),
     genresRepository: GenresRepository = koinInject(),
     toastNotifier: ToastNotifier = koinInject(),
-    authorBooksViewModel: AuthorBooksViewModel = getViewModel(),
+    authorBooksViewModel: AuthorBooksViewModel = rememberAuthorBooksViewModel(navController),
     authorSeriesViewModel: AuthorSeriesViewModel = getViewModel()
 ) {
     var currentStep by remember { mutableStateOf(1) }
@@ -81,15 +85,18 @@ fun BookCreationWizard(
         },
         initialDisplayedMonthMillis = tomorrowMillis
     )
-    val reviewDatePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = reviewDeadline?.let {
-            try {
-                SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(it)?.time
-            } catch (e: Exception) {
-                null
-            }
-        }
-    )
+    val reviewDatePickerState = key(applicationDeadline) {
+        rememberDatePickerState(
+            initialSelectedDateMillis = reviewDeadline?.let {
+                try {
+                    SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(it)?.time
+                } catch (e: Exception) {
+                    null
+                }
+            },
+            selectableDates = reviewDeadlineSelectableDates(applicationDeadline)
+        )
+    }
     var selectedSelectionMethod by remember { mutableStateOf<SelectionMethod?>(null) }
     var selectionCriteria by remember { mutableStateOf("") }
     var selectedGenres by remember { mutableStateOf<List<Int>>(emptyList()) }
@@ -126,6 +133,12 @@ fun BookCreationWizard(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    LaunchedEffect(applicationDeadline, reviewDeadline) {
+        val (appErr, revErr) = validateDeadlines(applicationDeadline, reviewDeadline)
+        applicationDeadlineError = appErr
+        reviewDeadlineError = revErr
+    }
+
     LaunchedEffect(Unit) {
         authorSeriesViewModel.loadMySeries()
         try {
@@ -145,6 +158,7 @@ fun BookCreationWizard(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
                 title = {
@@ -163,12 +177,7 @@ fun BookCreationWizard(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
-            contentPadding = PaddingValues(
-                start = 16.dp,
-                top = 16.dp,
-                end = 16.dp,
-                bottom = 16.dp
-            ),
+            contentPadding = appListContentPadding(),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
@@ -354,6 +363,7 @@ fun BookCreationWizard(
                     bookFileUri = bookFileUri,
                     titleError = titleError,
                     applicationDeadlineError = applicationDeadlineError,
+                    reviewDeadlineError = reviewDeadlineError,
                     isCreating = isCreating,
                     isUploadingFile = isUploadingFile,
                     coverImageUrl = coverImageUrl,
@@ -552,9 +562,14 @@ fun BookCreationWizard(
                     Button(
                         onClick = {
                             showPublishDialog = false
-                            authorBooksViewModel.publishBook(createdBookId!!)
-                            authorBooksViewModel.clearBookCreationState()
-                            navController.popBackStack()
+                            val bookId = createdBookId!!
+                            authorBooksViewModel.publishBook(
+                                bookId = bookId,
+                                onSuccess = {
+                                    authorBooksViewModel.clearBookCreationState()
+                                    navController.popBackStack()
+                                }
+                            )
                         },
                         modifier = Modifier.weight(1f)
                     ) {
@@ -575,28 +590,3 @@ fun BookCreationWizard(
     }
 }
 
-private fun validateDeadlines(
-    applicationDeadline: String?,
-    reviewDeadline: String?
-): Pair<String?, String?> {
-    val appError = if (applicationDeadline.isNullOrBlank()) {
-        "Application deadline is required"
-    } else null
-
-    val revError = if (!reviewDeadline.isNullOrBlank()) {
-        try {
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-            val appDate = dateFormat.parse(applicationDeadline!!)
-            val revDate = dateFormat.parse(reviewDeadline)
-
-            if (appDate != null && revDate != null && revDate.before(appDate)) {
-                "Review deadline must be after application deadline"
-            } else null
-        } catch (e: Exception) {
-            "Invalid date format"
-        }
-    } else {
-        null
-    }
-    return Pair(appError, revError)
-}

@@ -29,8 +29,10 @@ fun AuthorStatsGrid(
 ) {
     val statItems = listOf(
         StatItem("Total Books", (stats.totalBooks ?: 0).toString(), Icons.Default.Menu),
-        StatItem("Published Books", (stats.publishedBooks ?: 0).toString(), Icons.Default.Check),
+        StatItem("Active Books", (stats.publishedBooks ?: 0).toString(), Icons.Default.Check),
         StatItem("Draft Books", (stats.draftBooks ?: 0).toString(), Icons.Default.Edit),
+        StatItem("In Progress", (stats.inProgressBooks ?: 0).toString(), Icons.Default.DateRange),
+        StatItem("Completed", (stats.completedBooks ?: 0).toString(), Icons.Default.CheckCircle),
         StatItem("Total Applications", stats.totalApplications.toString(), Icons.Default.DateRange),
         StatItem(
             "Approved Applications",
@@ -48,7 +50,7 @@ fun AuthorStatsGrid(
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
-        modifier = Modifier.height(400.dp),
+        modifier = Modifier.height(520.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {

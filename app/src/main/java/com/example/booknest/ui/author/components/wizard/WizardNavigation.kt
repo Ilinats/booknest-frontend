@@ -27,6 +27,7 @@ fun WizardNavigation(
     bookFileUri: android.net.Uri?,
     titleError: String?,
     applicationDeadlineError: String?,
+    reviewDeadlineError: String?,
     isCreating: Boolean,
     isUploadingFile: Boolean,
     coverImageUrl: String?,
@@ -86,7 +87,8 @@ fun WizardNavigation(
                     bookFileUri,
                     selectedDistributionType,
                     titleError,
-                    applicationDeadlineError
+                    applicationDeadlineError,
+                    reviewDeadlineError
                 ),
                 modifier = Modifier
                     .weight(1f)
@@ -125,7 +127,8 @@ fun WizardNavigation(
                     bookFileUri,
                     selectedDistributionType,
                     titleError,
-                    applicationDeadlineError
+                    applicationDeadlineError,
+                    reviewDeadlineError
                 ),
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = MaterialTheme.colorScheme.onSurface
@@ -154,7 +157,8 @@ fun WizardNavigation(
                     bookFileUri,
                     selectedDistributionType,
                     titleError,
-                    applicationDeadlineError
+                    applicationDeadlineError,
+                    reviewDeadlineError
                 ),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary
@@ -189,13 +193,16 @@ private fun isStepValid(
     bookFileUri: android.net.Uri?,
     currentDistributionType: DistributionType?,
     titleError: String? = null,
-    applicationDeadlineError: String? = null
+    applicationDeadlineError: String? = null,
+    reviewDeadlineError: String? = null
 ): Boolean {
     return when (step) {
         1 -> title.isNotBlank() && titleError == null
         2 -> true
         3 -> ageRating != null && distributionType != null
-        4 -> applicationDeadline != null && applicationDeadlineError == null
+        4 -> applicationDeadline != null &&
+            applicationDeadlineError == null &&
+            reviewDeadlineError == null
         5 -> {
             val requiresFile = currentDistributionType == DistributionType.DIGITAL ||
                     currentDistributionType == DistributionType.BOTH
@@ -205,7 +212,9 @@ private fun isStepValid(
                 true
             }
         }
-        6 -> true
+        6 -> applicationDeadline != null &&
+            applicationDeadlineError == null &&
+            reviewDeadlineError == null
         else -> false
     }
 }

@@ -16,6 +16,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.zIndex
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -110,9 +113,19 @@ class MainActivity : ComponentActivity() {
 
                 val networkMonitor: NetworkConnectivityMonitor = koinInject()
                 val isOnline by networkMonitor.isOnline.collectAsStateWithLifecycle()
-                DisposableEffect(networkMonitor) {
+                val lifecycleOwner = LocalLifecycleOwner.current
+                DisposableEffect(lifecycleOwner, networkMonitor) {
                     networkMonitor.start()
-                    onDispose { networkMonitor.stop() }
+                    val observer = LifecycleEventObserver { _, event ->
+                        if (event == Lifecycle.Event.ON_RESUME) {
+                            networkMonitor.refresh()
+                        }
+                    }
+                    lifecycleOwner.lifecycle.addObserver(observer)
+                    onDispose {
+                        lifecycleOwner.lifecycle.removeObserver(observer)
+                        networkMonitor.stop()
+                    }
                 }
 
                 DisposableEffect(navController) {

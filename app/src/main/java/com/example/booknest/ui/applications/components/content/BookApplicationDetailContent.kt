@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -33,8 +34,14 @@ import com.example.booknest.ui.applications.components.statistics.StatisticsTabC
 import com.example.booknest.ui.applications.dialogs.RunLotteryDialog
 import com.example.booknest.ui.applications.models.ApplicationStats
 import com.example.booknest.ui.applications.models.SortOption
+import com.example.booknest.ui.components.AppScaffoldContentInsets
+import com.example.booknest.ui.components.AppTopBar
 import com.example.booknest.ui.components.BackButton
+import com.example.booknest.ui.components.paddingTopFromScaffold
+import com.example.booknest.navigation.rememberAuthorBooksViewModel
+import com.example.booknest.ui.author.components.LeakFingerprintDecodeSection
 import com.example.booknest.viewmodel.applications.BookApplicationViewModel
+import com.example.booknest.viewmodel.author.AuthorBooksViewModel
 import com.example.booknest.viewmodel.books.BookViewModel
 import com.example.booknest.viewmodel.analytics.ReviewViewModel
 import org.koin.androidx.compose.getViewModel
@@ -52,9 +59,12 @@ fun BookApplicationDetailContent(
     bookId: String,
     bookApplicationViewModel: BookApplicationViewModel = getViewModel(),
     bookViewModel: BookViewModel = getViewModel(),
-    reviewViewModel: ReviewViewModel = getViewModel()
+    reviewViewModel: ReviewViewModel = getViewModel(),
+    authorBooksViewModel: AuthorBooksViewModel = rememberAuthorBooksViewModel(navController),
 ) {
+    val context = LocalContext.current
     val bookApplications by bookApplicationViewModel.bookApplications.collectAsState()
+    val leakFingerprintState by authorBooksViewModel.leakFingerprintState.collectAsState()
     val isLoading by bookApplicationViewModel.isLoading.collectAsState()
     val bookDetails by bookViewModel.bookDetails.collectAsState()
     val bookReviews by reviewViewModel.bookReviews.collectAsState()
@@ -64,6 +74,11 @@ fun BookApplicationDetailContent(
     val tabs = listOf("All", "Pending", "Approved", "Rejected", "Reviews", "Statistics")
 
     val book = bookDetails ?: bookApplications.firstOrNull()?.book
+
+    val showLeakFingerprintTool = book?.let { b ->
+        !b.fileUrl.isNullOrBlank() &&
+            b.distributionType?.lowercase() != "physical"
+    } == true
 
     val isLotteryBook = book?.selectionMethod?.let { method ->
         method.lowercase().trim() == "lottery" || method.lowercase().trim() == "random_selection"
@@ -94,6 +109,7 @@ fun BookApplicationDetailContent(
         bookApplicationViewModel.loadBookApplications(bookId)
         reviewViewModel.loadBookReviews(bookId)
         bookApplicationViewModel.loadOverdueReviews()
+        authorBooksViewModel.clearLeakFingerprintState()
     }
 
     LaunchedEffect(selectedTab) {
@@ -180,62 +196,41 @@ fun BookApplicationDetailContent(
     val approvedCount = applicationStats.approved
 
     Scaffold(
+        contentWindowInsets = AppScaffoldContentInsets,
         topBar = {
-            Surface(
-                shadowElevation = 4.dp,
-                tonalElevation = 2.dp,
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                TopAppBar(
-                    title = {
-                        Column {
-                            Text(
-                                book?.title ?: "Book Details",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 20.sp,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                "Status: ${
-                                    book?.status?.lowercase()
-                                        ?.replaceFirstChar { it.uppercase() } ?: "Unknown"
-                                }",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+            AppTopBar(
+                title = book?.title ?: "Book Details",
+                subtitle = "Status: ${
+                    book?.status?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "Unknown"
+                }",
+                navigationIcon = {
+                    BackButton(onClick = { navController.popBackStack() })
+                },
+                actions = {
+                    IconButton(onClick = {
+                        book?.id?.let {
+                            navController.navigate(Screen.BookEdit.createRoute(it))
                         }
-                    },
-                    navigationIcon = {
-                        BackButton(onClick = { navController.popBackStack() })
-                    },
-                    actions = {
-                        IconButton(onClick = {
-                            book?.id?.let {
-                                navController.navigate(Screen.BookEdit.createRoute(it))
-                            }
-                        }) {
-                            Icon(Icons.Filled.Edit, contentDescription = "Edit Book")
-                        }
-                        IconButton(onClick = { }) {
-                            Icon(Icons.Filled.Share, contentDescription = "Share")
-                        }
-                        IconButton(onClick = {
-                            bookId.let {
-                                navController.navigate(Screen.BookAnalytics.createRoute(it))
-                            }
-                        }) {
-                            Icon(Icons.Filled.Info, contentDescription = "Analytics")
-                        }
+                    }) {
+                        Icon(Icons.Filled.Edit, contentDescription = "Edit Book")
                     }
-                )
-            }
-        }
+                    IconButton(onClick = { }) {
+                        Icon(Icons.Filled.Share, contentDescription = "Share")
+                    }
+                    IconButton(onClick = {
+                        navController.navigate(Screen.BookAnalytics.createRoute(bookId))
+                    }) {
+                        Icon(Icons.Filled.Info, contentDescription = "Analytics")
+                    }
+                },
+            )
+        },
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(bottom = 16.dp),
+                .paddingTopFromScaffold(paddingValues),
+            contentPadding = PaddingValues(bottom = 0.dp),
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
             item {
@@ -248,6 +243,23 @@ fun BookApplicationDetailContent(
 
             item {
                 ApplicationStatsSection(stats = applicationStats)
+            }
+
+            if (showLeakFingerprintTool) {
+                item {
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+                item {
+                    LeakFingerprintDecodeSection(
+                        leakFingerprintState = leakFingerprintState,
+                        bookApplications = applicationsWithReviews,
+                        onFileChosen = { uri ->
+                            authorBooksViewModel.decodeLeakFingerprint(bookId, uri, context)
+                        },
+                        onDismissResult = { authorBooksViewModel.clearLeakFingerprintState() },
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
+                }
             }
 
             if (overdueReviews.isNotEmpty()) {

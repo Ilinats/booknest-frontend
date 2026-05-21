@@ -44,7 +44,7 @@ val networkModule = module {
             .addInterceptor(TokenInterceptor(get<AuthTokenAccessor>()))
             .authenticator(TokenAuthenticator(get<RefreshTokenUseCase>(), get<SessionWriter>()))
             .connectTimeout(RetrofitConstants.TIME, TimeUnit.SECONDS)
-            .readTimeout(RetrofitConstants.TIME, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
             .writeTimeout(RetrofitConstants.TIME, TimeUnit.SECONDS)
             .build()
     }
@@ -61,6 +61,7 @@ val networkModule = module {
             ignoreUnknownKeys = true
             explicitNulls = false
             coerceInputValues = true
+            isLenient = true
         }
 
         val okHttpClient = get<OkHttpClient>()

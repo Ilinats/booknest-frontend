@@ -12,7 +12,7 @@ import com.example.booknest.ui.components.stats.StatCard
 @Composable
 fun EnhancedPublicAuthorStatsGrid(stats: UserStatsDataResponse, followerCount: Int? = null) {
     val statItems = buildList {
-        add("Published Books" to (stats.publishedBooks ?: 0))
+        add("Active Books" to (stats.publishedBooks ?: 0))
         add("Total Reviews" to (stats.totalReviews ?: 0))
         add("Average Rating" to (stats.averageRating ?: 0.0))
         followerCount?.let { count ->

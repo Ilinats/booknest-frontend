@@ -2,6 +2,7 @@ package com.example.booknest.ui.toast
 
 import com.example.booknest.data.datasource.extractErrorMessage
 import com.example.booknest.data.error.BNError
+import com.example.booknest.data.error.shouldShowErrorToast
 import com.example.booknest.port.DownloadNotifier
 import com.example.booknest.port.SessionReader
 import com.example.booknest.port.ToastNotifier
@@ -51,6 +52,7 @@ class AppToastNotifier(
     }
 
     override fun showError(message: String) {
+        if (!shouldShowErrorToast(message = message)) return
         if (shouldSuppressStaleAuthToast(message)) return
         scope.launch {
             _messages.emit(ToastMessage(message, ToastType.ERROR))
@@ -58,6 +60,7 @@ class AppToastNotifier(
     }
 
     override fun showError(exception: Throwable) {
+        if (!shouldShowErrorToast(throwable = exception)) return
         scope.launch {
             val message = when (exception) {
                 is BNError.Generic -> {

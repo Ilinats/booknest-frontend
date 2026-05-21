@@ -69,6 +69,25 @@ class SessionManager(
         android.util.Log.d("SessionManager", "logout() completed, isLoggedIn=${_isLoggedIn.value}")
     }
 
+    override suspend fun logoutAll(authRepository: AuthRepository?) {
+        android.util.Log.d("SessionManager", "logoutAll() called")
+
+        if (authRepository != null && currentToken.isNotEmpty()) {
+            try {
+                authRepository.logoutAll()
+                android.util.Log.d("SessionManager", "Backend logout-all successful")
+            } catch (e: Exception) {
+                android.util.Log.e("SessionManager", "Backend logout-all failed: ${e.message}", e)
+            }
+        }
+
+        setAuthEntities("", "", "", "", "", "")
+        _isLoggedIn.emit(false)
+        _currentUser.emit(null)
+
+        android.util.Log.d("SessionManager", "logoutAll() completed, isLoggedIn=${_isLoggedIn.value}")
+    }
+
     override suspend fun setLoggedIn() {
         _isLoggedIn.value = true
     }

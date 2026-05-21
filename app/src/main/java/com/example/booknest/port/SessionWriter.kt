@@ -8,6 +8,7 @@ import com.example.booknest.domain.repository.AuthRepository
  */
 interface SessionWriter {
     suspend fun logout(authRepository: AuthRepository? = null)
+    suspend fun logoutAll(authRepository: AuthRepository? = null)
     suspend fun setLoggedIn()
     suspend fun setAuthEntities(
         token: String,

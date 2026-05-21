@@ -31,7 +31,7 @@ import androidx.compose.foundation.background
 import coil.compose.AsyncImage
 import com.example.booknest.domain.model.response.ApplicationResponse
 import com.example.booknest.presentation.navigation.Screen
-import com.example.booknest.ui.myapplications.components.common.StatusBadge
+import com.example.booknest.ui.myapplications.components.common.ApplicationStatusBadge
 import com.example.booknest.ui.myapplications.utils.formatDate
 import androidx.navigation.NavController
 import com.example.booknest.viewmodel.applications.ApplicationViewModel
@@ -121,7 +121,7 @@ fun ApplicationCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                StatusBadge(status = application.status)
+                ApplicationStatusBadge(application = application)
             }
         }
     }
