@@ -62,6 +62,7 @@ data class RecommendedBookResponse(
     val author: BookAuthorResponse? = null,
     val coverImageUrl: String? = null,
     val rating: Double? = null,
+    val seriesId: String? = null,
     val seriesName: String? = null,
     val seriesOrder: Int? = null,
     val publishedAt: String? = null,
@@ -109,6 +110,7 @@ data class BookStatsResponse(
     @SerialName("totalApplicants")
     val totalApplicants: Int? = null,
     val approvedReaders: Int,
+    val pendingApplications: Int? = null,
     val reviewsSubmitted: Int? = null,
     val averageRating: Double? = null,
     val readingProgress: Map<String, Int>? = null
@@ -168,7 +170,11 @@ data class BookLeakFingerprintResponse(
     val readerId: String,
     val bookId: String,
     val issuedAt: Long,
-    val format: String
+    val format: String,
+    val readerUsername: String? = null,
+    val readerFirstName: String? = null,
+    val readerLastName: String? = null,
+    val readerEmail: String? = null,
 )
 
 @Serializable

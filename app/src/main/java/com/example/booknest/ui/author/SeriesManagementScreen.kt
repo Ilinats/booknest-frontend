@@ -25,7 +25,10 @@ import coil.compose.AsyncImage
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.model.response.BookResponse
 import com.example.booknest.presentation.navigation.Screen
+import com.example.booknest.ui.components.AppScaffoldContentInsets
+import com.example.booknest.ui.components.AppTopBar
 import com.example.booknest.ui.components.BackButton
+import com.example.booknest.ui.components.paddingTopFromScaffold
 import com.example.booknest.viewmodel.books.BookViewModel
 import com.example.booknest.viewmodel.series.SeriesViewModel
 import com.example.booknest.ui.author.components.series.CreateSeriesDialog
@@ -70,7 +73,8 @@ fun SeriesManagementScreen(
             bookViewModel.ensureSeriesBooksLoaded(
                 seriesId = seriesItem.id,
                 forceRefresh = false,
-                treatFailureAsEmptyCatalog = true
+                treatFailureAsEmptyCatalog = true,
+                status = null,
             )
         }
     }
@@ -80,43 +84,31 @@ fun SeriesManagementScreen(
             bookViewModel.ensureSeriesBooksLoaded(
                 seriesId = seriesId,
                 forceRefresh = false,
-                treatFailureAsEmptyCatalog = true
+                treatFailureAsEmptyCatalog = true,
+                status = null,
             )
         }
     }
 
     Scaffold(
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        contentWindowInsets = AppScaffoldContentInsets,
         topBar = {
-            Surface(
-                shadowElevation = 4.dp,
-                tonalElevation = 2.dp,
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                TopAppBar(
-                    title = {
-                        Text(
-                            "Series Management",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp,
-                            color = MaterialTheme.colorScheme.onBackground
+            AppTopBar(
+                title = "Series Management",
+                navigationIcon = {
+                    BackButton(onClick = { navController.popBackStack() })
+                },
+                actions = {
+                    IconButton(onClick = { showCreateDialog = true }) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Add Series",
+                            tint = MaterialTheme.colorScheme.primary,
                         )
-                    },
-                    navigationIcon = {
-                        BackButton(onClick = { navController.popBackStack() })
-                    },
-                    actions = {
-                        IconButton(onClick = { showCreateDialog = true }) {
-                            Icon(
-                                Icons.Default.Add,
-                                contentDescription = "Add Series",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
                     }
-                )
-            }
-        }
+                },
+            )
+        },
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -129,7 +121,7 @@ fun SeriesManagementScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(paddingValues),
+                        .paddingTopFromScaffold(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()
@@ -138,7 +130,7 @@ fun SeriesManagementScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(paddingValues),
+                        .paddingTopFromScaffold(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(
@@ -170,7 +162,7 @@ fun SeriesManagementScreen(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(paddingValues),
+                        .paddingTopFromScaffold(paddingValues),
                     contentPadding = PaddingValues(
                         start = 16.dp,
                         end = 16.dp,

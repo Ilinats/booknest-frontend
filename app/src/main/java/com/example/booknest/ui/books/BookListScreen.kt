@@ -44,7 +44,10 @@ import com.example.booknest.ui.books.components.browse.BookListSearchHeader
 import com.example.booknest.ui.books.components.browse.bookListActiveFilterLabels
 import com.example.booknest.ui.books.components.list.BookItem
 import com.example.booknest.viewmodel.books.BookViewModel
+import com.example.booknest.ui.components.AppScaffoldContentInsets
+import com.example.booknest.ui.components.AppTopBar
 import com.example.booknest.ui.components.BackgroundDecoration
+import com.example.booknest.ui.components.paddingTopFromScaffold
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
 
@@ -105,32 +108,25 @@ fun BookListScreen(
     val listTopPadding = if (category == null) 16.dp else 8.dp
 
     Scaffold(
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        contentWindowInsets = AppScaffoldContentInsets,
         topBar = {
             if (category != null) {
-                TopAppBar(
-                    title = {
-                        Text(
-                            screenTitle,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                    },
+                AppTopBar(
+                    title = screenTitle,
                     actions = {
                         if (showFiltersForBrowse) {
                             IconButton(onClick = { bookViewModel.setBookListShowFilters(!browseUi.showFilters) }) {
                                 Icon(
                                     Icons.Filled.FilterList,
                                     contentDescription = stringResource(R.string.cd_book_list_filters),
-                                    tint = if (browseUi.showFilters) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    tint = if (browseUi.showFilters) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                                 )
                             }
                         }
-                    }
+                    },
                 )
             }
-        }
+        },
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -143,7 +139,7 @@ fun BookListScreen(
                 state = listState,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
+                    .paddingTopFromScaffold(paddingValues)
                     .padding(horizontal = 16.dp),
                 contentPadding = PaddingValues(top = listTopPadding, bottom = listBottomPadding),
                 verticalArrangement = Arrangement.spacedBy(12.dp),

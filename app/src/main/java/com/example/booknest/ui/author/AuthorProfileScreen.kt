@@ -28,10 +28,15 @@ import com.example.booknest.ui.theme.SkyBluePeriwinkle
 import androidx.navigation.NavController
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.ui.author.components.profile.AuthorProfileHeader
+import com.example.booknest.ui.components.AppScaffoldContentInsets
+import com.example.booknest.ui.components.AppTopBar
+import com.example.booknest.ui.components.paddingTopFromScaffold
 import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.ui.author.components.profile.AuthorStatisticsSection
 import com.example.booknest.ui.author.components.AuthorProfileMyBooksSection
+import com.example.booknest.navigation.rememberAuthorBooksViewModel
 import com.example.booknest.viewmodel.author.AuthorBooksViewModel
+import com.example.booknest.viewmodel.author.withBookStatusCountsFrom
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
 import com.example.booknest.viewmodel.profile.ProfileViewModel
@@ -42,7 +47,7 @@ fun AuthorProfileScreen(
     navController: NavController,
     sessionManager: SessionManager = koinInject(),
     profileViewModel: ProfileViewModel = getViewModel(),
-    authorBooksViewModel: AuthorBooksViewModel = getViewModel()
+    authorBooksViewModel: AuthorBooksViewModel = rememberAuthorBooksViewModel(navController)
 ) {
     val currentUser by sessionManager.currentUser.collectAsState()
     val myProfile by profileViewModel.myProfile.collectAsState()
@@ -61,40 +66,30 @@ fun AuthorProfileScreen(
     } ?: myProfile?.username ?: currentUser?.username ?: "Author"
     val authorBio = myProfile?.bio ?: "No bio available"
     val joinYear = myProfile?.createdAt?.take(4) ?: "N/A"
+    val displayStats = remember(myProfile?.stats, myBooks) {
+        myProfile?.stats?.withBookStatusCountsFrom(myBooks)
+    }
 
     Scaffold(
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        contentWindowInsets = AppScaffoldContentInsets,
         topBar = {
-            Surface(
-                shadowElevation = 4.dp,
-                tonalElevation = 2.dp,
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                TopAppBar(
-                    title = {
-                        Text(
-                            "Profile",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp,
-                            color = DarkNavyBlue
-                        )
-                    },
-                    actions = {
-                        IconButton(onClick = {
-                            navController.navigate(Screen.ProfileEdit.route)
-                        }) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit Profile")
-                        }
+            AppTopBar(
+                title = "Profile",
+                actions = {
+                    IconButton(onClick = {
+                        navController.navigate(Screen.ProfileEdit.route)
+                    }) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit Profile")
                     }
-                )
-            }
-        }
+                },
+            )
+        },
     ) { paddingValues ->
         if (isLoadingProfile && myProfile == null) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
+                    .paddingTopFromScaffold(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
@@ -142,7 +137,7 @@ fun AuthorProfileScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(paddingValues)
+                        .paddingTopFromScaffold(paddingValues)
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
@@ -156,7 +151,7 @@ fun AuthorProfileScreen(
                         sessionManager = sessionManager
                     )
 
-                    AuthorStatisticsSection(stats = myProfile?.stats)
+                    AuthorStatisticsSection(stats = displayStats)
 
                     AuthorProfileMyBooksSection(
                         myBooks = myBooks,

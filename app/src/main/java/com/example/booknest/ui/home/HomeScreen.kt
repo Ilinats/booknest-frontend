@@ -48,7 +48,9 @@ fun HomeScreen(
 ) {
     val recommendedBooks by bookViewModel.recommendedBooks.collectAsState()
     val newReleases by bookViewModel.newReleases.collectAsState()
-    val isLoading by bookViewModel.isLoading.collectAsState()
+    val recommendedLoading by bookViewModel.recommendedLoading.collectAsState()
+    val newReleasesLoading by bookViewModel.newReleasesLoading.collectAsState()
+    val trendingLoading by bookViewModel.trendingLoading.collectAsState()
     val currentUser by sessionManager.currentUser.collectAsState()
 
     val friendsActivity by friendViewModel.friendsActivity.collectAsState()
@@ -60,7 +62,7 @@ fun HomeScreen(
 
     var searchQuery by remember { mutableStateOf("") }
     val searchResults by bookViewModel.homeSearchResults.collectAsState()
-    val isSearching by bookViewModel.isLoading.collectAsState()
+    val isSearching by bookViewModel.homeSearchLoading.collectAsState()
 
     val activeReadingApplications by applicationViewModel.activeReadingApplications.collectAsState()
     val pendingApplications by applicationViewModel.pendingApplications.collectAsState()
@@ -68,15 +70,18 @@ fun HomeScreen(
     val unreadCount by notificationViewModel.unreadCount.collectAsState()
 
     val trendingBooks by bookViewModel.trendingBooks.collectAsState()
+    val isLoggedIn by sessionManager.isLoggedIn.collectAsState()
 
-    LaunchedEffect(Unit) {
-        bookViewModel.getRecommendedBooks()
-        bookViewModel.getNewReleases()
+    LaunchedEffect(isLoggedIn) {
         bookViewModel.getTrendingBooks()
-        friendViewModel.loadFriendsActivity()
-        authorFollowViewModel.loadBooksFromFollowedAuthors()
-        applicationViewModel.loadMyApplications()
-        notificationViewModel.loadUnreadCount()
+        bookViewModel.getNewReleases()
+        if (isLoggedIn == true) {
+            bookViewModel.getRecommendedBooks()
+            friendViewModel.loadFriendsActivity()
+            authorFollowViewModel.loadBooksFromFollowedAuthors()
+            applicationViewModel.loadMyApplications()
+            notificationViewModel.loadUnreadCount()
+        }
     }
 
     LaunchedEffect(searchQuery) {
@@ -126,7 +131,7 @@ fun HomeScreen(
                     BookSection(
                         title = "Recommended for You",
                         books = recommendedBooks,
-                        isLoading = isLoading && recommendedBooks.isEmpty(),
+                        isLoading = recommendedLoading && recommendedBooks.isEmpty(),
                         navController = navController,
                         onViewAllClick = {
                             navController.navigate(Screen.Books.createRoute("recommended"))
@@ -138,7 +143,7 @@ fun HomeScreen(
                     BookSection(
                         title = "New Releases",
                         books = newReleases,
-                        isLoading = isLoading && newReleases.isEmpty(),
+                        isLoading = newReleasesLoading && newReleases.isEmpty(),
                         navController = navController,
                         onViewAllClick = {
                             navController.navigate(Screen.Books.createRoute("new_releases"))
@@ -163,7 +168,7 @@ fun HomeScreen(
                 item {
                     TrendingSection(
                         trendingBooks = trendingBooks,
-                        isLoading = isLoading && trendingBooks.isEmpty(),
+                        isLoading = trendingLoading && trendingBooks.isEmpty(),
                         navController = navController
                     )
                 }

@@ -430,8 +430,15 @@ fun BookDetailsContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
-                        .windowInsetsPadding(WindowInsets.navigationBars)
-                        .padding(bottom = 24.dp),
+                        .then(
+                            if (isAuthor) {
+                                Modifier.padding(bottom = 16.dp)
+                            } else {
+                                Modifier
+                                    .windowInsetsPadding(WindowInsets.navigationBars)
+                                    .padding(bottom = 16.dp)
+                            }
+                        ),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     GenreTagsSection(book = book)

@@ -22,6 +22,8 @@ fun BookEditNavigation(
     selectedAgeRating: AgeRating?,
     selectedDistributionType: DistributionType?,
     applicationDeadline: String?,
+    applicationDeadlineError: String?,
+    reviewDeadlineError: String?,
     selectedSelectionMethod: SelectionMethod?,
     bookFileUri: Uri?,
     existingFileUrl: String?,
@@ -39,7 +41,11 @@ fun BookEditNavigation(
         Button(
             onClick = onSave,
             modifier = Modifier.fillMaxWidth(),
-            enabled = !isSaving && !isLoading && hasChanges
+            enabled = !isSaving &&
+                !isLoading &&
+                hasChanges &&
+                applicationDeadlineError == null &&
+                reviewDeadlineError == null
         ) {
             if (isSaving) {
                 CircularProgressIndicator(
@@ -76,6 +82,8 @@ fun BookEditNavigation(
                         selectedAgeRating,
                         selectedDistributionType,
                         applicationDeadline,
+                        applicationDeadlineError,
+                        reviewDeadlineError,
                         selectedSelectionMethod,
                         bookFileUri,
                         selectedDistributionType,
@@ -99,6 +107,8 @@ private fun isStepValid(
     ageRating: AgeRating?,
     distributionType: DistributionType?,
     applicationDeadline: String?,
+    applicationDeadlineError: String?,
+    reviewDeadlineError: String?,
     selectionMethod: SelectionMethod?,
     bookFileUri: Uri?,
     currentDistributionType: DistributionType?,
@@ -108,7 +118,9 @@ private fun isStepValid(
         1 -> title.isNotBlank()
         2 -> true
         3 -> ageRating != null && distributionType != null
-        4 -> applicationDeadline != null
+        4 -> applicationDeadline != null &&
+            applicationDeadlineError == null &&
+            reviewDeadlineError == null
         5 -> {
             val requiresFile = currentDistributionType == DistributionType.DIGITAL ||
                     currentDistributionType == DistributionType.BOTH

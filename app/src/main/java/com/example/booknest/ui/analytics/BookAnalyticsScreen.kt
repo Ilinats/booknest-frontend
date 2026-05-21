@@ -2,7 +2,6 @@ package com.example.booknest.ui.analytics
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -29,7 +28,9 @@ import com.example.booknest.viewmodel.analytics.AnalyticsViewModel
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
 import com.example.booknest.presentation.common.UiState
+import com.example.booknest.ui.components.AppTopBar
 import com.example.booknest.ui.components.BackgroundDecoration
+import com.example.booknest.ui.components.paddingTopFromScaffold
 import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -55,27 +56,16 @@ fun BookAnalyticsScreen(
         BackgroundDecoration(modifier = Modifier.fillMaxSize())
 
         Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
             topBar = {
-                Surface(
-                    shadowElevation = 4.dp,
-                    tonalElevation = 2.dp,
-                    color = MaterialTheme.colorScheme.surface
-                ) {
-                    TopAppBar(
-                        title = {
-                            Text(
-                                "Book Analytics",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 20.sp,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                        },
-                        navigationIcon = {
-                            BackButton(onClick = { navController.popBackStack() })
-                        }
-                    )
-                }
-            }
+                AppTopBar(
+                    title = "Book Analytics",
+                    navigationIcon = {
+                        BackButton(onClick = { navController.popBackStack() })
+                    },
+                )
+            },
         ) { paddingValues ->
             val currentState = analyticsState
             when (currentState) {
@@ -83,7 +73,7 @@ fun BookAnalyticsScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(paddingValues),
+                            .paddingTopFromScaffold(paddingValues),
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator()
@@ -94,7 +84,7 @@ fun BookAnalyticsScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(paddingValues),
+                            .paddingTopFromScaffold(paddingValues),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(
@@ -126,8 +116,8 @@ fun BookAnalyticsScreen(
                         analytics = currentState.data,
                         analyticsViewModel = analyticsViewModel,
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues),
+                            .fillMaxWidth()
+                            .paddingTopFromScaffold(paddingValues),
                         isScrollable = true
                     )
                 }

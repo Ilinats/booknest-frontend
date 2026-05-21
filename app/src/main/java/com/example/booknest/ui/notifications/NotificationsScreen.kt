@@ -28,7 +28,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
+import com.example.booknest.ui.components.AppScaffoldContentInsets
+import com.example.booknest.ui.components.AppTopBar
 import com.example.booknest.ui.components.BackButton
+import com.example.booknest.ui.components.paddingTopFromScaffold
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ButtonDefaults
@@ -40,12 +43,15 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.presentation.navigation.Screen
@@ -75,63 +81,62 @@ fun NotificationsScreen(
     var showUnreadOnly by remember { mutableStateOf(false) }
     var showClearAllDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(isLoggedIn) {
-        if (isLoggedIn == true) {
-            notificationViewModel.loadNotifications(refresh = true)
-            notificationViewModel.loadUnreadCount()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, isLoggedIn) {
+        if (isLoggedIn != true) {
+            return@DisposableEffect onDispose { }
         }
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                notificationViewModel.refreshNotifications()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    LaunchedEffect(showUnreadOnly, isLoggedIn) {
-        if (isLoggedIn == true) {
-            notificationViewModel.loadNotifications(unreadOnly = showUnreadOnly, refresh = true)
+    val displayedNotifications = remember(notifications, showUnreadOnly) {
+        if (showUnreadOnly) {
+            notifications.filter { !it.isRead }
+        } else {
+            notifications
         }
     }
 
     Scaffold(
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        contentWindowInsets = AppScaffoldContentInsets,
         topBar = {
-            Box(
-                modifier = Modifier.shadow(elevation = 4.dp)
-            ) {
-                TopAppBar(
-                    title = { Text("Notifications") },
-                    navigationIcon = {
-                        BackButton(onClick = { navController.popBackStack() })
-                    },
-                    actions = {
-                        if (notifications.isNotEmpty()) {
-                            TextButton(
-                                onClick = { showClearAllDialog = true }
-                            ) {
-                                Icon(
-                                    Icons.Default.Delete,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Clear all")
-                            }
-                        }
-                        if (unreadCount > 0) {
-                            TextButton(
-                                onClick = {
-                                    notificationViewModel.markAllAsRead()
-                                }
-                            ) {
-                                Icon(
-                                    Icons.Default.CheckCircle,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Mark all read")
-                            }
+            AppTopBar(
+                title = "Notifications",
+                navigationIcon = {
+                    BackButton(onClick = { navController.popBackStack() })
+                },
+                actions = {
+                    if (notifications.isNotEmpty()) {
+                        TextButton(onClick = { showClearAllDialog = true }) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Clear all")
                         }
                     }
-                )
-            }
-        }
+                    if (unreadCount > 0) {
+                        TextButton(onClick = { notificationViewModel.markAllAsRead() }) {
+                            Icon(
+                                Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Mark all read")
+                        }
+                    }
+                },
+            )
+        },
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -143,7 +148,7 @@ fun NotificationsScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
+                    .paddingTopFromScaffold(paddingValues)
             ) {
                 Row(
                     modifier = Modifier
@@ -191,7 +196,7 @@ fun NotificationsScreen(
                         }
                     }
 
-                    notifications.isEmpty() -> {
+                    displayedNotifications.isEmpty() -> {
                         EmptyNotificationsState(
                             showUnreadOnly = showUnreadOnly,
                             onNavigateToSettings = {
@@ -212,7 +217,10 @@ fun NotificationsScreen(
                             ),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            items(notifications) { notification ->
+                            items(
+                                items = displayedNotifications,
+                                key = { it.id }
+                            ) { notification ->
                                 NotificationItem(
                                     notification = notification,
                                     onNotificationClick = {

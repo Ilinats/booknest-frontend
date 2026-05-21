@@ -2,27 +2,23 @@ package com.example.booknest.ui.books.components.browse
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.InputChip
+import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.booknest.domain.model.response.GenreResponse
@@ -41,14 +37,16 @@ internal fun bookListActiveFilterLabels(
     browseUi.selectedDistributionType?.let {
         add("Type: ${it.replaceFirstChar { c -> c.uppercase() }}")
     }
-    if (browseUi.minRating > 0 || browseUi.maxRating < 5) add(
-        "Rating: ${
-            String.format(
-                "%.1f",
-                browseUi.minRating
-            )
-        }-${String.format("%.1f", browseUi.maxRating)}"
-    )
+    if (browseUi.minRating > 0 || browseUi.maxRating < 5) {
+        add(
+            "Rating: ${String.format("%.1f", browseUi.minRating)}-${
+                String.format(
+                    "%.1f",
+                    browseUi.maxRating
+                )
+            }"
+        )
+    }
     browseUi.selectedApplicationStatus?.let {
         add("Status: ${if (it == "accepting_applications") "Accepting Applications" else "All Books"}")
     }
@@ -67,40 +65,30 @@ internal fun bookListActiveFilterLabels(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun BookListActiveFiltersBanner(
     activeFilters: List<String>,
     browseFilterGenres: List<GenreResponse>,
     bookViewModel: BookViewModel,
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(
-                elevation = 2.dp,
-                shape = RoundedCornerShape(16.dp)
-            ),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Active Filters",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                TextButton(onClick = {
+            Text(
+                text = "Active filters",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            TextButton(
+                onClick = {
                     bookViewModel.clearBookListSearchImmediate()
                     bookViewModel.updateBookListBrowseUi {
                         it.copy(
@@ -114,77 +102,80 @@ fun BookListActiveFiltersBanner(
                             selectedSortBy = null,
                         )
                     }
-                }) {
-                    Text("Clear All")
-                }
-            }
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                },
+                modifier = Modifier.padding(end = 0.dp),
             ) {
-                items(activeFilters.size) { index ->
-                    FilterChip(
-                        selected = true,
-                        onClick = { },
-                        label = {
-                            Text(
-                                activeFilters[index],
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        },
-                        trailingIcon = {
-                            IconButton(onClick = {
-                                val filter = activeFilters[index]
-                                when {
-                                    filter.startsWith("Search:") -> {
-                                        bookViewModel.clearBookListSearchImmediate()
-                                    }
+                Text("Clear all")
+            }
+        }
 
-                                    filter.startsWith("Genre:") -> {
-                                        val genreName =
-                                            filter.removePrefix("Genre: ")
-                                        browseFilterGenres.find { it.name == genreName }
-                                            ?.let { g ->
-                                                bookViewModel.updateBookListBrowseUi { s ->
-                                                    s.copy(selectedGenres = s.selectedGenres - g.id)
-                                                }
-                                            }
-                                    }
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            activeFilters.forEach { filter ->
+                InputChip(
+                    selected = true,
+                    onClick = {
+                        removeBookListActiveFilter(filter, browseFilterGenres, bookViewModel)
+                    },
+                    label = {
+                        Text(
+                            text = filter,
+                            style = MaterialTheme.typography.labelMedium,
+                        )
+                    },
+                    trailingIcon = {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    },
+                    colors = InputChipDefaults.inputChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        selectedTrailingIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    ),
+                )
+            }
+        }
+    }
+}
 
-                                    filter.startsWith("Age:") -> bookViewModel.updateBookListBrowseUi {
-                                        it.copy(selectedAgeRating = null)
-                                    }
-
-                                    filter.startsWith("Type:") -> bookViewModel.updateBookListBrowseUi {
-                                        it.copy(selectedDistributionType = null)
-                                    }
-
-                                    filter.startsWith("Rating:") -> bookViewModel.updateBookListBrowseUi {
-                                        it.copy(minRating = 0f, maxRating = 5f)
-                                    }
-
-                                    filter.startsWith("Status:") -> bookViewModel.updateBookListBrowseUi {
-                                        it.copy(selectedApplicationStatus = null)
-                                    }
-
-                                    filter.startsWith("Deadline:") -> bookViewModel.updateBookListBrowseUi {
-                                        it.copy(selectedDeadlineFilter = null)
-                                    }
-
-                                    filter.startsWith("Sort:") -> bookViewModel.updateBookListBrowseUi {
-                                        it.copy(selectedSortBy = null)
-                                    }
-                                }
-                            }) {
-                                Icon(
-                                    Icons.Filled.Clear,
-                                    contentDescription = "Remove",
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
-                    )
+private fun removeBookListActiveFilter(
+    filter: String,
+    browseFilterGenres: List<GenreResponse>,
+    bookViewModel: BookViewModel,
+) {
+    when {
+        filter.startsWith("Search:") -> bookViewModel.clearBookListSearchImmediate()
+        filter.startsWith("Genre:") -> {
+            val genreName = filter.removePrefix("Genre: ")
+            browseFilterGenres.find { it.name == genreName }?.let { g ->
+                bookViewModel.updateBookListBrowseUi { s ->
+                    s.copy(selectedGenres = s.selectedGenres - g.id)
                 }
             }
+        }
+        filter.startsWith("Age:") -> bookViewModel.updateBookListBrowseUi {
+            it.copy(selectedAgeRating = null)
+        }
+        filter.startsWith("Type:") -> bookViewModel.updateBookListBrowseUi {
+            it.copy(selectedDistributionType = null)
+        }
+        filter.startsWith("Rating:") -> bookViewModel.updateBookListBrowseUi {
+            it.copy(minRating = 0f, maxRating = 5f)
+        }
+        filter.startsWith("Status:") -> bookViewModel.updateBookListBrowseUi {
+            it.copy(selectedApplicationStatus = null)
+        }
+        filter.startsWith("Deadline:") -> bookViewModel.updateBookListBrowseUi {
+            it.copy(selectedDeadlineFilter = null)
+        }
+        filter.startsWith("Sort:") -> bookViewModel.updateBookListBrowseUi {
+            it.copy(selectedSortBy = null)
         }
     }
 }

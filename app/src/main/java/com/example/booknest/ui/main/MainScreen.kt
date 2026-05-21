@@ -320,7 +320,7 @@ private fun MainTopBar(
                     )
                 }
 
-                Box(modifier = Modifier.size(48.dp)) {
+                Box(modifier = Modifier.size(36.dp)) {
                     ProfileAvatar(
                         user = currentUser,
                         contentDescription = cdProfileMenu,
@@ -365,6 +365,21 @@ private fun MainTopBar(
                                 menuExpanded = false
                                 coroutineScope.launch {
                                     sessionManager.logout(authRepository)
+                                    onSignOut()
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    "Sign out on all devices",
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            },
+                            onClick = {
+                                menuExpanded = false
+                                coroutineScope.launch {
+                                    sessionManager.logoutAll(authRepository)
                                     onSignOut()
                                 }
                             }
@@ -421,7 +436,8 @@ private fun ProfileAvatar(
                 Text(
                     text = initials ?: "U",
                     color = MaterialTheme.colorScheme.onPrimary,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.labelLarge
                 )
             }
         }

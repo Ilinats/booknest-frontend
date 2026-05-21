@@ -5,7 +5,6 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,10 +20,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.repository.AuthRepository
-import com.example.booknest.navigation.AuthorBottomBarScreen
 import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.ui.author.components.ActiveCampaignsSection
 import com.example.booknest.ui.author.components.ActionNeededSection
@@ -33,9 +30,13 @@ import com.example.booknest.ui.author.components.QuickActionsSection
 import com.example.booknest.ui.author.components.QuickStatsSection
 import com.example.booknest.ui.author.components.RecentReviewsSection
 import com.example.booknest.ui.components.BackgroundDecoration
+import com.example.booknest.ui.components.appListContentPadding
 import com.example.booknest.ui.author.components.profile.WelcomeSection
 import com.example.booknest.ui.author.components.PerformanceSummarySection
 import com.example.booknest.ui.author.utils.AuthorHomeUtils
+import com.example.booknest.navigation.rememberAuthorBooksViewModel
+import com.example.booknest.navigation.rememberAuthorDashboardViewModel
+import com.example.booknest.ui.author.utils.DeadlineDisplayUtils
 import com.example.booknest.viewmodel.author.AuthorBooksViewModel
 import com.example.booknest.viewmodel.author.AuthorDashboardViewModel
 import com.example.booknest.viewmodel.author.BookStatus
@@ -47,8 +48,8 @@ import org.koin.compose.koinInject
 fun AuthorHomeScreen(
     navController: NavController,
     sessionManager: SessionManager = koinInject(),
-    authorBooksViewModel: AuthorBooksViewModel = getViewModel(),
-    authorDashboardViewModel: AuthorDashboardViewModel = getViewModel(),
+    authorBooksViewModel: AuthorBooksViewModel = rememberAuthorBooksViewModel(navController),
+    authorDashboardViewModel: AuthorDashboardViewModel = rememberAuthorDashboardViewModel(navController),
     authRepository: AuthRepository = koinInject()
 ) {
     val myBooks by authorBooksViewModel.myBooks.collectAsState()
@@ -60,16 +61,11 @@ fun AuthorHomeScreen(
     val bookStats by authorBooksViewModel.bookStats.collectAsState()
     val currentUser by sessionManager.currentUser.collectAsState()
 
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
-
-    LaunchedEffect(currentRoute) {
-        if (currentRoute == AuthorBottomBarScreen.Home.route) {
-            authorBooksViewModel.loadMyBooks()
-            authorDashboardViewModel.loadAuthorStats()
-            authorDashboardViewModel.loadRecentReviews()
-            authorDashboardViewModel.loadOverdueReviews()
-        }
+    LaunchedEffect(Unit) {
+        authorBooksViewModel.loadMyBooks()
+        authorDashboardViewModel.loadAuthorStats()
+        authorDashboardViewModel.loadRecentReviews()
+        authorDashboardViewModel.loadOverdueReviews()
     }
 
     Scaffold(
@@ -107,12 +103,7 @@ fun AuthorHomeScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues),
-                contentPadding = PaddingValues(
-                    start = 16.dp,
-                    top = 32.dp,
-                    end = 16.dp,
-                    bottom = 16.dp
-                ),
+                contentPadding = appListContentPadding(top = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(28.dp)
             ) {
                 item {
@@ -127,7 +118,10 @@ fun AuthorHomeScreen(
                         pendingApplications = quickStats.pendingApplications,
                         overdueReviews = overdueReviews.size,
                         booksWithDeadline = myBooks.filter { book ->
-                            book.applicationDeadline != null && AuthorHomeUtils.isDeadlineApproaching(book.applicationDeadline)
+                            val deadline = book.applicationDeadline
+                            deadline != null &&
+                                DeadlineDisplayUtils.hasDisplayableDeadline(deadline) &&
+                                AuthorHomeUtils.isDeadlineApproaching(deadline)
                         }
                     )
                 }

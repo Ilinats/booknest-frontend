@@ -3,7 +3,6 @@ package com.example.booknest.ui.author
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,15 +26,20 @@ import com.example.booknest.port.ToastNotifier
 import com.example.booknest.ui.author.components.bookedit.BookEditPublishedWarningCard
 import com.example.booknest.ui.author.components.bookedit.BookEditSaveErrorBanner
 import com.example.booknest.ui.author.components.bookedit.bookEditWizardSteps
+import com.example.booknest.ui.author.components.bookedit.reviewDeadlineSelectableDates
 import com.example.booknest.ui.author.components.bookedit.validateDeadlines
 import com.example.booknest.ui.author.components.BookEditNavigation
-import com.example.booknest.ui.author.components.LeakFingerprintDecodeSection
 import com.example.booknest.ui.author.components.common.AgeRating
 import com.example.booknest.ui.author.components.common.DatePickerDialog
 import com.example.booknest.ui.author.components.common.DistributionType
 import com.example.booknest.ui.author.components.common.SelectionMethod
 import com.example.booknest.ui.author.components.wizard.WizardStepIndicator
+import com.example.booknest.ui.components.AppScaffoldContentInsets
+import com.example.booknest.ui.components.AppTopBar
 import com.example.booknest.ui.components.BackButton
+import com.example.booknest.ui.components.appListContentPadding
+import com.example.booknest.ui.components.paddingTopFromScaffold
+import com.example.booknest.navigation.rememberAuthorBooksViewModel
 import com.example.booknest.viewmodel.author.AuthorBooksViewModel
 import com.example.booknest.viewmodel.author.AuthorSeriesViewModel
 import com.example.booknest.viewmodel.author.BookStatus
@@ -56,7 +60,7 @@ fun BookEditScreen(
     sessionManager: SessionManager = koinInject(),
     genresRepository: GenresRepository = koinInject(),
     toastNotifier: ToastNotifier = koinInject(),
-    authorBooksViewModel: AuthorBooksViewModel = getViewModel(),
+    authorBooksViewModel: AuthorBooksViewModel = rememberAuthorBooksViewModel(navController),
     authorSeriesViewModel: AuthorSeriesViewModel = getViewModel(),
     bookViewModel: BookViewModel = getViewModel()
 ) {
@@ -67,7 +71,6 @@ fun BookEditScreen(
     val coverImageRemovalState by authorBooksViewModel.coverImageRemovalState.collectAsState()
     val coverImageUploadState by authorBooksViewModel.coverImageUploadState.collectAsState()
     val bookFileUploadState by authorBooksViewModel.bookFileUploadState.collectAsState()
-    val leakFingerprintState by authorBooksViewModel.leakFingerprintState.collectAsState()
     var isLoading by remember { mutableStateOf(true) }
     var isSaving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf<String?>(null) }
@@ -170,18 +173,27 @@ fun BookEditScreen(
     val applicationDatePickerState = rememberDatePickerState(
         initialSelectedDateMillis = null
     )
-    val reviewDatePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = null
-    )
-
-    val showLeakFingerprintTool =
-        bookDetails?.let { b ->
-            !b.fileUrl.isNullOrBlank() && b.distributionType != DistributionType.PHYSICAL.value
-        } == true
+    val reviewDatePickerState = key(applicationDeadline) {
+        rememberDatePickerState(
+            initialSelectedDateMillis = reviewDeadline?.let {
+                try {
+                    SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(it)?.time
+                } catch (e: Exception) {
+                    null
+                }
+            },
+            selectableDates = reviewDeadlineSelectableDates(applicationDeadline)
+        )
+    }
 
     LaunchedEffect(bookId) {
         bookViewModel.getBookDetails(bookId)
-        authorBooksViewModel.clearLeakFingerprintState()
+    }
+
+    LaunchedEffect(applicationDeadline, reviewDeadline) {
+        val (appErr, revErr) = validateDeadlines(applicationDeadline, reviewDeadline)
+        applicationDeadlineError = appErr
+        reviewDeadlineError = revErr
     }
 
     LaunchedEffect(Unit) {
@@ -285,6 +297,10 @@ fun BookEditScreen(
             coverImageUrl = book.coverImageUrl
             shouldRemoveCoverImage = false
 
+            val (appErr, revErr) = validateDeadlines(applicationDeadline, reviewDeadline)
+            applicationDeadlineError = appErr
+            reviewDeadlineError = revErr
+
             if (initialTitle == null) {
                 initialTitle = title
                 initialShortDescription = shortDescription
@@ -342,25 +358,21 @@ fun BookEditScreen(
     }
 
     Scaffold(
+        contentWindowInsets = AppScaffoldContentInsets,
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        "Edit Book (Step $currentStep of $totalSteps)",
-                        fontWeight = FontWeight.Bold
-                    )
-                },
+            AppTopBar(
+                title = "Edit Book (Step $currentStep of $totalSteps)",
                 navigationIcon = {
                     BackButton(onClick = { navController.popBackStack() })
-                }
+                },
             )
-        }
+        },
     ) { paddingValues ->
         if (isLoading) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
+                    .paddingTopFromScaffold(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
@@ -369,30 +381,13 @@ fun BookEditScreen(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
-                contentPadding = PaddingValues(
-                    start = 16.dp,
-                    top = 16.dp,
-                    end = 16.dp,
-                    bottom = 80.dp
-                ),
+                    .paddingTopFromScaffold(paddingValues),
+                contentPadding = appListContentPadding(),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 if (isPublished) {
                     item {
                         BookEditPublishedWarningCard()
-                    }
-                }
-
-                if (showLeakFingerprintTool) {
-                    item {
-                        LeakFingerprintDecodeSection(
-                            leakFingerprintState = leakFingerprintState,
-                            onFileChosen = { uri ->
-                                authorBooksViewModel.decodeLeakFingerprint(bookId, uri, context)
-                            },
-                            onDismissResult = { authorBooksViewModel.clearLeakFingerprintState() }
-                        )
                     }
                 }
 
@@ -522,6 +517,8 @@ fun BookEditScreen(
                         selectedAgeRating = selectedAgeRating,
                         selectedDistributionType = selectedDistributionType,
                         applicationDeadline = applicationDeadline,
+                        applicationDeadlineError = applicationDeadlineError,
+                        reviewDeadlineError = reviewDeadlineError,
                         selectedSelectionMethod = selectedSelectionMethod,
                         bookFileUri = bookFileUri,
                         existingFileUrl = bookDetails?.fileUrl,

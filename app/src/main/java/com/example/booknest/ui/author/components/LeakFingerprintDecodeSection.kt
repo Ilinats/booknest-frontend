@@ -28,8 +28,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.booknest.domain.model.response.ApplicationResponse
 import com.example.booknest.domain.model.response.BookLeakFingerprintResponse
 import com.example.booknest.presentation.common.UiState
+import com.example.booknest.ui.applications.utils.readerDisplayLabel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -37,8 +39,10 @@ import java.util.Locale
 @Composable
 fun LeakFingerprintDecodeSection(
     leakFingerprintState: UiState<BookLeakFingerprintResponse>,
+    bookApplications: List<ApplicationResponse> = emptyList(),
     onFileChosen: (Uri) -> Unit,
-    onDismissResult: () -> Unit
+    onDismissResult: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     var fileHint by remember { mutableStateOf<String?>(null) }
@@ -74,7 +78,7 @@ fun LeakFingerprintDecodeSection(
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.secondaryContainer
         )
@@ -141,7 +145,10 @@ fun LeakFingerprintDecodeSection(
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.SemiBold
                             )
-                            Text("Reader ID: ${data.readerId}", style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                text = "Reader: ${data.readerDisplayLabel(bookApplications)}",
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
                             Text("Format: ${data.format}", style = MaterialTheme.typography.bodyMedium)
                             Text("Marked at: $whenMarked", style = MaterialTheme.typography.bodyMedium)
                         }
