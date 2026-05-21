@@ -31,8 +31,8 @@ interface BooksDataSource {
         createdTo: String? = null,
         minAvgRating: Double? = null,
         maxAvgRating: Double? = null,
-        skip: Int? = null,
-        take: Int? = null,
+        page: Int? = null,
+        limit: Int? = null,
         status: String? = null,
         applicationStatus: String? = null,
         deadlineFilter: String? = null,
@@ -41,11 +41,11 @@ interface BooksDataSource {
 
     suspend fun searchBooks(
         query: String,
-        skip: Int?,
-        take: Int?
+        page: Int?,
+        limit: Int?
     ): Result<List<RecommendedBookResponse>>
 
-    suspend fun getRecommendedBooks(take: Int?): Result<List<RecommendedBookResponse>>
+    suspend fun getRecommendedBooks(limit: Int?, page: Int? = 1): Result<List<RecommendedBookResponse>>
     suspend fun getTrendingBooks(limit: Int? = null): Result<List<com.example.booknest.domain.model.response.TrendingBookResponse>>
     suspend fun getBookDetails(bookId: String): Result<BookResponse>
     suspend fun createBook(
@@ -76,8 +76,8 @@ interface BooksDataSource {
     ): Result<BookLeakFingerprintResponse>
     suspend fun getBookAllReviews(
         bookId: String,
-        skip: Int?,
-        take: Int?
+        page: Int?,
+        limit: Int?
     ): Result<List<ReviewResponse>>
 }
 

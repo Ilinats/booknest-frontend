@@ -101,12 +101,12 @@ class BNAuthDataSource(
     }
 
     override suspend fun logout(refreshToken: String): Result<Unit> {
-        return try {
-            authService.logout(RefreshTokenRequest(refreshToken))
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.success(Unit)
-        }
+        runSuspendRequest { authService.logout(RefreshTokenRequest(refreshToken)) }
+        return Result.success(Unit)
+    }
+
+    override suspend fun logoutAll(): Result<Unit> {
+        return runSuspendRequest { authService.logoutAll() }.map { }
     }
 
     override suspend fun verifyEmail(code: String): Result<UserResponse> {

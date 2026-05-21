@@ -61,7 +61,7 @@ class BNApplicationsDataSource(private val applicationsService: ApplicationsServ
 
     override suspend fun getReadingProgress(): Result<List<ApplicationResponse>> {
         return runSuspendRequestPaginated {
-            applicationsService.getMyApplications(skip = 0, take = 100)
+            applicationsService.getMyApplications(page = 1, limit = 100)
         }.map { list ->
             list.filter { it.isActiveReadingProgress() }
         }
@@ -74,7 +74,9 @@ class BNApplicationsDataSource(private val applicationsService: ApplicationsServ
     }
 
     override suspend fun getBookApplications(bookId: String): Result<List<ApplicationResponse>> {
-        return runSuspendRequestPaginated { applicationsService.getBookApplications(bookId) }
+        return runSuspendRequestPaginated {
+            applicationsService.getBookApplications(bookId, page = 1, limit = 100)
+        }
     }
 
     override suspend fun bulkActionApplications(

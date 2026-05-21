@@ -10,8 +10,18 @@ import com.example.booknest.domain.model.response.UnreadCountResponse
 class BNNotificationsDataSource(private val notificationsService: NotificationsService) :
     NotificationsDataSource {
 
-    override suspend fun getNotifications(unreadOnly: Boolean?): Result<NotificationsListResponse> {
-        return runSuspendRequest { notificationsService.getNotifications(unreadOnly) }
+    override suspend fun getNotifications(
+        unreadOnly: Boolean?,
+        skip: Int?,
+        take: Int?,
+    ): Result<NotificationsListResponse> {
+        return runSuspendRequest {
+            notificationsService.getNotifications(
+                unreadOnly = unreadOnly,
+                skip = skip,
+                take = take,
+            )
+        }
     }
 
     override suspend fun getUnreadCount(): Result<UnreadCountResponse> {

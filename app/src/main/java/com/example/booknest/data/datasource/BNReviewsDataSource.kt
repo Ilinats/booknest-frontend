@@ -26,12 +26,10 @@ class BNReviewsDataSource(private val reviewsService: ReviewsService) : ReviewsD
         return runSuspendRequestUnit { reviewsService.deleteReview(reviewId) }
     }
 
-    override suspend fun getBookReviews(bookId: String): Result<List<ReviewResponse>> {
-        return runSuspendRequestPaginated { reviewsService.getBookReviews(bookId) }
-    }
-
     override suspend fun getUserReviews(userId: String): Result<List<ReviewResponse>> {
-        return runSuspendRequestPaginated { reviewsService.getUserReviews(userId) }
+        return runSuspendRequestPaginated {
+            reviewsService.getUserReviews(userId, skip = 0, take = 100)
+        }
     }
 
     override suspend fun getAuthorLatestReviews(limit: Int?): Result<List<ReviewResponse>> {

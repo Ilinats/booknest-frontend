@@ -47,34 +47,57 @@ class BNBooksDataSource(private val booksService: BooksService) : BooksDataSourc
         createdTo: String?,
         minAvgRating: Double?,
         maxAvgRating: Double?,
-        skip: Int?,
-        take: Int?,
+        page: Int?,
+        limit: Int?,
         status: String?,
         applicationStatus: String?,
         deadlineFilter: String?,
         sortBy: String?
     ): Result<List<RecommendedBookResponse>> {
-        return runSuspendRequestPaginated {
-            booksService.browseBooks(
-                search, genres, title, authorName, authorId,
-                seriesName, seriesId, ageRating, distributionType,
-                publishedFrom, publishedTo, createdFrom, createdTo,
-                minAvgRating, maxAvgRating, skip, take, status,
-                applicationStatus, deadlineFilter, sortBy
-            )
-        }
+        val api = BrowseBooksQueryMapper.toApiQuery(
+            search = search,
+            genres = genres,
+            title = title,
+            authorName = authorName,
+            authorId = authorId,
+            seriesName = seriesName,
+            seriesId = seriesId,
+            ageRating = ageRating,
+            distributionType = distributionType,
+            publishedFrom = publishedFrom,
+            publishedTo = publishedTo,
+            minAvgRating = minAvgRating,
+            maxAvgRating = maxAvgRating,
+            page = page,
+            limit = limit,
+            status = status,
+            applicationStatus = applicationStatus,
+            deadlineFilter = deadlineFilter,
+            sortBy = sortBy,
+        )
+        return runSuspendRequestPaginated { booksService.browseBooksFromQuery(api) }
     }
 
     override suspend fun searchBooks(
         query: String,
-        skip: Int?,
-        take: Int?
+        page: Int?,
+        limit: Int?
     ): Result<List<RecommendedBookResponse>> {
-        return runSuspendRequestPaginated { booksService.searchBooks(query, skip, take) }
+        val api = BrowseBooksQueryMapper.toApiQuery(
+            search = query,
+            page = page,
+            limit = limit,
+        )
+        return runSuspendRequestPaginated { booksService.browseBooksFromQuery(api) }
     }
 
-    override suspend fun getRecommendedBooks(take: Int?): Result<List<RecommendedBookResponse>> {
-        return runSuspendRequestPaginated { booksService.getRecommendedBooks(take) }
+    override suspend fun getRecommendedBooks(
+        limit: Int?,
+        page: Int?,
+    ): Result<List<RecommendedBookResponse>> {
+        return runSuspendRequestPaginated {
+            booksService.getRecommendedBooks(page = page, limit = limit)
+        }
     }
 
     override suspend fun getTrendingBooks(limit: Int?): Result<List<TrendingBookResponse>> {
@@ -301,9 +324,14 @@ class BNBooksDataSource(private val booksService: BooksService) : BooksDataSourc
 
     override suspend fun getBookAllReviews(
         bookId: String,
-        skip: Int?,
-        take: Int?
+        page: Int?,
+        limit: Int?
     ): Result<List<ReviewResponse>> {
-        return runSuspendRequestPaginated { booksService.getBookAllReviews(bookId, skip, take) }
+        val resolvedLimit = limit ?: 20
+        val resolvedPage = page ?: 1
+        val skip = (resolvedPage - 1).coerceAtLeast(0) * resolvedLimit
+        return runSuspendRequestPaginated {
+            booksService.getBookAllReviews(bookId, skip = skip, take = resolvedLimit)
+        }
     }
 }

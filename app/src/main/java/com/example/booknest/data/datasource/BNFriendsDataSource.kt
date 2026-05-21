@@ -28,15 +28,19 @@ class BNFriendsDataSource(private val friendsService: FriendsService) : FriendsD
     }
 
     override suspend fun getFriends(): Result<List<UserResponse>> {
-        return runSuspendRequest { friendsService.getFriends() }
+        return runSuspendRequest { friendsService.getFriends(status = "accepted") }
     }
 
     override suspend fun getSentFriendRequests(): Result<List<UserResponse>> {
-        return runSuspendRequest { friendsService.getSentFriendRequests() }
+        return runSuspendRequest {
+            friendsService.getFriends(status = "pending", type = "sent")
+        }
     }
 
     override suspend fun getReceivedFriendRequests(): Result<List<UserResponse>> {
-        return runSuspendRequest { friendsService.getReceivedFriendRequests() }
+        return runSuspendRequest {
+            friendsService.getFriends(status = "pending", type = "received")
+        }
     }
 
     override suspend fun getFriendshipStatus(userId: String): Result<FriendshipStatusResponse> {
