@@ -23,7 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.booknest.domain.model.response.GenreResponse
 import com.example.booknest.viewmodel.books.BookListBrowseUiState
-import com.example.booknest.viewmodel.books.BookViewModel
+import com.example.booknest.viewmodel.books.BrowseBooksViewModel
 
 internal fun bookListActiveFilterLabels(
     browseUi: BookListBrowseUiState,
@@ -70,7 +70,7 @@ internal fun bookListActiveFilterLabels(
 fun BookListActiveFiltersBanner(
     activeFilters: List<String>,
     browseFilterGenres: List<GenreResponse>,
-    bookViewModel: BookViewModel,
+    browseBooksViewModel: BrowseBooksViewModel,
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -89,8 +89,8 @@ fun BookListActiveFiltersBanner(
             )
             TextButton(
                 onClick = {
-                    bookViewModel.clearBookListSearchImmediate()
-                    bookViewModel.updateBookListBrowseUi {
+                    browseBooksViewModel.clearBookListSearchImmediate()
+                    browseBooksViewModel.updateBookListBrowseUi {
                         it.copy(
                             selectedGenres = emptySet(),
                             selectedAgeRating = null,
@@ -118,7 +118,7 @@ fun BookListActiveFiltersBanner(
                 InputChip(
                     selected = true,
                     onClick = {
-                        removeBookListActiveFilter(filter, browseFilterGenres, bookViewModel)
+                        removeBookListActiveFilter(filter, browseFilterGenres, browseBooksViewModel)
                     },
                     label = {
                         Text(
@@ -147,34 +147,34 @@ fun BookListActiveFiltersBanner(
 private fun removeBookListActiveFilter(
     filter: String,
     browseFilterGenres: List<GenreResponse>,
-    bookViewModel: BookViewModel,
+    browseBooksViewModel: BrowseBooksViewModel,
 ) {
     when {
-        filter.startsWith("Search:") -> bookViewModel.clearBookListSearchImmediate()
+        filter.startsWith("Search:") -> browseBooksViewModel.clearBookListSearchImmediate()
         filter.startsWith("Genre:") -> {
             val genreName = filter.removePrefix("Genre: ")
             browseFilterGenres.find { it.name == genreName }?.let { g ->
-                bookViewModel.updateBookListBrowseUi { s ->
+                browseBooksViewModel.updateBookListBrowseUi { s ->
                     s.copy(selectedGenres = s.selectedGenres - g.id)
                 }
             }
         }
-        filter.startsWith("Age:") -> bookViewModel.updateBookListBrowseUi {
+        filter.startsWith("Age:") -> browseBooksViewModel.updateBookListBrowseUi {
             it.copy(selectedAgeRating = null)
         }
-        filter.startsWith("Type:") -> bookViewModel.updateBookListBrowseUi {
+        filter.startsWith("Type:") -> browseBooksViewModel.updateBookListBrowseUi {
             it.copy(selectedDistributionType = null)
         }
-        filter.startsWith("Rating:") -> bookViewModel.updateBookListBrowseUi {
+        filter.startsWith("Rating:") -> browseBooksViewModel.updateBookListBrowseUi {
             it.copy(minRating = 0f, maxRating = 5f)
         }
-        filter.startsWith("Status:") -> bookViewModel.updateBookListBrowseUi {
+        filter.startsWith("Status:") -> browseBooksViewModel.updateBookListBrowseUi {
             it.copy(selectedApplicationStatus = null)
         }
-        filter.startsWith("Deadline:") -> bookViewModel.updateBookListBrowseUi {
+        filter.startsWith("Deadline:") -> browseBooksViewModel.updateBookListBrowseUi {
             it.copy(selectedDeadlineFilter = null)
         }
-        filter.startsWith("Sort:") -> bookViewModel.updateBookListBrowseUi {
+        filter.startsWith("Sort:") -> browseBooksViewModel.updateBookListBrowseUi {
             it.copy(selectedSortBy = null)
         }
     }

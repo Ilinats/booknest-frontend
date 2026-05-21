@@ -8,17 +8,23 @@ import com.example.booknest.viewmodel.auth.EmailVerificationViewModel
 import com.example.booknest.viewmodel.auth.LoginViewModel
 import com.example.booknest.viewmodel.auth.PasswordResetViewModel
 import com.example.booknest.viewmodel.auth.SignupViewModel
+import com.example.booknest.viewmodel.author.AuthorBookEditorViewModel
 import com.example.booknest.viewmodel.author.AuthorBooksViewModel
 import com.example.booknest.viewmodel.author.AuthorDashboardViewModel
 import com.example.booknest.viewmodel.author.AuthorFollowViewModel
 import com.example.booknest.viewmodel.author.AuthorSeriesViewModel
-import com.example.booknest.viewmodel.books.BookViewModel
+import com.example.booknest.viewmodel.books.BookDetailsViewModel
+import com.example.booknest.viewmodel.books.BrowseBooksViewModel
+import com.example.booknest.viewmodel.books.HomeBooksViewModel
+import com.example.booknest.viewmodel.books.ProfileAuthorBooksViewModel
 import com.example.booknest.viewmodel.files.FileViewModel
 import com.example.booknest.viewmodel.friends.FriendViewModel
 import com.example.booknest.viewmodel.genres.FavoriteGenresViewModel
 import com.example.booknest.viewmodel.main.MainViewModel
 import com.example.booknest.viewmodel.notifications.NotificationViewModel
 import com.example.booknest.viewmodel.profile.AddressViewModel
+import com.example.booknest.viewmodel.profile.ProfileActivityViewModel
+import com.example.booknest.viewmodel.profile.ProfileEditViewModel
 import com.example.booknest.viewmodel.profile.ProfileSettingsViewModel
 import com.example.booknest.viewmodel.profile.ProfileStatsViewModel
 import com.example.booknest.viewmodel.profile.ProfileViewModel
@@ -66,15 +72,35 @@ val viewModelModule = module {
     }
 
     viewModel {
-        BookViewModel(
+        HomeBooksViewModel(
             getRecommendedBooksUseCase = get(),
             getNewReleasesUseCase = get(),
-            browseBooksUseCase = get(),
-            searchBooksUseCase = get(),
-            getBookDetailsUseCase = get(),
             getTrendingBooksUseCase = get(),
+            browseBooksUseCase = get(),
+            bookCatalogCache = get(),
+        )
+    }
+
+    viewModel {
+        BrowseBooksViewModel(
+            browseBooksUseCase = get(),
             getGenresUseCase = get(),
-            searchHistoryManager = get()
+            searchHistoryManager = get(),
+            bookCatalogCache = get(),
+        )
+    }
+
+    viewModel {
+        BookDetailsViewModel(
+            getBookDetailsUseCase = get(),
+            bookCatalogCache = get(),
+        )
+    }
+
+    viewModel {
+        ProfileAuthorBooksViewModel(
+            browseBooksUseCase = get(),
+            bookCatalogCache = get(),
         )
     }
 
@@ -121,15 +147,30 @@ val viewModelModule = module {
             sessionManager = get(),
             getMyProfileUseCase = get(),
             getUserProfileUseCase = get(),
-            getCurrentUserUseCase = get(),
-            getMyRecentActivityUseCase = get(),
-            getUserRecentActivityUseCase = get(),
             getPublicUserProfileUseCase = get(),
+            profileRefreshBus = get(),
+        )
+    }
+
+    viewModel {
+        ProfileEditViewModel(
+            feedback = get(),
+            sessionManager = get(),
             updateMyProfileUseCase = get(),
             removeAvatarUseCase = get(),
             deleteAccountUseCase = get(),
             uploadProfileImageUseCase = get(),
-            authRepository = get()
+            getCurrentUserUseCase = get(),
+            authRepository = get(),
+            profileRefreshBus = get(),
+        )
+    }
+
+    viewModel {
+        ProfileActivityViewModel(
+            feedback = get(),
+            getMyRecentActivityUseCase = get(),
+            getUserRecentActivityUseCase = get(),
         )
     }
 
@@ -213,14 +254,22 @@ val viewModelModule = module {
             getMyBooksUseCase = get(),
             getBookStatsUseCase = get(),
             getBookApplicationsUseCase = get(),
-            createBookUseCase = get(),
-            updateBookUseCase = get(),
             deleteBookUseCase = get(),
             publishBookUseCase = get(),
+            catalogRefresher = get(),
+        )
+    }
+
+    viewModel {
+        AuthorBookEditorViewModel(
+            feedback = get(),
+            createBookUseCase = get(),
+            updateBookUseCase = get(),
             uploadBookFileUseCase = get(),
             uploadBookCoverImageUseCase = get(),
             removeBookCoverImageUseCase = get(),
-            decodeBookLeakFingerprintUseCase = get()
+            decodeBookLeakFingerprintUseCase = get(),
+            catalogRefresher = get(),
         )
     }
 

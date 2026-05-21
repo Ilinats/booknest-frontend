@@ -29,7 +29,7 @@ import com.example.booknest.ui.components.AppScaffoldContentInsets
 import com.example.booknest.ui.components.AppTopBar
 import com.example.booknest.ui.components.BackButton
 import com.example.booknest.ui.components.paddingTopFromScaffold
-import com.example.booknest.viewmodel.books.BookViewModel
+import com.example.booknest.viewmodel.books.BrowseBooksViewModel
 import com.example.booknest.viewmodel.series.SeriesViewModel
 import com.example.booknest.ui.author.components.series.CreateSeriesDialog
 import com.example.booknest.ui.author.components.series.DeleteSeriesDialog
@@ -45,12 +45,12 @@ fun SeriesManagementScreen(
     navController: NavHostController,
     sessionManager: SessionManager = koinInject(),
     seriesViewModel: SeriesViewModel = getViewModel(),
-    bookViewModel: BookViewModel = getViewModel()
+    browseBooksViewModel: BrowseBooksViewModel = getViewModel()
 ) {
     val series by seriesViewModel.series.collectAsState()
     val isLoading by seriesViewModel.isLoading.collectAsState()
-    val seriesBooksMap by bookViewModel.seriesBooksBySeriesId.collectAsState()
-    val loadingBooksForSeries by bookViewModel.seriesBooksLoadingIds.collectAsState()
+    val seriesBooksMap by browseBooksViewModel.seriesBooksBySeriesId.collectAsState()
+    val loadingBooksForSeries by browseBooksViewModel.seriesBooksLoadingIds.collectAsState()
     var showCreateDialog by remember { mutableStateOf(false) }
     var editingSeries by remember {
         mutableStateOf<com.example.booknest.domain.model.response.SeriesResponse?>(
@@ -70,7 +70,7 @@ fun SeriesManagementScreen(
 
     LaunchedEffect(series) {
         series.forEach { seriesItem ->
-            bookViewModel.ensureSeriesBooksLoaded(
+            browseBooksViewModel.ensureSeriesBooksLoaded(
                 seriesId = seriesItem.id,
                 forceRefresh = false,
                 treatFailureAsEmptyCatalog = true,
@@ -81,7 +81,7 @@ fun SeriesManagementScreen(
 
     LaunchedEffect(expandedSeriesIds) {
         expandedSeriesIds.forEach { seriesId ->
-            bookViewModel.ensureSeriesBooksLoaded(
+            browseBooksViewModel.ensureSeriesBooksLoaded(
                 seriesId = seriesId,
                 forceRefresh = false,
                 treatFailureAsEmptyCatalog = true,

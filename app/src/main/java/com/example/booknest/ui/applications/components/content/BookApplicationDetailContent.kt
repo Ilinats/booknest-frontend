@@ -38,11 +38,11 @@ import com.example.booknest.ui.components.AppScaffoldContentInsets
 import com.example.booknest.ui.components.AppTopBar
 import com.example.booknest.ui.components.BackButton
 import com.example.booknest.ui.components.paddingTopFromScaffold
-import com.example.booknest.navigation.rememberAuthorBooksViewModel
+import com.example.booknest.navigation.rememberAuthorBookEditorViewModel
 import com.example.booknest.ui.author.components.LeakFingerprintDecodeSection
 import com.example.booknest.viewmodel.applications.BookApplicationViewModel
-import com.example.booknest.viewmodel.author.AuthorBooksViewModel
-import com.example.booknest.viewmodel.books.BookViewModel
+import com.example.booknest.viewmodel.books.BookDetailsViewModel
+import com.example.booknest.viewmodel.author.AuthorBookEditorViewModel
 import com.example.booknest.viewmodel.analytics.ReviewViewModel
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
@@ -58,15 +58,15 @@ fun BookApplicationDetailContent(
     sessionManager: SessionManager = koinInject(),
     bookId: String,
     bookApplicationViewModel: BookApplicationViewModel = getViewModel(),
-    bookViewModel: BookViewModel = getViewModel(),
+    bookDetailsViewModel: BookDetailsViewModel = getViewModel(),
     reviewViewModel: ReviewViewModel = getViewModel(),
-    authorBooksViewModel: AuthorBooksViewModel = rememberAuthorBooksViewModel(navController),
+    authorBookEditorViewModel: AuthorBookEditorViewModel = rememberAuthorBookEditorViewModel(navController),
 ) {
     val context = LocalContext.current
     val bookApplications by bookApplicationViewModel.bookApplications.collectAsState()
-    val leakFingerprintState by authorBooksViewModel.leakFingerprintState.collectAsState()
+    val leakFingerprintState by authorBookEditorViewModel.leakFingerprintState.collectAsState()
     val isLoading by bookApplicationViewModel.isLoading.collectAsState()
-    val bookDetails by bookViewModel.bookDetails.collectAsState()
+    val bookDetails by bookDetailsViewModel.bookDetails.collectAsState()
     val bookReviews by reviewViewModel.bookReviews.collectAsState()
     val allOverdueReviews by bookApplicationViewModel.overdueReviews.collectAsState()
 
@@ -104,12 +104,15 @@ fun BookApplicationDetailContent(
     var sortOption by remember { mutableStateOf<SortOption>(SortOption.DATE_DESC) }
     var showSortMenu by remember { mutableStateOf(false) }
 
+    LaunchedEffect(Unit) {
+        bookApplicationViewModel.loadOverdueReviews()
+    }
+
     LaunchedEffect(bookId) {
-        bookViewModel.getBookDetails(bookId)
+        bookDetailsViewModel.getBookDetails(bookId)
         bookApplicationViewModel.loadBookApplications(bookId)
         reviewViewModel.loadBookReviews(bookId)
-        bookApplicationViewModel.loadOverdueReviews()
-        authorBooksViewModel.clearLeakFingerprintState()
+        authorBookEditorViewModel.clearLeakFingerprintState()
     }
 
     LaunchedEffect(selectedTab) {
@@ -254,9 +257,9 @@ fun BookApplicationDetailContent(
                         leakFingerprintState = leakFingerprintState,
                         bookApplications = applicationsWithReviews,
                         onFileChosen = { uri ->
-                            authorBooksViewModel.decodeLeakFingerprint(bookId, uri, context)
+                            authorBookEditorViewModel.decodeLeakFingerprint(bookId, uri, context)
                         },
-                        onDismissResult = { authorBooksViewModel.clearLeakFingerprintState() },
+                        onDismissResult = { authorBookEditorViewModel.clearLeakFingerprintState() },
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
                 }

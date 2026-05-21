@@ -43,7 +43,7 @@ import com.example.booknest.ui.books.components.browse.BookListRecentSearchesCar
 import com.example.booknest.ui.books.components.browse.BookListSearchHeader
 import com.example.booknest.ui.books.components.browse.bookListActiveFilterLabels
 import com.example.booknest.ui.books.components.list.BookItem
-import com.example.booknest.viewmodel.books.BookViewModel
+import com.example.booknest.viewmodel.books.BrowseBooksViewModel
 import com.example.booknest.ui.components.AppScaffoldContentInsets
 import com.example.booknest.ui.components.AppTopBar
 import com.example.booknest.ui.components.BackgroundDecoration
@@ -56,21 +56,21 @@ import org.koin.compose.koinInject
 fun BookListScreen(
     navController: NavController? = null,
     sessionManager: SessionManager,
-    bookViewModel: BookViewModel = getViewModel(),
+    browseBooksViewModel: BrowseBooksViewModel = getViewModel(),
     searchHistoryManager: SearchHistoryManager = koinInject(),
     searchQuery: String? = null,
     category: String? = null
 ) {
-    val books by bookViewModel.books.collectAsState()
-    val isLoading by bookViewModel.isLoading.collectAsState()
-    val hasMore by bookViewModel.browseListHasMore.collectAsState()
-    val browseUi by bookViewModel.bookListBrowseUi.collectAsState()
-    val browseListLoadingMore by bookViewModel.browseListLoadingMore.collectAsState()
+    val books by browseBooksViewModel.books.collectAsState()
+    val isLoading by browseBooksViewModel.isLoading.collectAsState()
+    val hasMore by browseBooksViewModel.browseListHasMore.collectAsState()
+    val browseUi by browseBooksViewModel.bookListBrowseUi.collectAsState()
+    val browseListLoadingMore by browseBooksViewModel.browseListLoadingMore.collectAsState()
 
     val showFiltersForBrowse = category == null
 
-    val browseFilterGenres by bookViewModel.browseFilterGenres.collectAsState()
-    val browseGenresLoading by bookViewModel.browseGenresLoading.collectAsState()
+    val browseFilterGenres by browseBooksViewModel.browseFilterGenres.collectAsState()
+    val browseGenresLoading by browseBooksViewModel.browseGenresLoading.collectAsState()
 
     val screenTitle = when (category) {
         "search" -> "Search Results"
@@ -81,7 +81,7 @@ fun BookListScreen(
     val currentIsLoading = isLoading
 
     LaunchedEffect(category, searchQuery) {
-        bookViewModel.onBookListRouteArgs(searchQuery, category)
+        browseBooksViewModel.onBookListRouteArgs(searchQuery, category)
     }
 
     val recentSearches by searchHistoryManager.recentSearches.collectAsState(initial = emptyList())
@@ -99,7 +99,7 @@ fun BookListScreen(
             lastVisible >= total - 3
         }.collect { nearEnd ->
             if (nearEnd && !browseListLoadingMore && !isLoading) {
-                bookViewModel.loadMoreBrowseList(category)
+                browseBooksViewModel.loadMoreBrowseList(category)
             }
         }
     }
@@ -115,7 +115,7 @@ fun BookListScreen(
                     title = screenTitle,
                     actions = {
                         if (showFiltersForBrowse) {
-                            IconButton(onClick = { bookViewModel.setBookListShowFilters(!browseUi.showFilters) }) {
+                            IconButton(onClick = { browseBooksViewModel.setBookListShowFilters(!browseUi.showFilters) }) {
                                 Icon(
                                     Icons.Filled.FilterList,
                                     contentDescription = stringResource(R.string.cd_book_list_filters),
@@ -150,7 +150,7 @@ fun BookListScreen(
                             browseUi = browseUi,
                             recentSearches = recentSearches,
                             showFiltersForBrowse = showFiltersForBrowse,
-                            bookViewModel = bookViewModel,
+                            browseBooksViewModel = browseBooksViewModel,
                         )
                     }
 
@@ -158,7 +158,7 @@ fun BookListScreen(
                         item {
                             BookListRecentSearchesCard(
                                 recentSearches = recentSearches,
-                                bookViewModel = bookViewModel,
+                                browseBooksViewModel = browseBooksViewModel,
                             )
                         }
                     }
@@ -170,7 +170,7 @@ fun BookListScreen(
                             browseUi = browseUi,
                             browseFilterGenres = browseFilterGenres,
                             browseGenresLoading = browseGenresLoading,
-                            bookViewModel = bookViewModel,
+                            browseBooksViewModel = browseBooksViewModel,
                         )
                     }
                 }
@@ -182,7 +182,7 @@ fun BookListScreen(
                             BookListActiveFiltersBanner(
                                 activeFilters = activeFilterLabels,
                                 browseFilterGenres = browseFilterGenres,
-                                bookViewModel = bookViewModel,
+                                browseBooksViewModel = browseBooksViewModel,
                             )
                         }
                     }

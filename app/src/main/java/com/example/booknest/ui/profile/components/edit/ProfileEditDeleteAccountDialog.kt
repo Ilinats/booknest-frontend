@@ -15,12 +15,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.booknest.viewmodel.profile.ProfileViewModel
+import com.example.booknest.viewmodel.profile.ProfileEditViewModel
 import kotlinx.coroutines.launch
 
 @Composable
 fun ProfileEditDeleteAccountDialog(
-    profileViewModel: ProfileViewModel,
+    profileEditViewModel: ProfileEditViewModel,
     onDismiss: () -> Unit,
 ) {
     AlertDialog(
@@ -40,7 +40,7 @@ fun ProfileEditDeleteAccountDialog(
                     if (!isDeleting) {
                         isDeleting = true
                         scope.launch {
-                            profileViewModel.deleteAccount()
+                            profileEditViewModel.deleteAccount()
                             onDismiss()
                         }
                     }

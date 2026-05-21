@@ -30,7 +30,7 @@ import com.example.booknest.ui.home.components.sections.SearchSection
 import com.example.booknest.ui.home.components.sections.TrendingSection
 import com.example.booknest.viewmodel.applications.ApplicationViewModel
 import com.example.booknest.viewmodel.author.AuthorFollowViewModel
-import com.example.booknest.viewmodel.books.BookViewModel
+import com.example.booknest.viewmodel.books.HomeBooksViewModel
 import com.example.booknest.viewmodel.friends.FriendViewModel
 import com.example.booknest.viewmodel.notifications.NotificationViewModel
 import org.koin.androidx.compose.getViewModel
@@ -40,17 +40,17 @@ import org.koin.compose.koinInject
 fun HomeScreen(
     navController: NavController,
     sessionManager: SessionManager = koinInject(),
-    bookViewModel: BookViewModel = getViewModel(),
+    homeBooksViewModel: HomeBooksViewModel = getViewModel(),
     friendViewModel: FriendViewModel = getViewModel(),
     authorFollowViewModel: AuthorFollowViewModel = getViewModel(),
     applicationViewModel: ApplicationViewModel = getViewModel(),
     notificationViewModel: NotificationViewModel = getViewModel()
 ) {
-    val recommendedBooks by bookViewModel.recommendedBooks.collectAsState()
-    val newReleases by bookViewModel.newReleases.collectAsState()
-    val recommendedLoading by bookViewModel.recommendedLoading.collectAsState()
-    val newReleasesLoading by bookViewModel.newReleasesLoading.collectAsState()
-    val trendingLoading by bookViewModel.trendingLoading.collectAsState()
+    val recommendedBooks by homeBooksViewModel.recommendedBooks.collectAsState()
+    val newReleases by homeBooksViewModel.newReleases.collectAsState()
+    val recommendedLoading by homeBooksViewModel.recommendedLoading.collectAsState()
+    val newReleasesLoading by homeBooksViewModel.newReleasesLoading.collectAsState()
+    val trendingLoading by homeBooksViewModel.trendingLoading.collectAsState()
     val currentUser by sessionManager.currentUser.collectAsState()
 
     val friendsActivity by friendViewModel.friendsActivity.collectAsState()
@@ -61,31 +61,33 @@ fun HomeScreen(
     val followedAuthorsLoading by authorFollowViewModel.isLoading.collectAsState()
 
     var searchQuery by remember { mutableStateOf("") }
-    val searchResults by bookViewModel.homeSearchResults.collectAsState()
-    val isSearching by bookViewModel.homeSearchLoading.collectAsState()
+    val searchResults by homeBooksViewModel.homeSearchResults.collectAsState()
+    val isSearching by homeBooksViewModel.homeSearchLoading.collectAsState()
 
     val activeReadingApplications by applicationViewModel.activeReadingApplications.collectAsState()
     val pendingApplications by applicationViewModel.pendingApplications.collectAsState()
 
     val unreadCount by notificationViewModel.unreadCount.collectAsState()
 
-    val trendingBooks by bookViewModel.trendingBooks.collectAsState()
+    val trendingBooks by homeBooksViewModel.trendingBooks.collectAsState()
     val isLoggedIn by sessionManager.isLoggedIn.collectAsState()
 
+    LaunchedEffect(Unit) {
+        homeBooksViewModel.getTrendingBooks()
+        homeBooksViewModel.getNewReleases()
+    }
+
     LaunchedEffect(isLoggedIn) {
-        bookViewModel.getTrendingBooks()
-        bookViewModel.getNewReleases()
-        if (isLoggedIn == true) {
-            bookViewModel.getRecommendedBooks()
-            friendViewModel.loadFriendsActivity()
-            authorFollowViewModel.loadBooksFromFollowedAuthors()
-            applicationViewModel.loadMyApplications()
-            notificationViewModel.loadUnreadCount()
-        }
+        if (isLoggedIn != true) return@LaunchedEffect
+        homeBooksViewModel.getRecommendedBooks()
+        friendViewModel.loadFriendsActivity()
+        authorFollowViewModel.loadBooksFromFollowedAuthors()
+        applicationViewModel.loadMyApplications()
+        notificationViewModel.loadUnreadCount()
     }
 
     LaunchedEffect(searchQuery) {
-        bookViewModel.updateSearchQuery(searchQuery)
+        homeBooksViewModel.updateSearchQuery(searchQuery)
     }
 
     Box(

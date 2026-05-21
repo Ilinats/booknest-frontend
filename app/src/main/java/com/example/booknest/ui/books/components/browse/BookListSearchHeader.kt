@@ -40,14 +40,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.booknest.R
 import com.example.booknest.viewmodel.books.BookListBrowseUiState
-import com.example.booknest.viewmodel.books.BookViewModel
+import com.example.booknest.viewmodel.books.BrowseBooksViewModel
 
 @Composable
 fun BookListSearchHeader(
     browseUi: BookListBrowseUiState,
     recentSearches: List<String>,
     showFiltersForBrowse: Boolean,
-    bookViewModel: BookViewModel,
+    browseBooksViewModel: BrowseBooksViewModel,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -59,15 +59,15 @@ fun BookListSearchHeader(
 
         LaunchedEffect(isFocused) {
             if (isFocused && browseUi.searchQuery.isBlank() && recentSearches.isNotEmpty()) {
-                bookViewModel.setBookListShowRecentSearches(true)
+                browseBooksViewModel.setBookListShowRecentSearches(true)
             }
         }
 
         OutlinedTextField(
             value = browseUi.searchQuery,
             onValueChange = { newValue ->
-                bookViewModel.updateBookListSearchInput(newValue)
-                bookViewModel.setBookListShowRecentSearches(
+                browseBooksViewModel.updateBookListSearchInput(newValue)
+                browseBooksViewModel.setBookListShowRecentSearches(
                     newValue.isBlank() && recentSearches.isNotEmpty() && isFocused
                 )
             },
@@ -98,8 +98,8 @@ fun BookListSearchHeader(
             trailingIcon = {
                 if (browseUi.searchQuery.isNotBlank()) {
                     IconButton(onClick = {
-                        bookViewModel.clearBookListSearchImmediate()
-                        bookViewModel.setBookListShowRecentSearches(
+                        browseBooksViewModel.clearBookListSearchImmediate()
+                        browseBooksViewModel.setBookListShowRecentSearches(
                             recentSearches.isNotEmpty() && isFocused
                         )
                     }) {
@@ -110,7 +110,7 @@ fun BookListSearchHeader(
                     }
                 } else if (recentSearches.isNotEmpty()) {
                     IconButton(onClick = {
-                        bookViewModel.setBookListShowRecentSearches(!browseUi.showRecentSearches)
+                        browseBooksViewModel.setBookListShowRecentSearches(!browseUi.showRecentSearches)
                     }) {
                         Icon(
                             if (browseUi.showRecentSearches) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
@@ -123,7 +123,7 @@ fun BookListSearchHeader(
 
         if (showFiltersForBrowse) {
             IconButton(
-                onClick = { bookViewModel.setBookListShowFilters(!browseUi.showFilters) },
+                onClick = { browseBooksViewModel.setBookListShowFilters(!browseUi.showFilters) },
                 modifier = Modifier.size(48.dp)
             ) {
                 Icon(
@@ -139,7 +139,7 @@ fun BookListSearchHeader(
 @Composable
 fun BookListRecentSearchesCard(
     recentSearches: List<String>,
-    bookViewModel: BookViewModel,
+    browseBooksViewModel: BrowseBooksViewModel,
 ) {
     Card(
         modifier = Modifier
@@ -169,7 +169,7 @@ fun BookListRecentSearchesCard(
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                TextButton(onClick = { bookViewModel.clearBookListSearchHistory() }) {
+                TextButton(onClick = { browseBooksViewModel.clearBookListSearchHistory() }) {
                     Text(
                         "Clear",
                         style = MaterialTheme.typography.labelSmall
@@ -183,7 +183,7 @@ fun BookListRecentSearchesCard(
                     FilterChip(
                         selected = false,
                         onClick = {
-                            bookViewModel.applyBookListRecentSearch(search)
+                            browseBooksViewModel.applyBookListRecentSearch(search)
                         },
                         label = { Text(search, maxLines = 1) },
                         leadingIcon = {
