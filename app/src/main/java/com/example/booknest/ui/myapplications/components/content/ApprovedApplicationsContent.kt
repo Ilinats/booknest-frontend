@@ -14,8 +14,8 @@ import androidx.navigation.NavController
 import com.example.booknest.domain.model.response.ApplicationResponse
 import com.example.booknest.ui.myapplications.components.cards.ApprovedApplicationCard
 import com.example.booknest.ui.myapplications.components.info.ApprovedTabInfoCard
-import com.example.booknest.viewmodel.ApplicationViewModel
-import com.example.booknest.viewmodel.FileViewModel
+import com.example.booknest.viewmodel.applications.ApplicationViewModel
+import com.example.booknest.viewmodel.files.FileViewModel
 
 fun LazyListScope.ApprovedApplicationsContent(
     awaitingCopy: List<ApplicationResponse>,

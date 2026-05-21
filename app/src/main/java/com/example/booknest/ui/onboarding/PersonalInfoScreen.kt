@@ -1,50 +1,53 @@
 package com.example.booknest.ui.onboarding
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.draw.shadow
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.*
-import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.runtime.*
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
-import com.example.booknest.navigation.Screen
-import com.example.booknest.ui.onboarding.components.dialogs.DatePickerDialog
-import com.example.booknest.ui.components.models.UsernameStatus
-import com.example.booknest.ui.auth.components.utils.calculatePasswordStrength
-import com.example.booknest.viewmodel.SignupViewModel
-import com.example.booknest.data.service.AuthService
-import org.koin.compose.koinInject
-import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.*
 import android.util.Log
 import android.util.Patterns
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import com.example.booknest.data.service.AuthService
+import com.example.booknest.presentation.navigation.Screen
+import com.example.booknest.ui.components.BackgroundDecoration
+import com.example.booknest.ui.components.models.UsernameStatus
+import com.example.booknest.ui.onboarding.components.dialogs.DatePickerDialog
+import com.example.booknest.ui.onboarding.components.personalinfo.PersonalInfoBirthDateField
+import com.example.booknest.ui.onboarding.components.personalinfo.PersonalInfoContinueButton
+import com.example.booknest.ui.onboarding.components.personalinfo.PersonalInfoEmailField
+import com.example.booknest.ui.onboarding.components.personalinfo.PersonalInfoNameFields
+import com.example.booknest.ui.onboarding.components.personalinfo.PersonalInfoPasswordFields
+import com.example.booknest.ui.onboarding.components.personalinfo.PersonalInfoSignupProgressBar
+import com.example.booknest.ui.onboarding.components.personalinfo.PersonalInfoSignupTitle
+import com.example.booknest.ui.onboarding.components.personalinfo.PersonalInfoUsernameField
+import com.example.booknest.viewmodel.auth.SignupViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -221,8 +224,6 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
         password.length in 8..128
     }
 
-    val passwordStrength = calculatePasswordStrength(password)
-
     val isBirthDateValid = remember(birthDate) {
         birthDate?.let {
             val datePattern = Regex("^\\d{4}-\\d{2}-\\d{2}$")
@@ -270,71 +271,12 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .offset(x = (-175).dp, y = (-175).dp)
-                .size(350.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .offset(x = (-135).dp, y = (-135).dp)
-                .size(270.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary)
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .offset(x = 175.dp, y = 175.dp)
-                .size(350.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .offset(x = 135.dp, y = 135.dp)
-                .size(270.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary)
-        )
+        BackgroundDecoration(modifier = Modifier.fillMaxSize())
 
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets.statusBars)
-                    .padding(horizontal = 24.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(4.dp)
-                        .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp))
-                )
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(4.dp)
-                        .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp))
-                )
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(4.dp)
-                        .background(
-                            MaterialTheme.colorScheme.surfaceVariant,
-                            RoundedCornerShape(2.dp)
-                        )
-                )
-            }
+            PersonalInfoSignupProgressBar()
 
             Column(
                 modifier = Modifier
@@ -344,692 +286,62 @@ fun PersonalInfoScreen(navController: NavController, viewModel: SignupViewModel)
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                Spacer(modifier = Modifier.height(40.dp))
+                PersonalInfoSignupTitle()
 
-                Text(
-                    "Create\nYour Account",
-                    style = MaterialTheme.typography.headlineLarge.copy(
-                        fontSize = 40.sp,
-                        fontWeight = FontWeight.Bold
-                    ),
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center
+                PersonalInfoNameFields(
+                    firstName = firstName,
+                    onFirstNameChange = { if (it.length <= 100) firstName = it },
+                    isFirstNameValid = isFirstNameValid,
+                    lastName = lastName,
+                    onLastNameChange = { if (it.length <= 100) lastName = it },
+                    isLastNameValid = isLastNameValid
                 )
 
-                Spacer(modifier = Modifier.height(40.dp))
+                PersonalInfoEmailField(
+                    email = email,
+                    onEmailChange = { if (it.length <= 255) email = it },
+                    isEmailValid = isEmailValid,
+                    isCheckingEmail = isCheckingEmail,
+                    emailAvailable = emailAvailable
+                )
 
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        "First Name *",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontWeight = FontWeight.Medium
-                        ),
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
-                    OutlinedTextField(
-                        value = firstName,
-                        onValueChange = { if (it.length <= 100) firstName = it },
-                        placeholder = {
-                            Text(
-                                "First Name",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp)
-                            .shadow(
-                                elevation = 2.dp,
-                                shape = RoundedCornerShape(28.dp)
-                            ),
-                        singleLine = true,
-                        shape = RoundedCornerShape(28.dp),
-                        colors = TextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            disabledIndicatorColor = Color.Transparent
-                        )
-                    )
-                    when {
-                        firstName.isBlank() -> Text(
-                            "Required (1-100 characters)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
+                PersonalInfoUsernameField(
+                    username = username,
+                    onUsernameChange = { username = it },
+                    isCheckingUsername = isCheckingUsername,
+                    usernameStatus = usernameStatus,
+                    usernameAvailable = usernameAvailable
+                )
 
-                        firstName.length > 100 -> Text(
-                            "First name must be 100 characters or less",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
+                PersonalInfoPasswordFields(
+                    password = password,
+                    onPasswordChange = { if (it.length <= 128) password = it },
+                    passwordVisible = passwordVisible,
+                    onPasswordVisibleChange = { passwordVisible = it },
+                    isPasswordValid = isPasswordValid,
+                    confirmPassword = confirmPassword,
+                    onConfirmPasswordChange = { confirmPassword = it },
+                    confirmPasswordVisible = confirmPasswordVisible,
+                    onConfirmPasswordVisibleChange = { confirmPasswordVisible = it }
+                )
 
-                        !isFirstNameValid -> Text(
-                            "First name is required",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
+                PersonalInfoBirthDateField(
+                    formattedDate = formattedDate,
+                    birthDate = birthDate,
+                    isBirthDateValid = isBirthDateValid,
+                    firstName = firstName,
+                    onOpenDatePicker = { showDatePicker = true }
+                )
 
-                        else -> Text(
-                            "✓ ${firstName.length}/100",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-                    }
-                }
-
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        "Last Name *",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontWeight = FontWeight.Medium
-                        ),
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
-                    OutlinedTextField(
-                        value = lastName,
-                        onValueChange = { if (it.length <= 100) lastName = it },
-                        placeholder = { Text("Last Name", color = Color(0xFF757575)) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp)
-                            .shadow(
-                                elevation = 2.dp,
-                                shape = RoundedCornerShape(28.dp)
-                            ),
-                        singleLine = true,
-                        shape = RoundedCornerShape(28.dp),
-                        colors = TextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            disabledIndicatorColor = Color.Transparent
-                        )
-                    )
-                    when {
-                        lastName.isBlank() -> Text(
-                            "Required (1-100 characters)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-
-                        lastName.length > 100 -> Text(
-                            "Last name must be 100 characters or less",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-
-                        !isLastNameValid -> Text(
-                            "Last name is required",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-
-                        else -> Text(
-                            "✓ ${lastName.length}/100",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-                    }
-                }
-
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        "Email *",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontWeight = FontWeight.Medium
-                        ),
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
-                    OutlinedTextField(
-                        value = email,
-                        onValueChange = { if (it.length <= 255) email = it },
-                        placeholder = { Text("Email", color = Color(0xFF757575)) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp)
-                            .shadow(
-                                elevation = 2.dp,
-                                shape = RoundedCornerShape(28.dp)
-                            ),
-                        singleLine = true,
-                        shape = RoundedCornerShape(28.dp),
-                        trailingIcon = {
-                            when {
-                                isCheckingEmail -> {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(20.dp),
-                                        strokeWidth = 2.dp
-                                    )
-                                }
-
-                                emailAvailable == true && isEmailValid -> {
-                                    Icon(
-                                        Icons.Default.CheckCircle,
-                                        contentDescription = "Available",
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-
-                                emailAvailable == false -> {
-                                    Icon(
-                                        Icons.Default.CheckCircle,
-                                        contentDescription = "Taken",
-                                        tint = MaterialTheme.colorScheme.error
-                                    )
-                                }
-
-                                isEmailValid -> {
-                                    Icon(
-                                        Icons.Default.CheckCircle,
-                                        contentDescription = "Valid",
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-
-                                else -> {}
-                            }
-                        },
-                        colors = TextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            disabledIndicatorColor = Color.Transparent
-                        )
-                    )
-                    when {
-                        email.isBlank() -> Text(
-                            "Required (max 255 characters)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-
-                        email.length > 255 -> Text(
-                            "Email must be 255 characters or less",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-
-                        !Patterns.EMAIL_ADDRESS.matcher(email).matches() -> Text(
-                            "Please enter a valid email address",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-
-                        isCheckingEmail -> Text(
-                            "Checking availability...",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-
-                        emailAvailable == false -> Text(
-                            "Email is already registered",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-
-                        emailAvailable == true -> Text(
-                            "✓ Email is available",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-
-                        isEmailValid -> Text(
-                            "✓ Valid email",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-
-                        else -> {}
-                    }
-                }
-
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        "Username *",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontWeight = FontWeight.Medium
-                        ),
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
-                    OutlinedTextField(
-                        value = username,
-                        onValueChange = { username = it },
-                        placeholder = { Text("Username", color = Color(0xFF757575)) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp)
-                            .shadow(
-                                elevation = 2.dp,
-                                shape = RoundedCornerShape(28.dp)
-                            ),
-                        singleLine = true,
-                        trailingIcon = {
-                            when {
-                                isCheckingUsername -> {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(20.dp),
-                                        strokeWidth = 2.dp
-                                    )
-                                }
-
-                                usernameStatus is UsernameStatus.ValidFormat && usernameAvailable == true -> {
-                                    Icon(
-                                        Icons.Default.CheckCircle,
-                                        contentDescription = "Available",
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-
-                                usernameStatus is UsernameStatus.ValidFormat && usernameAvailable == false -> {
-                                    Icon(
-                                        Icons.Default.CheckCircle,
-                                        contentDescription = "Taken",
-                                        tint = MaterialTheme.colorScheme.error
-                                    )
-                                }
-
-                                usernameStatus is UsernameStatus.ValidFormat -> {
-                                    Icon(
-                                        Icons.Default.CheckCircle,
-                                        contentDescription = "Valid",
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-
-                                else -> {}
-                            }
-                        },
-                        colors = TextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            disabledIndicatorColor = Color.Transparent
-                        )
-                    )
-                    when (val status = usernameStatus) {
-                        is UsernameStatus.Idle -> Text(
-                            "3-50 characters, letters, numbers, _, ., -",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-
-                        is UsernameStatus.TooShort -> Text(
-                            "Username must be at least 3 characters",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-
-                        is UsernameStatus.TooLong -> Text(
-                            "Username must be 50 characters or less",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-
-                        is UsernameStatus.InvalidFormat -> Text(
-                            "Invalid format. Use letters, numbers, _, ., -",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-
-                        is UsernameStatus.ValidFormat -> {
-                            when {
-                                isCheckingUsername -> Text(
-                                    "Checking availability...",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(horizontal = 8.dp)
-                                )
-
-                                usernameAvailable == false -> Text(
-                                    "Username is already taken",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.padding(horizontal = 8.dp)
-                                )
-
-                                usernameAvailable == true -> Text(
-                                    "✓ Username is available",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(horizontal = 8.dp)
-                                )
-
-                                else -> Text(
-                                    "✓ Format valid",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(horizontal = 8.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        "Password *",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontWeight = FontWeight.Medium
-                        ),
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = { if (it.length <= 128) password = it },
-                        placeholder = { Text("Password", color = Color(0xFF757575)) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp)
-                            .shadow(
-                                elevation = 2.dp,
-                                shape = RoundedCornerShape(28.dp)
-                            ),
-                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                Icon(
-                                    imageVector = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
-                                    contentDescription = if (passwordVisible) "Hide password" else "Show password",
-                                    tint = Color(0xFF757575)
-                                )
-                            }
-                        },
-                        singleLine = true,
-                        shape = RoundedCornerShape(28.dp),
-                        colors = TextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            disabledIndicatorColor = Color.Transparent
-                        )
-                    )
-                    if (password.isNotBlank()) {
-                        Column(
-                            modifier = Modifier.padding(horizontal = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            when {
-                                password.length < 8 -> Text(
-                                    "Password must be at least 8 characters",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error
-                                )
-
-                                password.length > 128 -> Text(
-                                    "Password must be 128 characters or less",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error
-                                )
-
-                                !isPasswordValid -> Text(
-                                    "Password must be 8-128 characters",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error
-                                )
-
-                                else -> Text(
-                                    "Strength: ${passwordStrength.label} (${password.length}/128)",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color(0xFF757575)
-                                )
-                            }
-                            if (isPasswordValid) {
-                                LinearProgressIndicator(
-                                    progress = passwordStrength.strength,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    color = passwordStrength.color,
-                                    trackColor = MaterialTheme.colorScheme.surfaceVariant
-                                )
-                            }
-                        }
-                    } else {
-                        Text(
-                            "Required (8-128 characters)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-                    }
-                }
-
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        "Confirm Password *",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontWeight = FontWeight.Medium
-                        ),
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
-                    OutlinedTextField(
-                        value = confirmPassword,
-                        onValueChange = { confirmPassword = it },
-                        placeholder = { Text("Confirm Password", color = Color(0xFF757575)) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp)
-                            .shadow(
-                                elevation = 2.dp,
-                                shape = RoundedCornerShape(28.dp)
-                            ),
-                        visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            IconButton(onClick = {
-                                confirmPasswordVisible = !confirmPasswordVisible
-                            }) {
-                                Icon(
-                                    imageVector = if (confirmPasswordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
-                                    contentDescription = if (confirmPasswordVisible) "Hide password" else "Show password",
-                                    tint = Color(0xFF757575)
-                                )
-                            }
-                        },
-                        singleLine = true,
-                        shape = RoundedCornerShape(28.dp),
-                        colors = TextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            disabledIndicatorColor = Color.Transparent
-                        )
-                    )
-                    when {
-                        confirmPassword.isBlank() -> {}
-                        password != confirmPassword -> Text(
-                            "Passwords don't match",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-
-                        else -> Text(
-                            "✓",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-                    }
-                }
-
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        "Birth Date *",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontWeight = FontWeight.Medium
-                        ),
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
-                    OutlinedTextField(
-                        value = formattedDate,
-                        onValueChange = { },
-                        placeholder = { Text("Birthday", color = Color(0xFF757575)) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp)
-                            .shadow(
-                                elevation = 2.dp,
-                                shape = RoundedCornerShape(28.dp)
-                            )
-                            .clickable { showDatePicker = true },
-                        readOnly = true,
-                        trailingIcon = {
-                            IconButton(onClick = { showDatePicker = true }) {
-                                Icon(
-                                    Icons.Default.CalendarToday,
-                                    contentDescription = "Select Date",
-                                    tint = Color(0xFF757575)
-                                )
-                            }
-                        },
-                        colors = TextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            disabledIndicatorColor = Color.Transparent
-                        )
-                    )
-                    when {
-                        birthDate == null && firstName.isNotBlank() -> Text(
-                            "Birth date is required",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-
-                        birthDate != null && !isBirthDateValid -> {
-                            val datePattern = Regex("^\\d{4}-\\d{2}-\\d{2}$")
-                            val errorText = if (datePattern.matches(birthDate ?: "")) {
-                                "You must be at least 10 years old"
-                            } else {
-                                "Invalid date format (YYYY-MM-DD)"
-                            }
-                            Text(
-                                errorText,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.padding(horizontal = 8.dp)
-                            )
-                        }
-
-                        isBirthDateValid -> Text(
-                            "✓ Valid birth date",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-
-                        else -> Text(
-                            "Select your birth date (YYYY-MM-DD, must be at least 10 years old)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Button(
-                    onClick = {
+                PersonalInfoContinueButton(
+                    isFormValid = isFormValid,
+                    onContinue = {
                         viewModel.updatePersonalInfo(firstName, lastName, email, password)
                         viewModel.updateUsername(username)
                         viewModel.updateBirthDate(birthDate)
                         navController.navigate(Screen.ProfileDetails.route)
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .shadow(
-                            elevation = 4.dp,
-                            shape = RoundedCornerShape(12.dp)
-                        ),
-                    enabled = isFormValid,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        disabledContainerColor = Color(0xFFE0E0E0)
-                    )
-                ) {
-                    Text(
-                        "Continue",
-                        style = MaterialTheme.typography.labelLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp
-                        ),
-                        color = if (isFormValid) Color.White else Color(0xFF757575)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(32.dp))
+                    }
+                )
             }
         }
 

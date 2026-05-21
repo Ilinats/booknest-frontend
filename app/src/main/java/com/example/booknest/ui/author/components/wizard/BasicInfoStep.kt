@@ -143,14 +143,6 @@ fun BasicInfoStep(
                     val shortDescValidation = validateShortDescription(shortDescription)
                     val fullDescValidation = validateFullDescription(fullDescription)
 
-                    println("DEBUG: onValueChange with newValue: '$newValue'")
-                    println("DEBUG: validationResult: $validationResult")
-                    println("DEBUG: calling onValidationChange with:")
-                    println("  titleError: $titleValidation")
-                    println("  shortDescError: $shortDescValidation")
-                    println("  fullDescError: $fullDescValidation")
-                    println("  pageCountError: $validationResult")
-
                     onValidationChange?.invoke(
                         titleValidation,
                         shortDescValidation,

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -47,48 +48,36 @@ fun ApplicationStatItem(
 
 @Composable
 fun ApplicationStatsSection(stats: ApplicationStats) {
+    val statItems = listOf(
+        "Total" to stats.total.toString(),
+        "Pending" to stats.pending.toString(),
+        "Approved" to stats.approved.toString(),
+        "Rejected" to stats.rejected.toString(),
+        "Withdrawn" to stats.withdrawn.toString(),
+    )
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            ApplicationStatCard(
-                title = "Total",
-                value = stats.total.toString(),
-                modifier = Modifier.weight(1f)
-            )
-            ApplicationStatCard(
-                title = "Pending",
-                value = stats.pending.toString(),
-                modifier = Modifier.weight(1f)
-            )
-            ApplicationStatCard(
-                title = "Approved",
-                value = stats.approved.toString(),
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            ApplicationStatCard(
-                title = "Rejected",
-                value = stats.rejected.toString(),
-                modifier = Modifier.weight(1f)
-            )
-            ApplicationStatCard(
-                title = "Withdrawn",
-                value = stats.withdrawn.toString(),
-                modifier = Modifier.weight(1f)
-            )
-            Spacer(modifier = Modifier.weight(1f))
+        statItems.chunked(2).forEach { rowItems ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                rowItems.forEach { (title, value) ->
+                    ApplicationStatCard(
+                        title = title,
+                        value = value,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                if (rowItems.size == 1) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
         }
     }
 }
@@ -100,7 +89,7 @@ fun ApplicationStatCard(
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier,
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -125,8 +114,11 @@ fun ApplicationStatCard(
             Text(
                 text = title,
                 fontSize = 12.sp,
+                lineHeight = 14.sp,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.fillMaxWidth()
             )
         }

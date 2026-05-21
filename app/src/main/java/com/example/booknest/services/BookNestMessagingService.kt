@@ -9,6 +9,9 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.example.booknest.MainActivity
 import com.example.booknest.R
+import com.example.booknest.navigation.EXTRA_NOTIFICATION_ID
+import com.example.booknest.navigation.EXTRA_NOTIFICATION_TYPE
+import com.example.booknest.utils.DebugLog
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 
@@ -16,13 +19,16 @@ class BookNestMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        println("FCM Token: $token")
+        DebugLog.d("FCM", "onNewToken (length=${token.length})")
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
 
-        println("FCM: Message received - data: ${remoteMessage.data}, notification: ${remoteMessage.notification}")
+        DebugLog.d(
+            "FCM",
+            "onMessageReceived keys=${remoteMessage.data.keys} hasNotification=${remoteMessage.notification != null}"
+        )
 
         val notificationId = remoteMessage.data["notificationId"]
         val type = remoteMessage.data["type"]
@@ -54,8 +60,8 @@ class BookNestMessagingService : FirebaseMessagingService() {
     ) {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            notificationId?.let { putExtra("notificationId", it) }
-            type?.let { putExtra("notificationType", it) }
+            notificationId?.let { putExtra(EXTRA_NOTIFICATION_ID, it) }
+            type?.let { putExtra(EXTRA_NOTIFICATION_TYPE, it) }
             bookId?.let { putExtra("bookId", it) }
             applicationId?.let { putExtra("applicationId", it) }
             relatedUserId?.let { putExtra("relatedUserId", it) }
@@ -97,10 +103,9 @@ class BookNestMessagingService : FirebaseMessagingService() {
         val notificationIdInt = notificationId?.hashCode() ?: System.currentTimeMillis().toInt()
         try {
             notificationManager.notify(notificationIdInt, notificationBuilder.build())
-            println("FCM: Notification shown successfully with ID: $notificationIdInt")
+            DebugLog.d("FCM", "Notification shown id=$notificationIdInt")
         } catch (e: Exception) {
-            println("FCM: Error showing notification: ${e.message}")
-            e.printStackTrace()
+            DebugLog.w("FCM", "Error showing notification: ${e.message}", e)
         }
     }
 }

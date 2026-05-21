@@ -2,10 +2,20 @@ package com.example.booknest.ui.books
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,18 +26,23 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
 import androidx.navigation.NavController
+import android.app.Activity
 import coil.compose.AsyncImage
-import com.example.booknest.data.session.SessionManager
+import com.example.booknest.port.SessionReader
 import com.example.booknest.domain.model.response.ApplicationCheckApplicationResponse
 import com.example.booknest.domain.model.response.BookResponse
-import com.example.booknest.navigation.Screen
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.ui.books.components.application.ApplicationInfoSection
 import com.example.booknest.ui.books.components.author.AboutAuthorSection
 import com.example.booknest.ui.books.components.details.BookDescriptionSection
@@ -35,9 +50,9 @@ import com.example.booknest.ui.books.components.details.GenreTagsSection
 import com.example.booknest.ui.books.components.dialogs.ApplicationFormDialog
 import com.example.booknest.ui.books.components.dialogs.WithdrawApplicationDialog
 import com.example.booknest.ui.books.components.reviews.ReviewsSection
-import com.example.booknest.viewmodel.ApplicationViewModel
-import com.example.booknest.viewmodel.BookViewModel
-import com.example.booknest.viewmodel.ReviewViewModel
+import com.example.booknest.viewmodel.applications.ApplicationViewModel
+import com.example.booknest.viewmodel.books.BookViewModel
+import com.example.booknest.viewmodel.analytics.ReviewViewModel
 import com.example.booknest.ui.components.BackButton
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
@@ -48,14 +63,14 @@ import java.util.*
 @Composable
 fun BookDetailsScreen(
     navController: NavController,
-    sessionManager: SessionManager = koinInject(),
+    sessionReader: SessionReader = koinInject(),
     bookId: String,
     applicationViewModel: ApplicationViewModel = getViewModel(),
     reviewViewModel: ReviewViewModel = getViewModel(),
     bookViewModel: BookViewModel = getViewModel()
 ) {
-    var book by remember { mutableStateOf<BookResponse?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
+    val book by bookViewModel.bookDetailsScreenBook.collectAsState()
+    val isLoading by bookViewModel.bookDetailsScreenLoading.collectAsState()
     var showApplyDialog by remember { mutableStateOf(false) }
     var showWithdrawDialog by remember { mutableStateOf(false) }
     var userApplication by remember { mutableStateOf<ApplicationCheckApplicationResponse?>(null) }
@@ -72,25 +87,20 @@ fun BookDetailsScreen(
         return
     }
 
-    val currentUser by sessionManager.currentUser.collectAsState()
+    BookDetailsSystemBarsEffect(
+        statusBarColor = MaterialTheme.colorScheme.secondary,
+        navigationBarColor = MaterialTheme.colorScheme.background,
+    )
+
+    val currentUser by sessionReader.currentUser.collectAsState()
+
+    val books by bookViewModel.books.collectAsState()
+    val recommendedBooks by bookViewModel.recommendedBooks.collectAsState()
+    val newReleases by bookViewModel.newReleases.collectAsState()
+    val homeSearchResults by bookViewModel.homeSearchResults.collectAsState()
 
     LaunchedEffect(bookId) {
-        println("DEBUG: BookDetailsScreen - bookId: $bookId")
-
-        val cachedBook = bookViewModel.findBookInCache(bookId)
-        if (cachedBook != null) {
-            println("DEBUG: Found book in cache immediately, using cached data")
-            book = cachedBook
-            isLoading = false
-        }
-
-        try {
-            bookViewModel.getBookDetails(bookId)
-        } catch (e: Exception) {
-            println("DEBUG: Book details API failed: ${e.message}")
-            e.printStackTrace()
-        }
-
+        bookViewModel.beginBookDetailsScreen(bookId)
         reviewViewModel.loadBookReviews(bookId)
     }
 
@@ -105,37 +115,14 @@ fun BookDetailsScreen(
         }
     }
 
-    val bookDetails by bookViewModel.bookDetails.collectAsState()
     val bookReviews by reviewViewModel.bookReviews.collectAsState()
-    
-    LaunchedEffect(bookDetails) {
-        bookDetails?.let { details ->
-            if (book == null || (details.fullDescription != null && book?.fullDescription == null)) {
-                book = details
-                isLoading = false
-            }
-        }
-    }
 
     val calculatedRating = remember(book?.rating, bookReviews) {
         bookViewModel.calculateRating(book?.rating, bookReviews)
     }
 
-    LaunchedEffect(
-        bookViewModel.books,
-        bookViewModel.recommendedBooks,
-        bookViewModel.newReleases,
-        bookViewModel.homeSearchResults
-    ) {
-        if (book == null) {
-            println("DEBUG: Trying to find book in main screen data")
-            val foundBook = bookViewModel.findBookInCache(bookId)
-            if (foundBook != null) {
-                println("DEBUG: Found book in cache: ${foundBook.title}")
-                book = foundBook
-                isLoading = false
-            }
-        }
+    LaunchedEffect(bookId, books, recommendedBooks, newReleases, homeSearchResults) {
+        bookViewModel.refreshBookDetailsScreenFromCache()
     }
 
     val applicationCheck by applicationViewModel.applicationCheck.collectAsState()
@@ -145,7 +132,6 @@ fun BookDetailsScreen(
             if (check.hasApplied == true && isApplying) {
                 isApplying = false
             }
-            val previousApplication = userApplication
             userApplication = check.application
 
             if (isApplying && check.application != null) {
@@ -154,13 +140,13 @@ fun BookDetailsScreen(
 
             if (book == null && check.application?.book != null) {
                 val bookFromApp = check.application.book
-                println("DEBUG: Creating fallback book from application check: $bookFromApp")
-                book = BookResponse(
-                    id = bookFromApp.id,
-                    authorId = bookFromApp.authorId,
-                    title = bookFromApp.title
+                bookViewModel.applyBookDetailsFromApplicationCheck(
+                    BookResponse(
+                        id = bookFromApp.id,
+                        authorId = bookFromApp.authorId,
+                        title = bookFromApp.title
+                    )
                 )
-                println("DEBUG: Application check fallback book created: $book")
             }
         }
     }
@@ -174,13 +160,11 @@ fun BookDetailsScreen(
         }
     }
 
-    Scaffold(
-    ) { paddingValues ->
+    Box(modifier = Modifier.fillMaxSize()) {
         if (isLoading) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
                     .background(MaterialTheme.colorScheme.secondary),
                 contentAlignment = Alignment.Center
             ) {
@@ -191,7 +175,7 @@ fun BookDetailsScreen(
                 book = book!!,
                 calculatedRating = calculatedRating,
                 navController = navController,
-                sessionManager = sessionManager,
+                sessionReader = sessionReader,
                 applicationViewModel = applicationViewModel,
                 reviewViewModel = reviewViewModel,
                 userApplication = userApplication,
@@ -199,13 +183,11 @@ fun BookDetailsScreen(
                 onWithdrawClick = { showWithdrawDialog = true },
                 isApplicationLoading = isApplicationLoading,
                 isApplying = isApplying,
-                modifier = Modifier.padding(paddingValues)
+                modifier = Modifier.fillMaxSize()
             )
         } else {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 Text("Book not found")
@@ -244,7 +226,7 @@ fun BookDetailsContent(
     book: BookResponse,
     calculatedRating: Double,
     navController: NavController,
-    sessionManager: SessionManager,
+    sessionReader: SessionReader,
     applicationViewModel: ApplicationViewModel,
     reviewViewModel: ReviewViewModel,
     userApplication: ApplicationCheckApplicationResponse?,
@@ -256,7 +238,7 @@ fun BookDetailsContent(
 ) {
     val bookReviews by reviewViewModel.bookReviews.collectAsState()
     val isLoadingReviews by reviewViewModel.isLoading.collectAsState()
-    val currentUser by sessionManager.currentUser.collectAsState()
+    val currentUser by sessionReader.currentUser.collectAsState()
 
     val isAuthor = remember(currentUser?.id, book.authorId, book.author?.id) {
         val authorId = book.authorId ?: book.author?.id
@@ -278,34 +260,44 @@ fun BookDetailsContent(
     val coverWidth = 130.dp
     val coverHeight = 195.dp
     val halfCover = coverHeight / 2
+    val pageBackground = MaterialTheme.colorScheme.background
+    val heroBlue = MaterialTheme.colorScheme.secondary
+    val scrollState = rememberScrollState()
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.secondary)
+            .background(pageBackground)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .background(heroBlue)
             ) {
-                BackButton(
-                    onClick = { navController.popBackStack() },
-                    modifier = Modifier.padding(start = 8.dp),
-                    tint = MaterialTheme.colorScheme.onSecondary
-                )
-            }
+                Column(Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .windowInsetsPadding(WindowInsets.statusBars)
+                            .padding(start = 4.dp, top = 6.dp, bottom = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        BackButton(
+                            onClick = { navController.popBackStack() },
+                            tint = MaterialTheme.colorScheme.onSecondary
+                        )
+                    }
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp)
-            ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp)
+                    ) {
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -426,6 +418,8 @@ fun BookDetailsContent(
                         )
                     }
                 }
+                    }
+                }
             }
 
             Surface(
@@ -436,8 +430,15 @@ fun BookDetailsContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
-                        .windowInsetsPadding(WindowInsets.navigationBars)
-                        .padding(bottom = 24.dp),
+                        .then(
+                            if (isAuthor) {
+                                Modifier.padding(bottom = 16.dp)
+                            } else {
+                                Modifier
+                                    .windowInsetsPadding(WindowInsets.navigationBars)
+                                    .padding(bottom = 16.dp)
+                            }
+                        ),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     GenreTagsSection(book = book)
@@ -453,15 +454,14 @@ fun BookDetailsContent(
                             showApplyButton = !isApplicationDeadlinePassed && (userApplication == null || userApplication.status == "withdrawn") && !isApplicationLoading && !isApplying,
                             showWithdrawButton = !isApplicationDeadlinePassed && userApplication?.status == "pending",
                             navController = navController,
-                            sessionManager = sessionManager
+                            sessionReader = sessionReader
                         )
                     }
 
                     if (!isAuthor) {
                         AboutAuthorSection(
                             book = book,
-                            navController = navController,
-                            sessionManager = sessionManager
+                            navController = navController
                         )
                     }
 
@@ -549,6 +549,41 @@ fun BookStatsRow(book: BookResponse, rating: Double, modifier: Modifier = Modifi
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+@Composable
+private fun BookDetailsSystemBarsEffect(
+    statusBarColor: Color,
+    navigationBarColor: Color,
+) {
+    val view = LocalView.current
+    DisposableEffect(statusBarColor, navigationBarColor) {
+        val activity = view.context as? Activity
+        val window = activity?.window
+        val controller = window?.let { WindowCompat.getInsetsController(it, view) }
+        val prevLightStatus = controller?.isAppearanceLightStatusBars
+        val prevLightNav = controller?.isAppearanceLightNavigationBars
+        val prevStatusBarColor = window?.statusBarColor
+        val prevNavBarColor = window?.navigationBarColor
+        if (controller != null && window != null) {
+            window.statusBarColor = statusBarColor.toArgb()
+            window.navigationBarColor = navigationBarColor.toArgb()
+            controller.isAppearanceLightStatusBars = false
+            controller.isAppearanceLightNavigationBars = true
+        }
+        onDispose {
+            if (window != null) {
+                window.statusBarColor = prevStatusBarColor ?: Color.Transparent.toArgb()
+                window.navigationBarColor = prevNavBarColor ?: Color.Transparent.toArgb()
+            }
+            if (controller != null && prevLightStatus != null) {
+                controller.isAppearanceLightStatusBars = prevLightStatus
+            }
+            if (controller != null && prevLightNav != null) {
+                controller.isAppearanceLightNavigationBars = prevLightNav
+            }
         }
     }
 }

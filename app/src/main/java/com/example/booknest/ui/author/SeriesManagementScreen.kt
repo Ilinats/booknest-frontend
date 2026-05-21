@@ -14,8 +14,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -26,18 +24,18 @@ import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.model.response.BookResponse
-import com.example.booknest.domain.model.response.RecommendedBookResponse
-import com.example.booknest.navigation.Screen
+import com.example.booknest.presentation.navigation.Screen
+import com.example.booknest.ui.components.AppScaffoldContentInsets
+import com.example.booknest.ui.components.AppTopBar
 import com.example.booknest.ui.components.BackButton
-import com.example.booknest.viewmodel.BookViewModel
-import com.example.booknest.viewmodel.SeriesViewModel
-import com.example.booknest.domain.usecase.books.BrowseBooksUseCase
+import com.example.booknest.ui.components.paddingTopFromScaffold
+import com.example.booknest.viewmodel.books.BookViewModel
+import com.example.booknest.viewmodel.series.SeriesViewModel
 import com.example.booknest.ui.author.components.series.CreateSeriesDialog
 import com.example.booknest.ui.author.components.series.DeleteSeriesDialog
 import com.example.booknest.ui.author.components.series.EditSeriesDialog
 import com.example.booknest.ui.author.components.series.SeriesCard
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
+import com.example.booknest.ui.components.BackgroundDecoration
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
 
@@ -47,11 +45,12 @@ fun SeriesManagementScreen(
     navController: NavHostController,
     sessionManager: SessionManager = koinInject(),
     seriesViewModel: SeriesViewModel = getViewModel(),
-    bookViewModel: BookViewModel = getViewModel(),
-    browseBooksUseCase: BrowseBooksUseCase = koinInject()
+    bookViewModel: BookViewModel = getViewModel()
 ) {
     val series by seriesViewModel.series.collectAsState()
     val isLoading by seriesViewModel.isLoading.collectAsState()
+    val seriesBooksMap by bookViewModel.seriesBooksBySeriesId.collectAsState()
+    val loadingBooksForSeries by bookViewModel.seriesBooksLoadingIds.collectAsState()
     var showCreateDialog by remember { mutableStateOf(false) }
     var editingSeries by remember {
         mutableStateOf<com.example.booknest.domain.model.response.SeriesResponse?>(
@@ -65,153 +64,64 @@ fun SeriesManagementScreen(
     }
     var expandedSeriesIds by remember { mutableStateOf<Set<String>>(emptySet()) }
 
-    var seriesBooksMap by remember {
-        mutableStateOf<Map<String, List<RecommendedBookResponse>>>(
-            emptyMap()
-        )
-    }
-    var loadingBooksForSeries by remember { mutableStateOf<Set<String>>(emptySet()) }
-    val scope = rememberCoroutineScope()
-
     LaunchedEffect(Unit) {
         seriesViewModel.loadMySeries()
     }
 
     LaunchedEffect(series) {
         series.forEach { seriesItem ->
-            if (!seriesBooksMap.containsKey(seriesItem.id) && !loadingBooksForSeries.contains(
-                    seriesItem.id
-                )
-            ) {
-                loadingBooksForSeries = loadingBooksForSeries + seriesItem.id
-
-                scope.launch {
-                    browseBooksUseCase(
-                        seriesId = seriesItem.id,
-                        status = "active",
-                        take = 100
-                    ).onSuccess { fetchedBooks ->
-                        seriesBooksMap = seriesBooksMap + (seriesItem.id to fetchedBooks.sortedBy {
-                            it.seriesOrder ?: Int.MAX_VALUE
-                        })
-                        loadingBooksForSeries = loadingBooksForSeries - seriesItem.id
-                    }.onFailure { e ->
-                        println("Failed to load books for series ${seriesItem.id}: ${e.message}")
-                        loadingBooksForSeries = loadingBooksForSeries - seriesItem.id
-                        seriesBooksMap = seriesBooksMap + (seriesItem.id to emptyList())
-                    }
-                }
-            }
+            bookViewModel.ensureSeriesBooksLoaded(
+                seriesId = seriesItem.id,
+                forceRefresh = false,
+                treatFailureAsEmptyCatalog = true,
+                status = null,
+            )
         }
     }
 
     LaunchedEffect(expandedSeriesIds) {
         expandedSeriesIds.forEach { seriesId ->
-            if (!seriesBooksMap.containsKey(seriesId) && !loadingBooksForSeries.contains(seriesId)) {
-                loadingBooksForSeries = loadingBooksForSeries + seriesId
-
-                scope.launch {
-                    browseBooksUseCase(
-                        seriesId = seriesId,
-                        status = "active",
-                        take = 100
-                    ).onSuccess { fetchedBooks ->
-                        seriesBooksMap = seriesBooksMap + (seriesId to fetchedBooks.sortedBy {
-                            it.seriesOrder ?: Int.MAX_VALUE
-                        })
-                        loadingBooksForSeries = loadingBooksForSeries - seriesId
-                    }.onFailure { e ->
-                        println("Failed to load books for series $seriesId: ${e.message}")
-                        loadingBooksForSeries = loadingBooksForSeries - seriesId
-                        seriesBooksMap = seriesBooksMap + (seriesId to emptyList())
-                    }
-                }
-            }
+            bookViewModel.ensureSeriesBooksLoaded(
+                seriesId = seriesId,
+                forceRefresh = false,
+                treatFailureAsEmptyCatalog = true,
+                status = null,
+            )
         }
     }
 
     Scaffold(
+        contentWindowInsets = AppScaffoldContentInsets,
         topBar = {
-            Surface(
-                shadowElevation = 4.dp,
-                tonalElevation = 2.dp,
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                TopAppBar(
-                    title = {
-                        Text(
-                            "Series Management",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp,
-                            color = MaterialTheme.colorScheme.onBackground
+            AppTopBar(
+                title = "Series Management",
+                navigationIcon = {
+                    BackButton(onClick = { navController.popBackStack() })
+                },
+                actions = {
+                    IconButton(onClick = { showCreateDialog = true }) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Add Series",
+                            tint = MaterialTheme.colorScheme.primary,
                         )
-                    },
-                    navigationIcon = {
-                        BackButton(onClick = { navController.popBackStack() })
-                    },
-                    actions = {
-                        IconButton(onClick = { showCreateDialog = true }) {
-                            Icon(
-                                Icons.Default.Add,
-                                contentDescription = "Add Series",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
                     }
-                )
-            }
+                },
+            )
         },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showCreateDialog = true }
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Create Series")
-            }
-        }
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(x = (-175).dp, y = (-175).dp)
-                    .size(350.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(x = (-135).dp, y = (-135).dp)
-                    .size(270.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary)
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .offset(x = 175.dp, y = 175.dp)
-                    .size(350.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .offset(x = 135.dp, y = 135.dp)
-                    .size(270.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary)
-            )
+            BackgroundDecoration(modifier = Modifier.fillMaxSize())
 
             if (isLoading && series.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(paddingValues),
+                        .paddingTopFromScaffold(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()
@@ -220,7 +130,7 @@ fun SeriesManagementScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(paddingValues),
+                        .paddingTopFromScaffold(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(
@@ -252,12 +162,12 @@ fun SeriesManagementScreen(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(paddingValues),
+                        .paddingTopFromScaffold(paddingValues),
                     contentPadding = PaddingValues(
                         start = 16.dp,
                         end = 16.dp,
                         top = 16.dp,
-                        bottom = 80.dp
+                        bottom = 16.dp
                     ),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {

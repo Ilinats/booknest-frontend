@@ -20,7 +20,7 @@ import androidx.compose.material3.MaterialTheme
 
 import androidx.navigation.NavController
 import com.example.booknest.data.session.SessionManager
-import com.example.booknest.navigation.Screen
+import com.example.booknest.presentation.navigation.Screen
 import kotlinx.coroutines.delay
 
 @Composable

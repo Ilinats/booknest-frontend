@@ -8,34 +8,31 @@ import com.example.booknest.domain.model.response.ReviewResponse
 class BNReviewsDataSource(private val reviewsService: ReviewsService) : ReviewsDataSource {
 
     override suspend fun createReview(review: CreateReviewRequest): Result<ReviewResponse> {
-        return requestBody(reviewsService.createReview(review))
+        return runSuspendRequest { reviewsService.createReview(review) }
     }
 
     override suspend fun getReview(reviewId: String): Result<ReviewResponse> {
-        return requestBody(reviewsService.getReview(reviewId))
+        return runSuspendRequest { reviewsService.getReview(reviewId) }
     }
 
     override suspend fun updateReview(
         reviewId: String,
         review: UpdateReviewRequest
     ): Result<ReviewResponse> {
-        return requestBody(reviewsService.updateReview(reviewId, review))
+        return runSuspendRequest { reviewsService.updateReview(reviewId, review) }
     }
 
     override suspend fun deleteReview(reviewId: String): Result<Unit> {
-        return requestBodyUnit(reviewsService.deleteReview(reviewId))
-    }
-
-    override suspend fun getBookReviews(bookId: String): Result<List<ReviewResponse>> {
-        return requestPaginatedBody(reviewsService.getBookReviews(bookId))
+        return runSuspendRequestUnit { reviewsService.deleteReview(reviewId) }
     }
 
     override suspend fun getUserReviews(userId: String): Result<List<ReviewResponse>> {
-        return requestPaginatedBody(reviewsService.getUserReviews(userId))
+        return runSuspendRequestPaginated {
+            reviewsService.getUserReviews(userId, skip = 0, take = 100)
+        }
     }
 
     override suspend fun getAuthorLatestReviews(limit: Int?): Result<List<ReviewResponse>> {
-        return requestBody(reviewsService.getAuthorLatestReviews(limit))
+        return runSuspendRequest { reviewsService.getAuthorLatestReviews(limit) }
     }
 }
-

@@ -3,7 +3,6 @@ package com.example.booknest.ui.account
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.shadow
@@ -17,6 +16,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -25,15 +25,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import android.app.Activity
+import androidx.core.view.WindowCompat
 import com.example.booknest.data.session.SessionManager
-import com.example.booknest.viewmodel.FavoriteGenresViewModel
+import com.example.booknest.viewmodel.genres.FavoriteGenresViewModel
 import com.example.booknest.ui.account.components.genres.GenresGrid
+import com.example.booknest.ui.components.BackgroundDecoration
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
 
@@ -80,7 +85,11 @@ fun FavoriteGenresScreen(
         }
     }
 
+    val pageBackground = MaterialTheme.colorScheme.background
+    FavoriteGenresNavigationBarEffect(pageBackground)
+
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             Box(
                 modifier = Modifier
@@ -101,38 +110,7 @@ fun FavoriteGenresScreen(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(x = (-175).dp, y = (-175).dp)
-                    .size(350.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(x = (-135).dp, y = (-135).dp)
-                    .size(270.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary)
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .offset(x = 175.dp, y = 175.dp)
-                    .size(350.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .offset(x = 135.dp, y = 135.dp)
-                    .size(270.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary)
-            )
+            BackgroundDecoration(modifier = Modifier.fillMaxSize())
 
             if (isLoading && genres.isEmpty()) {
                 Box(
@@ -192,13 +170,14 @@ fun FavoriteGenresScreen(
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
                     }
 
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 16.dp),
+                            .windowInsetsPadding(WindowInsets.navigationBars)
+                            .padding(start = 24.dp, end = 24.dp, bottom = 16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         val isButtonEnabled =
@@ -253,4 +232,25 @@ fun FavoriteGenresScreen(
     }
 }
 
-
+@Composable
+private fun FavoriteGenresNavigationBarEffect(backgroundColor: Color) {
+    val view = LocalView.current
+    DisposableEffect(backgroundColor) {
+        val window = (view.context as? Activity)?.window
+        val controller = window?.let { WindowCompat.getInsetsController(it, view) }
+        val prevNavBarColor = window?.navigationBarColor
+        val prevLightNav = controller?.isAppearanceLightNavigationBars
+        if (window != null && controller != null) {
+            window.navigationBarColor = backgroundColor.toArgb()
+            controller.isAppearanceLightNavigationBars = true
+        }
+        onDispose {
+            if (window != null) {
+                window.navigationBarColor = prevNavBarColor ?: Color.Transparent.toArgb()
+            }
+            if (controller != null && prevLightNav != null) {
+                controller.isAppearanceLightNavigationBars = prevLightNav
+            }
+        }
+    }
+}

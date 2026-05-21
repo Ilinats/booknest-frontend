@@ -1,4 +1,12 @@
 <resources>
     <string name="app_name">BookNest</string>
     <string name="title_activity_home">Home</string>
+    <string name="cd_navigate_up">Navigate up</string>
+    <string name="cd_expand_book_list">Show all books</string>
+    <string name="cd_collapse_book_list">Show fewer books</string>
+    <string name="cd_book_list_filters">Show or hide browse filters</string>
+    <string name="cd_notifications">Notifications</string>
+    <string name="cd_friends">Friends</string>
+    <string name="cd_profile_menu">Open account menu</string>
+    <string name="cd_profile_photo">Profile photo</string>
 </resources>

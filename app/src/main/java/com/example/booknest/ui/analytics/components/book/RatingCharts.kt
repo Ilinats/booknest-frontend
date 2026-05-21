@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.booknest.domain.model.response.RatingBreakdownItemResponse
 import com.example.booknest.domain.model.response.RatingDistributionResponse
-import com.example.booknest.viewmodel.AnalyticsViewModel
+import com.example.booknest.viewmodel.analytics.AnalyticsViewModel
 
 @Composable
 fun RatingBreakdownChart(ratingBreakdown: List<RatingBreakdownItemResponse>) {

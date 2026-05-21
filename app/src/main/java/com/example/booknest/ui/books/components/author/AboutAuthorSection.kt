@@ -19,9 +19,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,17 +27,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.model.response.BookResponse
-import com.example.booknest.viewmodel.AuthorFollowViewModel
-import kotlinx.coroutines.flow.collectLatest
+import com.example.booknest.presentation.navigation.Screen
+import com.example.booknest.viewmodel.author.AuthorFollowViewModel
 import org.koin.androidx.compose.getViewModel
 
 @Composable
 fun AboutAuthorSection(
     book: BookResponse,
-    navController: NavController,
-    sessionManager: SessionManager
+    navController: NavController
 ) {
     val authorFollowViewModel: AuthorFollowViewModel = getViewModel()
 
@@ -125,7 +120,7 @@ fun AboutAuthorSection(
                         }
                     },
                     modifier = Modifier.weight(1f),
-                    enabled = isFollowing != null && !isAuthorLoading
+                    enabled = authorId != null && !isAuthorLoading
                 ) {
                     if (isAuthorLoading) {
                         CircularProgressIndicator(
@@ -141,9 +136,7 @@ fun AboutAuthorSection(
             OutlinedButton(
                 onClick = {
                     authorUsername?.let {
-                        navController.navigate("profile/$it")
-                    } ?: run {
-                        println("DEBUG: Cannot navigate to author profile - username is missing")
+                        navController.navigate(Screen.Profile.createRoute(it))
                     }
                 },
                 modifier = Modifier.weight(1f),

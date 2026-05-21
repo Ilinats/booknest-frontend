@@ -5,7 +5,8 @@ import androidx.annotation.RequiresApi
 import androidx.navigation.NavController
 import com.example.booknest.domain.model.enums.NotificationType
 import com.example.booknest.domain.model.response.NotificationResponse
-import com.example.booknest.navigation.Screen
+import com.example.booknest.navigation.BottomBarScreen
+import com.example.booknest.presentation.navigation.Screen
 import java.time.Instant
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
@@ -52,8 +53,8 @@ fun handleNotificationNavigation(
 
         NotificationType.APPLICATION_APPROVED,
         NotificationType.APPLICATION_REJECTED -> {
-            notification.applicationId?.let { applicationId ->
-                navController.navigate("my_applications")
+            notification.applicationId?.let {
+                navController.navigate(BottomBarScreen.MyApplications.route)
             } ?: notification.bookId?.let { bookId ->
                 navController.navigate(Screen.BookDetails.createRoute(bookId))
             }
@@ -61,7 +62,7 @@ fun handleNotificationNavigation(
 
         NotificationType.REVIEW_DEADLINE_REMINDER -> {
             notification.applicationId?.let { applicationId ->
-                navController.navigate("review_submission/$applicationId")
+                navController.navigate(Screen.ReviewSubmission.createRoute(applicationId))
             } ?: notification.bookId?.let { bookId ->
                 navController.navigate(Screen.BookDetails.createRoute(bookId))
             }

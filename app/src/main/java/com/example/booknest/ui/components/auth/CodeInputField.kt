@@ -102,7 +102,15 @@ fun CodeInputField(
                         keyboardType = KeyboardType.Number
                     ),
                     singleLine = true,
-                    maxLines = 1
+                    maxLines = 1,
+                    decorationBox = { innerTextField ->
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            innerTextField()
+                        }
+                    }
                 )
             }
         }

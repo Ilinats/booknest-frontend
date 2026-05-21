@@ -30,18 +30,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
 import kotlinx.coroutines.delay
 
 enum class ToastType {
@@ -63,26 +57,24 @@ fun Toast(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var isVisible by remember(toastMessage) { mutableStateOf(false) }
+    val visible = toastMessage != null && toastMessage.message.isNotBlank()
 
     LaunchedEffect(toastMessage) {
-        if (toastMessage != null && toastMessage.message.isNotBlank()) {
-            isVisible = true
-            val duration = when (toastMessage.type) {
-                ToastType.DOWNLOAD_STARTED -> 3000L
-                ToastType.DOWNLOAD_COMPLETED -> 4000L
-                ToastType.SUCCESS -> 4000L
-                ToastType.ERROR -> 5000L
-                ToastType.INFO -> 4000L
-            }
-            delay(duration)
-            isVisible = false
-            onDismiss()
+        val current = toastMessage ?: return@LaunchedEffect
+        if (current.message.isBlank()) return@LaunchedEffect
+        val duration = when (current.type) {
+            ToastType.DOWNLOAD_STARTED -> 3000L
+            ToastType.DOWNLOAD_COMPLETED -> 4000L
+            ToastType.SUCCESS -> 4000L
+            ToastType.ERROR -> 5000L
+            ToastType.INFO -> 4000L
         }
+        delay(duration)
+        onDismiss()
     }
 
     AnimatedVisibility(
-        visible = isVisible && toastMessage != null && toastMessage.message.isNotBlank(),
+        visible = visible,
         enter = slideInVertically(
             initialOffsetY = { -it },
             animationSpec = tween(300)
@@ -91,9 +83,7 @@ fun Toast(
             targetOffsetY = { -it },
             animationSpec = tween(300)
         ) + fadeOut(animationSpec = tween(300)),
-        modifier = modifier
-            .zIndex(1000f)
-            .fillMaxWidth()
+        modifier = modifier.fillMaxWidth()
     ) {
         val (backgroundColor, iconColor, icon) = when (toastMessage?.type) {
             ToastType.SUCCESS -> Triple(
@@ -166,10 +156,7 @@ fun Toast(
                 )
 
                 IconButton(
-                    onClick = {
-                        isVisible = false
-                        onDismiss()
-                    },
+                    onClick = onDismiss,
                     modifier = Modifier.size(24.dp)
                 ) {
                     Icon(
@@ -183,4 +170,3 @@ fun Toast(
         }
     }
 }
-

@@ -2,7 +2,6 @@ package com.example.booknest.ui.analytics
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -25,10 +24,13 @@ import androidx.navigation.NavController
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.model.response.*
 import com.example.booknest.ui.analytics.components.book.*
-import com.example.booknest.viewmodel.AnalyticsViewModel
+import com.example.booknest.viewmodel.analytics.AnalyticsViewModel
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
-import com.example.booknest.ui.state.UiState
+import com.example.booknest.presentation.common.UiState
+import com.example.booknest.ui.components.AppTopBar
+import com.example.booknest.ui.components.BackgroundDecoration
+import com.example.booknest.ui.components.paddingTopFromScaffold
 import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -51,61 +53,19 @@ fun BookAnalyticsScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .offset(x = (-175).dp, y = (-175).dp)
-                .size(350.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .offset(x = (-135).dp, y = (-135).dp)
-                .size(270.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary)
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .offset(x = 175.dp, y = 175.dp)
-                .size(350.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .offset(x = 135.dp, y = 135.dp)
-                .size(270.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary)
-        )
+        BackgroundDecoration(modifier = Modifier.fillMaxSize())
 
         Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
             topBar = {
-                Surface(
-                    shadowElevation = 4.dp,
-                    tonalElevation = 2.dp,
-                    color = MaterialTheme.colorScheme.surface
-                ) {
-                    TopAppBar(
-                        title = {
-                            Text(
-                                "Book Analytics",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 20.sp,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                        },
-                        navigationIcon = {
-                            BackButton(onClick = { navController.popBackStack() })
-                        }
-                    )
-                }
-            }
+                AppTopBar(
+                    title = "Book Analytics",
+                    navigationIcon = {
+                        BackButton(onClick = { navController.popBackStack() })
+                    },
+                )
+            },
         ) { paddingValues ->
             val currentState = analyticsState
             when (currentState) {
@@ -113,7 +73,7 @@ fun BookAnalyticsScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(paddingValues),
+                            .paddingTopFromScaffold(paddingValues),
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator()
@@ -124,7 +84,7 @@ fun BookAnalyticsScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(paddingValues),
+                            .paddingTopFromScaffold(paddingValues),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(
@@ -156,8 +116,8 @@ fun BookAnalyticsScreen(
                         analytics = currentState.data,
                         analyticsViewModel = analyticsViewModel,
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues),
+                            .fillMaxWidth()
+                            .paddingTopFromScaffold(paddingValues),
                         isScrollable = true
                     )
                 }

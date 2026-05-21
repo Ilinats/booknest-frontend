@@ -12,7 +12,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.booknest.domain.model.response.ApplicationResponse
 import com.example.booknest.navigation.BottomBarScreen
-import com.example.booknest.navigation.Screen
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.ui.home.components.cards.QuickActionCard
 
 @Composable

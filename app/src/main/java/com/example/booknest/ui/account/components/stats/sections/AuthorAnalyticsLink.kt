@@ -23,7 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.booknest.navigation.Screen
+import com.example.booknest.presentation.navigation.Screen
 
 @Composable
 fun AuthorAnalyticsLink(navController: NavController) {
@@ -48,7 +48,7 @@ fun AuthorAnalyticsLink(navController: NavController) {
             )
 
             Button(
-                onClick = { navController.navigate("author_analytics") },
+                onClick = { navController.navigate(Screen.AuthorAnalytics.route) },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(

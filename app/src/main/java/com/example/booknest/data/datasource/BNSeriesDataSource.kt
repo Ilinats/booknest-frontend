@@ -8,22 +8,21 @@ import com.example.booknest.domain.model.response.SeriesResponse
 class BNSeriesDataSource(private val seriesService: SeriesService) : SeriesDataSource {
 
     override suspend fun getMySeries(): Result<List<SeriesResponse>> {
-        return requestBody(seriesService.getMySeries())
+        return runSuspendRequest { seriesService.getMySeries() }
     }
 
     override suspend fun createSeries(series: CreateSeriesRequest): Result<SeriesResponse> {
-        return requestBody(seriesService.createSeries(series))
+        return runSuspendRequest { seriesService.createSeries(series) }
     }
 
     override suspend fun updateSeries(
         seriesId: String,
         series: UpdateSeriesRequest
     ): Result<SeriesResponse> {
-        return requestBody(seriesService.updateSeries(seriesId, series))
+        return runSuspendRequest { seriesService.updateSeries(seriesId, series) }
     }
 
     override suspend fun deleteSeries(seriesId: String): Result<Unit> {
-        return requestBodyUnit(seriesService.deleteSeries(seriesId))
+        return runSuspendRequestUnit { seriesService.deleteSeries(seriesId) }
     }
 }
-

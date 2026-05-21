@@ -48,9 +48,8 @@ interface ProfilesService {
     @PATCH(Users.ME)
     suspend fun updateMyProfile(@Body profile: UpdateProfileRequest): Response<UserResponse>
 
-    @PATCH(Users.PROFILE)
+    @PATCH(Users.ME)
     suspend fun updateUserProfile(
-        @Path(PathConstants.USER_ID) userId: String,
         @Body profile: UpdateUserProfileRequest
     ): Response<UserResponse>
 

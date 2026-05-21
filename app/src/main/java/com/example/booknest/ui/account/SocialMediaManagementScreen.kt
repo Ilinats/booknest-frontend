@@ -45,7 +45,8 @@ import com.example.booknest.domain.model.response.SocialMediaResponse
 import com.example.booknest.ui.components.social.CustomLinkCard
 import com.example.booknest.ui.account.components.social.SocialMediaInputCard
 import com.example.booknest.ui.account.components.social.utils.isValidUrl
-import com.example.booknest.viewmodel.ProfileViewModel
+import com.example.booknest.viewmodel.profile.ProfileViewModel
+import com.example.booknest.viewmodel.profile.ProfileSettingsViewModel
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
 
@@ -54,11 +55,12 @@ import org.koin.compose.koinInject
 fun SocialMediaManagementScreen(
     navController: NavController,
     sessionManager: SessionManager = koinInject(),
-    profileViewModel: ProfileViewModel = getViewModel()
+    profileViewModel: ProfileViewModel = getViewModel(),
+    profileSettingsViewModel: ProfileSettingsViewModel = getViewModel()
 ) {
     val myProfile by profileViewModel.myProfile.collectAsState()
-    val isLoading by profileViewModel.isLoading.collectAsState()
-    val error by profileViewModel.error.collectAsState()
+    val isLoading by profileSettingsViewModel.isLoading.collectAsState()
+    val error by profileSettingsViewModel.error.collectAsState()
     var instagram by remember { mutableStateOf("") }
     var tiktok by remember { mutableStateOf("") }
     var youtube by remember { mutableStateOf("") }
@@ -335,7 +337,7 @@ fun SocialMediaManagementScreen(
                 Button(
                     onClick = {
                         hasJustSaved = true
-                        profileViewModel.updateSocialMedia(
+                        profileSettingsViewModel.updateSocialMedia(
                             SocialMediaResponse(
                                 instagram = instagram.takeIf { it.isNotBlank() },
                                 tiktok = tiktok.takeIf { it.isNotBlank() },

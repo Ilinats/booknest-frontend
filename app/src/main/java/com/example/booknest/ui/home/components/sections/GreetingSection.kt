@@ -1,8 +1,6 @@
 package com.example.booknest.ui.home.components.sections
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -23,8 +21,6 @@ fun GreetingSection(
             currentUser?.username != null -> "Welcome back, ${currentUser.username}!"
             else -> "Welcome back!"
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
 
         Text(
             text = greeting,

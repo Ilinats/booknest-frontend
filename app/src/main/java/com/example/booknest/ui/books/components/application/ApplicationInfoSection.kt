@@ -30,13 +30,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.booknest.data.session.SessionManager
+import com.example.booknest.port.SessionReader
 import com.example.booknest.domain.model.response.ApplicationCheckApplicationResponse
 import com.example.booknest.domain.model.response.BookResponse
-import com.example.booknest.navigation.Screen
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.ui.books.utils.formatDate
-import com.example.booknest.viewmodel.ApplicationViewModel
-import com.example.booknest.viewmodel.ProfileViewModel
+import com.example.booknest.viewmodel.profile.AddressViewModel
+import com.example.booknest.viewmodel.applications.ApplicationViewModel
+import com.example.booknest.viewmodel.profile.ProfileViewModel
 import org.koin.androidx.compose.getViewModel
 
 @Composable
@@ -48,14 +49,15 @@ fun ApplicationInfoSection(
     showApplyButton: Boolean,
     showWithdrawButton: Boolean,
     navController: NavController? = null,
-    sessionManager: SessionManager? = null,
+    sessionReader: SessionReader? = null,
     applicationViewModel: ApplicationViewModel = getViewModel()
 ) {
     val profileViewModel: ProfileViewModel = getViewModel()
+    val addressViewModel: AddressViewModel = getViewModel()
     val myProfile by profileViewModel.myProfile.collectAsState()
-    val addresses by profileViewModel.addresses.collectAsState()
-    val currentUser = if (sessionManager != null) {
-        val user by sessionManager.currentUser.collectAsState()
+    val addresses by addressViewModel.addresses.collectAsState()
+    val currentUser = if (sessionReader != null) {
+        val user by sessionReader.currentUser.collectAsState()
         user
     } else {
         null
@@ -70,7 +72,7 @@ fun ApplicationInfoSection(
             if (myProfile == null) {
                 profileViewModel.loadMyProfile()
             }
-            profileViewModel.loadAddresses()
+            addressViewModel.loadAddresses()
         }
     }
 
@@ -174,12 +176,6 @@ fun ApplicationInfoSection(
                     }
                 }
             }
-        }
-
-        LaunchedEffect(userApplication, showWithdrawButton, showApplyButton) {
-            println("DEBUG ApplicationInfoSection: userApplication?.status = ${userApplication?.status}")
-            println("DEBUG ApplicationInfoSection: showWithdrawButton = $showWithdrawButton")
-            println("DEBUG ApplicationInfoSection: showApplyButton = $showApplyButton")
         }
 
         when {
@@ -335,7 +331,11 @@ fun ApplicationInfoSection(
                             )
                         } else {
                             Text(
-                                text = if (userApplication?.status == "approved") "Read Now" else "Apply",
+                                text = if (userApplication?.status == "approved") {
+                                    "Read Now"
+                                } else {
+                                    "Apply"
+                                },
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )

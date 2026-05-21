@@ -7,7 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.booknest.data.session.SessionManager
-import com.example.booknest.viewmodel.AnalyticsViewModel
+import com.example.booknest.viewmodel.analytics.AnalyticsViewModel
 import org.koin.androidx.compose.getViewModel
 
 @Composable

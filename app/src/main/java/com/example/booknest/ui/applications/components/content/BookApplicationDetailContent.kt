@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -17,7 +18,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.model.response.ApplicationResponse
-import com.example.booknest.navigation.Screen
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.ui.applications.components.detail.BookSummaryHeader
 import com.example.booknest.ui.applications.components.detail.BulkActionsBar
 import com.example.booknest.ui.applications.components.detail.OverdueReviewsCard
@@ -28,15 +29,21 @@ import com.example.booknest.ui.applications.components.list.EnhancedApplicationC
 import com.example.booknest.ui.applications.components.list.EnhancedApprovedApplicationCard
 import com.example.booknest.ui.applications.components.list.RejectedApplicationCard
 import com.example.booknest.ui.applications.components.lottery.LotterySelectionCard
-import com.example.booknest.ui.applications.components.review.ReviewCard
+import com.example.booknest.ui.applications.components.review.ApplicationReaderReviewCard
 import com.example.booknest.ui.applications.components.statistics.StatisticsTabContent
 import com.example.booknest.ui.applications.dialogs.RunLotteryDialog
 import com.example.booknest.ui.applications.models.ApplicationStats
 import com.example.booknest.ui.applications.models.SortOption
+import com.example.booknest.ui.components.AppScaffoldContentInsets
+import com.example.booknest.ui.components.AppTopBar
 import com.example.booknest.ui.components.BackButton
-import com.example.booknest.viewmodel.ApplicationViewModel
-import com.example.booknest.viewmodel.BookViewModel
-import com.example.booknest.viewmodel.ReviewViewModel
+import com.example.booknest.ui.components.paddingTopFromScaffold
+import com.example.booknest.navigation.rememberAuthorBooksViewModel
+import com.example.booknest.ui.author.components.LeakFingerprintDecodeSection
+import com.example.booknest.viewmodel.applications.BookApplicationViewModel
+import com.example.booknest.viewmodel.author.AuthorBooksViewModel
+import com.example.booknest.viewmodel.books.BookViewModel
+import com.example.booknest.viewmodel.analytics.ReviewViewModel
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
 import java.text.SimpleDateFormat
@@ -50,20 +57,28 @@ fun BookApplicationDetailContent(
     navController: NavController,
     sessionManager: SessionManager = koinInject(),
     bookId: String,
-    applicationViewModel: ApplicationViewModel = getViewModel(),
+    bookApplicationViewModel: BookApplicationViewModel = getViewModel(),
     bookViewModel: BookViewModel = getViewModel(),
-    reviewViewModel: ReviewViewModel = getViewModel()
+    reviewViewModel: ReviewViewModel = getViewModel(),
+    authorBooksViewModel: AuthorBooksViewModel = rememberAuthorBooksViewModel(navController),
 ) {
-    val bookApplications by applicationViewModel.bookApplications.collectAsState()
-    val isLoading by applicationViewModel.isLoading.collectAsState()
+    val context = LocalContext.current
+    val bookApplications by bookApplicationViewModel.bookApplications.collectAsState()
+    val leakFingerprintState by authorBooksViewModel.leakFingerprintState.collectAsState()
+    val isLoading by bookApplicationViewModel.isLoading.collectAsState()
     val bookDetails by bookViewModel.bookDetails.collectAsState()
     val bookReviews by reviewViewModel.bookReviews.collectAsState()
-    val allOverdueReviews by applicationViewModel.overdueReviews.collectAsState()
+    val allOverdueReviews by bookApplicationViewModel.overdueReviews.collectAsState()
 
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("All", "Pending", "Approved", "Rejected", "Reviews", "Statistics")
 
     val book = bookDetails ?: bookApplications.firstOrNull()?.book
+
+    val showLeakFingerprintTool = book?.let { b ->
+        !b.fileUrl.isNullOrBlank() &&
+            b.distributionType?.lowercase() != "physical"
+    } == true
 
     val isLotteryBook = book?.selectionMethod?.let { method ->
         method.lowercase().trim() == "lottery" || method.lowercase().trim() == "random_selection"
@@ -91,9 +106,10 @@ fun BookApplicationDetailContent(
 
     LaunchedEffect(bookId) {
         bookViewModel.getBookDetails(bookId)
-        applicationViewModel.loadBookApplications(bookId)
+        bookApplicationViewModel.loadBookApplications(bookId)
         reviewViewModel.loadBookReviews(bookId)
-        applicationViewModel.loadOverdueReviews()
+        bookApplicationViewModel.loadOverdueReviews()
+        authorBooksViewModel.clearLeakFingerprintState()
     }
 
     LaunchedEffect(selectedTab) {
@@ -180,62 +196,41 @@ fun BookApplicationDetailContent(
     val approvedCount = applicationStats.approved
 
     Scaffold(
+        contentWindowInsets = AppScaffoldContentInsets,
         topBar = {
-            Surface(
-                shadowElevation = 4.dp,
-                tonalElevation = 2.dp,
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                TopAppBar(
-                    title = {
-                        Column {
-                            Text(
-                                book?.title ?: "Book Details",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 20.sp,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                "Status: ${
-                                    book?.status?.lowercase()
-                                        ?.replaceFirstChar { it.uppercase() } ?: "Unknown"
-                                }",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+            AppTopBar(
+                title = book?.title ?: "Book Details",
+                subtitle = "Status: ${
+                    book?.status?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "Unknown"
+                }",
+                navigationIcon = {
+                    BackButton(onClick = { navController.popBackStack() })
+                },
+                actions = {
+                    IconButton(onClick = {
+                        book?.id?.let {
+                            navController.navigate(Screen.BookEdit.createRoute(it))
                         }
-                    },
-                    navigationIcon = {
-                        BackButton(onClick = { navController.popBackStack() })
-                    },
-                    actions = {
-                        IconButton(onClick = {
-                            book?.id?.let {
-                                navController.navigate(Screen.BookEdit.createRoute(it))
-                            }
-                        }) {
-                            Icon(Icons.Filled.Edit, contentDescription = "Edit Book")
-                        }
-                        IconButton(onClick = { }) {
-                            Icon(Icons.Filled.Share, contentDescription = "Share")
-                        }
-                        IconButton(onClick = {
-                            bookId.let {
-                                navController.navigate("book_analytics/$it")
-                            }
-                        }) {
-                            Icon(Icons.Filled.Info, contentDescription = "Analytics")
-                        }
+                    }) {
+                        Icon(Icons.Filled.Edit, contentDescription = "Edit Book")
                     }
-                )
-            }
-        }
+                    IconButton(onClick = { }) {
+                        Icon(Icons.Filled.Share, contentDescription = "Share")
+                    }
+                    IconButton(onClick = {
+                        navController.navigate(Screen.BookAnalytics.createRoute(bookId))
+                    }) {
+                        Icon(Icons.Filled.Info, contentDescription = "Analytics")
+                    }
+                },
+            )
+        },
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(bottom = 80.dp),
+                .paddingTopFromScaffold(paddingValues),
+            contentPadding = PaddingValues(bottom = 0.dp),
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
             item {
@@ -248,6 +243,23 @@ fun BookApplicationDetailContent(
 
             item {
                 ApplicationStatsSection(stats = applicationStats)
+            }
+
+            if (showLeakFingerprintTool) {
+                item {
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+                item {
+                    LeakFingerprintDecodeSection(
+                        leakFingerprintState = leakFingerprintState,
+                        bookApplications = applicationsWithReviews,
+                        onFileChosen = { uri ->
+                            authorBooksViewModel.decodeLeakFingerprint(bookId, uri, context)
+                        },
+                        onDismissResult = { authorBooksViewModel.clearLeakFingerprintState() },
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
+                }
             }
 
             if (overdueReviews.isNotEmpty()) {
@@ -328,7 +340,7 @@ fun BookApplicationDetailContent(
                         selectedCount = selectedApplicationIds.size,
                         availableSlots = availableSlots,
                         onApproveSelected = {
-                            applicationViewModel.bulkActionApplications(
+                            bookApplicationViewModel.bulkActionApplications(
                                 selectedApplicationIds.toList(),
                                 "approved"
                             )
@@ -336,7 +348,7 @@ fun BookApplicationDetailContent(
                             isSelectionMode = false
                         },
                         onRejectSelected = {
-                            applicationViewModel.bulkActionApplications(
+                            bookApplicationViewModel.bulkActionApplications(
                                 selectedApplicationIds.toList(),
                                 "rejected"
                             )
@@ -345,7 +357,7 @@ fun BookApplicationDetailContent(
                         },
                         onMarkSentSelected = {
                             selectedApplicationIds.forEach { id ->
-                                applicationViewModel.markCopySent(id)
+                                bookApplicationViewModel.markCopySent(id)
                             }
                             selectedApplicationIds = emptySet()
                             isSelectionMode = false
@@ -418,13 +430,13 @@ fun BookApplicationDetailContent(
                                     },
                                     navController = navController,
                                     onApprove = { app, notes ->
-                                        applicationViewModel.approveApplication(
+                                        bookApplicationViewModel.approveApplication(
                                             app.id,
                                             notes
                                         )
                                     },
                                     onReject = { app, notes ->
-                                        applicationViewModel.rejectApplication(
+                                        bookApplicationViewModel.rejectApplication(
                                             app.id,
                                             notes
                                         )
@@ -477,13 +489,13 @@ fun BookApplicationDetailContent(
                                     },
                                     navController = navController,
                                     onApprove = { app, notes ->
-                                        applicationViewModel.approveApplication(
+                                        bookApplicationViewModel.approveApplication(
                                             app.id,
                                             notes
                                         )
                                     },
                                     onReject = { app, notes ->
-                                        applicationViewModel.rejectApplication(
+                                        bookApplicationViewModel.rejectApplication(
                                             app.id,
                                             notes
                                         )
@@ -535,7 +547,7 @@ fun BookApplicationDetailContent(
                                             }
                                     },
                                     navController = navController,
-                                    onMarkSent = { app -> applicationViewModel.markCopySent(app.id) }
+                                    onMarkSent = { app -> bookApplicationViewModel.markCopySent(app.id) }
                                 )
                             }
                         }
@@ -606,7 +618,7 @@ fun BookApplicationDetailContent(
                             reviewsApplications.size,
                             key = { reviewsApplications[it].id }
                         ) { index ->
-                            ReviewCard(
+                            ApplicationReaderReviewCard(
                                 application = reviewsApplications[index],
                                 navController = navController
                             )
@@ -631,7 +643,7 @@ fun BookApplicationDetailContent(
             availableCopies = book?.availableCopies ?: 0,
             pendingCount = applicationStats.pending,
             onConfirm = {
-                applicationViewModel.runLottery(bookId)
+                bookApplicationViewModel.runLottery(bookId)
                 showLotteryDialog = false
             },
             onDismiss = { showLotteryDialog = false }

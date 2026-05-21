@@ -11,14 +11,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.example.booknest.navigation.Screen
+import com.example.booknest.presentation.navigation.Screen
 
 @Composable
 fun BookPerformanceComparisonSection(
@@ -211,7 +211,7 @@ fun BookPerformanceRow(
             .clickable { onClick() },
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
         Row(
@@ -240,25 +240,29 @@ fun BookPerformanceRow(
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     PerformanceMetricSmall(
+                        modifier = Modifier.weight(1f),
                         label = "Rating",
                         value = String.format("%.1f", book.reviews.averageRating),
                         icon = Icons.Default.Star
                     )
                     PerformanceMetricSmall(
+                        modifier = Modifier.weight(1f),
                         label = "Reviews",
                         value = book.reviews.reviewCount.toString(),
                         icon = Icons.Default.Comment
                     )
                     PerformanceMetricSmall(
+                        modifier = Modifier.weight(1f),
                         label = "Applications",
                         value = book.applications.totalApplications.toString(),
                         icon = Icons.Default.Menu
                     )
                     PerformanceMetricSmall(
-                        label = "Approval",
+                        modifier = Modifier.weight(1f),
+                        label = "Approvals",
                         value = "${book.approvalRate}%",
                         icon = Icons.Default.CheckCircle
                     )
@@ -272,36 +276,36 @@ fun BookPerformanceRow(
 fun PerformanceMetricSmall(
     label: String,
     value: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier = Modifier
 ) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.widthIn(min = 60.dp)
+    Column(
+        modifier = modifier.padding(horizontal = 2.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            modifier = Modifier.size(14.dp),
+            modifier = Modifier.size(16.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Column(
-            modifier = Modifier.widthIn(max = 50.dp)
-        ) {
-            Text(
-                text = value,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = label,
-                fontSize = 10.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
+        Text(
+            text = value,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center
+        )
+        Text(
+            text = label,
+            fontSize = 10.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            lineHeight = 11.sp
+        )
     }
 }

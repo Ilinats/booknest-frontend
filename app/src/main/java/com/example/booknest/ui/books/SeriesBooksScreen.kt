@@ -1,28 +1,36 @@
 package com.example.booknest.ui.books
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.booknest.domain.usecase.books.BrowseBooksUseCase
-import com.example.booknest.navigation.Screen
 import com.example.booknest.ui.components.BackButton
-import org.koin.compose.koinInject
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.CoroutineScope
-import androidx.compose.runtime.rememberCoroutineScope
 import com.example.booknest.ui.books.components.list.BookItem
+import com.example.booknest.ui.components.BackgroundDecoration
+import com.example.booknest.viewmodel.books.BookViewModel
+import org.koin.androidx.compose.getViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,34 +38,25 @@ fun SeriesBooksScreen(
     navController: NavController,
     seriesId: String,
     seriesName: String? = null,
-    browseBooksUseCase: BrowseBooksUseCase = koinInject()
+    bookViewModel: BookViewModel = getViewModel()
 ) {
-    var books by remember {
-        mutableStateOf<List<com.example.booknest.domain.model.response.RecommendedBookResponse>>(
-            emptyList()
-        )
-    }
-    var isLoading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
-    val scope = rememberCoroutineScope()
+    val seriesBooksMap by bookViewModel.seriesBooksBySeriesId.collectAsState()
+    val loadingIds by bookViewModel.seriesBooksLoadingIds.collectAsState()
+    val seriesErrors by bookViewModel.seriesBooksLoadError.collectAsState()
 
     LaunchedEffect(seriesId) {
-        scope.launch {
-            isLoading = true
-            error = null
-            browseBooksUseCase(
-                seriesId = seriesId,
-                status = "active",
-                take = 100
-            ).onSuccess { bookList ->
-                books = bookList.sortedBy { it.seriesOrder ?: Int.MAX_VALUE }
-                isLoading = false
-            }.onFailure { e ->
-                error = e.message ?: "Failed to load series books"
-                isLoading = false
-            }
-        }
+        bookViewModel.clearSeriesBooksLoadError(seriesId)
+        bookViewModel.ensureSeriesBooksLoaded(
+            seriesId = seriesId,
+            forceRefresh = false,
+            treatFailureAsEmptyCatalog = false
+        )
     }
+
+    val books = seriesBooksMap[seriesId].orEmpty()
+    val seriesError = seriesErrors[seriesId]
+    val isLoading = loadingIds.contains(seriesId)
+    val hasLoaded = seriesBooksMap.containsKey(seriesId)
 
     Scaffold(
         topBar = {
@@ -79,38 +78,7 @@ fun SeriesBooksScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(x = (-175).dp, y = (-175).dp)
-                    .size(350.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(x = (-135).dp, y = (-135).dp)
-                    .size(270.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary)
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .offset(x = 175.dp, y = 175.dp)
-                    .size(350.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .offset(x = 135.dp, y = 135.dp)
-                    .size(270.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondary)
-            )
+            BackgroundDecoration(modifier = Modifier.fillMaxSize())
 
             when {
                 isLoading -> {
@@ -119,7 +87,7 @@ fun SeriesBooksScreen(
                     )
                 }
 
-                error != null -> {
+                seriesError != null -> {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -128,31 +96,28 @@ fun SeriesBooksScreen(
                         verticalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = error ?: "Error loading books",
+                            text = seriesError,
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.error
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = {
-                            scope.launch {
-                                isLoading = true
-                                error = null
-                                browseBooksUseCase(
-                                    seriesId = seriesId,
-                                    status = "active",
-                                    take = 100
-                                ).onSuccess { bookList ->
-                                    books = bookList.sortedBy { it.seriesOrder ?: Int.MAX_VALUE }
-                                    isLoading = false
-                                }.onFailure { e ->
-                                    error = e.message ?: "Failed to load series books"
-                                    isLoading = false
-                                }
-                            }
+                            bookViewModel.clearSeriesBooksLoadError(seriesId)
+                            bookViewModel.ensureSeriesBooksLoaded(
+                                seriesId = seriesId,
+                                forceRefresh = true,
+                                treatFailureAsEmptyCatalog = false
+                            )
                         }) {
                             Text("Retry")
                         }
                     }
+                }
+
+                !hasLoaded && seriesError == null -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center)
+                    )
                 }
 
                 books.isEmpty() -> {
@@ -191,4 +156,3 @@ fun SeriesBooksScreen(
         }
     }
 }
-

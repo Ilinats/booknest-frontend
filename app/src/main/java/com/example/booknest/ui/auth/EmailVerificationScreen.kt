@@ -25,9 +25,9 @@ import org.koin.androidx.compose.getViewModel
 import com.example.booknest.ui.components.auth.CodeInputField
 import com.example.booknest.ui.components.auth.ResendCodeButton
 import com.example.booknest.data.session.SessionManager
-import com.example.booknest.viewmodel.EmailVerificationViewModel
-import com.example.booknest.navigation.Screen
-import com.example.booknest.ui.auth.components.AuthBackgroundDecoration
+import com.example.booknest.viewmodel.auth.EmailVerificationViewModel
+import com.example.booknest.presentation.navigation.Screen
+import com.example.booknest.ui.components.BackgroundDecoration
 
 @Composable
 fun EmailVerificationScreen(
@@ -71,7 +71,7 @@ fun EmailVerificationScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        AuthBackgroundDecoration(modifier = Modifier.fillMaxSize())
+        BackgroundDecoration(modifier = Modifier.fillMaxSize())
 
         Column(
             modifier = Modifier

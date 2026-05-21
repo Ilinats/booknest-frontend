@@ -113,6 +113,8 @@ data class AuthorAnalyticsOverviewResponse(
     val totalBooks: Int,
     val publishedBooks: Int,
     val draftBooks: Int,
+    val inProgressBooks: Int = 0,
+    val completedBooks: Int = 0,
     val totalApplications: Int,
     val approvedApplications: Int,
     val totalReviews: Int,

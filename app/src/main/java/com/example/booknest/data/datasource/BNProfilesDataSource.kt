@@ -25,12 +25,12 @@ import okhttp3.MultipartBody
 class BNProfilesDataSource(private val profilesService: ProfilesService) : ProfilesDataSource {
 
     override suspend fun getMe(): Result<UserResponse> {
-        return requestBody(profilesService.getMe())
+        return runSuspendRequest { profilesService.getMe() }
     }
 
     override suspend fun getMyProfile(): Result<UserProfileResponse> {
-        val statsResult = requestBody(profilesService.getMyStats())
-        val profileResult = requestBody(profilesService.getMyProfile())
+        val statsResult = runSuspendRequest { profilesService.getMyStats() }
+        val profileResult = runSuspendRequest { profilesService.getMyProfile() }
 
         return statsResult.fold(
             onSuccess = { statsResponse ->
@@ -93,7 +93,7 @@ class BNProfilesDataSource(private val profilesService: ProfilesService) : Profi
                 )
             },
             onFailure = { statsError ->
-                val userResult = requestBody(profilesService.getMe())
+                val userResult = runSuspendRequest { profilesService.getMe() }
                 userResult.fold(
                     onSuccess = { user ->
                         profileResult.fold(
@@ -138,7 +138,7 @@ class BNProfilesDataSource(private val profilesService: ProfilesService) : Profi
     }
 
     override suspend fun updateMyProfile(profile: UpdateProfileRequest): Result<UserProfileResponse> {
-        val updateResult = requestBody(profilesService.updateMyProfile(profile))
+        val updateResult = runSuspendRequest { profilesService.updateMyProfile(profile) }
         return updateResult.fold(
             onSuccess = {
                 getMyProfile()
@@ -153,38 +153,38 @@ class BNProfilesDataSource(private val profilesService: ProfilesService) : Profi
         userId: String,
         profile: UpdateUserProfileRequest
     ): Result<UserResponse> {
-        return requestBody(profilesService.updateUserProfile(userId, profile))
+        return runSuspendRequest { profilesService.updateUserProfile(profile) }
     }
 
     override suspend fun updateSocialMedia(request: UpdateSocialMediaRequest): Result<UserProfileResponse> {
-        return requestBody(profilesService.updateSocialMedia(request))
+        return runSuspendRequest { profilesService.updateSocialMedia(request) }
     }
 
     override suspend fun updatePrivacySettings(request: UpdatePrivacyRequest): Result<UserProfileResponse> {
-        return requestBody(profilesService.updatePrivacySettings(request))
+        return runSuspendRequest { profilesService.updatePrivacySettings(request) }
     }
 
     override suspend fun updateNotificationSettings(request: UpdateNotificationSettingsRequest): Result<UserProfileResponse> {
-        return requestBody(profilesService.updateNotificationSettings(request))
+        return runSuspendRequest { profilesService.updateNotificationSettings(request) }
     }
 
     override suspend fun getPublicUserProfile(username: String): Result<PublicUserProfileResponse> {
-        return requestBody(profilesService.getPublicUserProfile(username))
+        return runSuspendRequest { profilesService.getPublicUserProfile(username) }
     }
 
     override suspend fun getMyActivity(limit: Int?): Result<List<UserActivityResponse>> {
-        return requestBody(profilesService.getMyActivity(limit))
+        return runSuspendRequest { profilesService.getMyActivity(limit) }
     }
 
     override suspend fun getMyPublicActivity(limit: Int?): Result<List<UserActivityResponse>> {
-        return requestBody(profilesService.getMyPublicActivity(limit))
+        return runSuspendRequest { profilesService.getMyPublicActivity(limit) }
     }
 
     override suspend fun getMyRecentActivity(
         days: Int?,
         limit: Int?
     ): Result<List<UserActivityResponse>> {
-        return requestBody(profilesService.getMyRecentActivity(days, limit))
+        return runSuspendRequest { profilesService.getMyRecentActivity(days, limit) }
     }
 
     override suspend fun getUserRecentActivity(
@@ -192,46 +192,46 @@ class BNProfilesDataSource(private val profilesService: ProfilesService) : Profi
         days: Int?,
         limit: Int?
     ): Result<List<UserActivityResponse>> {
-        return requestBody(profilesService.getUserRecentActivity(username, days, limit))
+        return runSuspendRequest { profilesService.getUserRecentActivity(username, days, limit) }
     }
 
     override suspend fun getMyActivityStats(): Result<ActivityStatsResponse> {
-        return requestBody(profilesService.getMyActivityStats())
+        return runSuspendRequest { profilesService.getMyActivityStats() }
     }
 
     override suspend fun getMyAddresses(): Result<List<ReaderAddressResponse>> {
-        return requestBody(profilesService.getMyAddresses())
+        return runSuspendRequest { profilesService.getMyAddresses() }
     }
 
     override suspend fun addAddress(address: CreateAddressRequest): Result<ReaderAddressResponse> {
-        return requestBody(profilesService.addAddress(address))
+        return runSuspendRequest { profilesService.addAddress(address) }
     }
 
     override suspend fun updateAddress(
         addressId: String,
         address: UpdateAddressRequest
     ): Result<ReaderAddressResponse> {
-        return requestBody(profilesService.updateAddress(addressId, address))
+        return runSuspendRequest { profilesService.updateAddress(addressId, address) }
     }
 
     override suspend fun deleteAddress(addressId: String): Result<Unit> {
-        return requestBodyUnit(profilesService.deleteAddress(addressId))
+        return runSuspendRequestUnit { profilesService.deleteAddress(addressId) }
     }
 
     override suspend fun getMyStats(): Result<UserStatsResponse> {
-        return requestBody(profilesService.getMyStats())
+        return runSuspendRequest { profilesService.getMyStats() }
     }
 
     override suspend fun getAuthorStats(authorId: String): Result<AuthorStatsResponse> {
-        return requestBody(profilesService.getAuthorStats(authorId))
+        return runSuspendRequest { profilesService.getAuthorStats(authorId) }
     }
 
     override suspend fun uploadAvatar(avatarPart: MultipartBody.Part): Result<UploadAvatarResponse> {
-        return requestBody(profilesService.uploadAvatar(avatarPart))
+        return runSuspendRequest { profilesService.uploadAvatar(avatarPart) }
     }
 
     override suspend fun removeAvatar(): Result<UserResponse> {
-        return requestBody(profilesService.removeAvatar())
+        return runSuspendRequest { profilesService.removeAvatar() }
     }
 
     override suspend fun deleteAccount(): Result<Unit> {

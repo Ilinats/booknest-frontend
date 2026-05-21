@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.shadow
@@ -14,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -21,13 +23,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.booknest.navigation.NavigationEvent
-import com.example.booknest.navigation.Screen
+import com.example.booknest.presentation.navigation.Screen
+import com.example.booknest.presentation.navigation.applyAuthUiEffect
 import com.example.booknest.ui.components.Toast
 import com.example.booknest.ui.components.ToastMessage
 import com.example.booknest.ui.components.ToastType
-import com.example.booknest.viewmodel.SignupViewModel
-import com.example.booknest.ui.state.UiState
+import com.example.booknest.domain.validation.AddressFormRules
+import com.example.booknest.viewmodel.auth.SignupViewModel
+import com.example.booknest.presentation.common.UiState
+import com.example.booknest.ui.components.BackgroundDecoration
 import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,29 +42,8 @@ fun ProfileDetailsScreen(navController: NavController, viewModel: SignupViewMode
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
-        viewModel.navigationEvent.collectLatest { event ->
-            when (event) {
-                is NavigationEvent.NavigateTo -> {
-                    navController.navigate(event.route) {
-                        event.popUpTo?.let { popUpTo ->
-                            popUpTo(popUpTo) { inclusive = event.inclusive }
-                        }
-                        launchSingleTop = event.launchSingleTop
-                    }
-                }
-                is NavigationEvent.NavigateBack -> {
-                    navController.popBackStack()
-                }
-                is NavigationEvent.PopBackTo -> {
-                    navController.popBackStack(event.route, event.inclusive)
-                }
-                is NavigationEvent.NavigateAndClearStack -> {
-                    navController.navigate(event.route) {
-                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
-                        launchSingleTop = true
-                    }
-                }
-            }
+        viewModel.authUiEffect.collectLatest { effect ->
+            navController.applyAuthUiEffect(effect)
         }
     }
 
@@ -72,6 +55,13 @@ fun ProfileDetailsScreen(navController: NavController, viewModel: SignupViewMode
     var country by remember { mutableStateOf("") }
     var isPrimary by remember { mutableStateOf(true) }
 
+    val hasPartialAddress = streetAddress.isNotBlank() ||
+        city.isNotBlank() ||
+        postalCode.isNotBlank() ||
+        country.isNotBlank()
+    val addressSectionValid = !hasPartialAddress ||
+        AddressFormRules.isFormValid(streetAddress, city, postalCode, country)
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -82,38 +72,7 @@ fun ProfileDetailsScreen(navController: NavController, viewModel: SignupViewMode
             onDismiss = { errorMessage = null },
             modifier = Modifier.align(Alignment.TopCenter)
         )
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .offset(x = (-175).dp, y = (-175).dp)
-                .size(350.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .offset(x = (-135).dp, y = (-135).dp)
-                .size(270.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary)
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .offset(x = 175.dp, y = 175.dp)
-                .size(350.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .offset(x = 135.dp, y = 135.dp)
-                .size(270.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary)
-        )
+        BackgroundDecoration(modifier = Modifier.fillMaxSize())
 
         Column(
             modifier = Modifier.fillMaxSize()
@@ -232,21 +191,37 @@ fun ProfileDetailsScreen(navController: NavController, viewModel: SignupViewMode
 
                         OutlinedTextField(
                             value = streetAddress,
-                            onValueChange = { if (it.length <= 255) streetAddress = it },
-                            label = { Text("Street Address") },
+                            onValueChange = {
+                                if (it.length <= AddressFormRules.STREET_MAX) streetAddress = it
+                            },
+                            label = {
+                                Text(if (hasPartialAddress) "Street Address *" else "Street Address")
+                            },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
-                            isError = streetAddress.isNotBlank() && (streetAddress.isEmpty() || streetAddress.length > 255),
+                            isError = hasPartialAddress && AddressFormRules.streetError(streetAddress) != null,
+                            supportingText = {
+                                if (hasPartialAddress) {
+                                    AddressFormRules.streetError(streetAddress)?.let { Text(it) }
+                                }
+                            },
                             placeholder = { Text("123 Main Street") }
                         )
 
                         OutlinedTextField(
                             value = city,
-                            onValueChange = { if (it.length <= 100) city = it },
-                            label = { Text("City") },
+                            onValueChange = {
+                                if (it.length <= AddressFormRules.CITY_MAX) city = it
+                            },
+                            label = { Text(if (hasPartialAddress) "City *" else "City") },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
-                            isError = city.isNotBlank() && (city.isEmpty() || city.length > 100),
+                            isError = hasPartialAddress && AddressFormRules.cityError(city) != null,
+                            supportingText = {
+                                if (hasPartialAddress) {
+                                    AddressFormRules.cityError(city)?.let { Text(it) }
+                                }
+                            },
                             placeholder = { Text("New York") }
                         )
 
@@ -256,19 +231,18 @@ fun ProfileDetailsScreen(navController: NavController, viewModel: SignupViewMode
                         ) {
                             OutlinedTextField(
                                 value = postalCode,
-                                onValueChange = { if (it.length <= 20) postalCode = it },
-                                label = { Text("Postal Code") },
+                                onValueChange = {
+                                    if (it.length <= AddressFormRules.POSTAL_MAX) postalCode = it
+                                },
+                                label = {
+                                    Text(if (hasPartialAddress) "Postal Code *" else "Postal Code")
+                                },
                                 modifier = Modifier.weight(1f),
                                 singleLine = true,
-                                isError = postalCode.isNotBlank() && (postalCode.length < 1 || postalCode.length > 20),
+                                isError = hasPartialAddress && AddressFormRules.postalError(postalCode) != null,
                                 supportingText = {
-                                    if (postalCode.isNotBlank() && postalCode.length > 20) {
-                                        Text(
-                                            "Max 20 chars",
-                                            color = MaterialTheme.colorScheme.error
-                                        )
-                                    } else if (postalCode.isNotBlank()) {
-                                        Text("✓", color = MaterialTheme.colorScheme.primary)
+                                    if (hasPartialAddress) {
+                                        AddressFormRules.postalError(postalCode)?.let { Text(it) }
                                     }
                                 },
                                 placeholder = { Text("10001") }
@@ -276,22 +250,19 @@ fun ProfileDetailsScreen(navController: NavController, viewModel: SignupViewMode
 
                             OutlinedTextField(
                                 value = country,
-                                onValueChange = { if (it.length <= 100) country = it },
-                                label = { Text("Country") },
+                                onValueChange = {
+                                    if (it.length <= AddressFormRules.COUNTRY_MAX) country = it
+                                },
+                                label = { Text(if (hasPartialAddress) "Country *" else "Country") },
                                 modifier = Modifier.weight(1f),
                                 singleLine = true,
-                                isError = country.isNotBlank() && country.length > 100,
+                                isError = hasPartialAddress && AddressFormRules.countryError(country) != null,
                                 supportingText = {
-                                    if (country.isNotBlank() && country.length > 100) {
-                                        Text(
-                                            "Max 100 chars",
-                                            color = MaterialTheme.colorScheme.error
-                                        )
-                                    } else if (country.isNotBlank()) {
-                                        Text("✓", color = MaterialTheme.colorScheme.primary)
+                                    if (hasPartialAddress) {
+                                        AddressFormRules.countryError(country)?.let { Text(it) }
                                     }
                                 },
-                                placeholder = { Text("USA") }
+                                placeholder = { Text(AddressFormRules.DEFAULT_COUNTRY) }
                             )
                         }
 
@@ -316,7 +287,7 @@ fun ProfileDetailsScreen(navController: NavController, viewModel: SignupViewMode
                     onClick = {
                         viewModel.updateBio(bio.ifBlank { null }, null)
                         viewModel.updateProfileDetails(
-                            birthDate = viewModel.signupData.birthDate,
+                            birthDate = viewModel.signupData.value.birthDate,
                             streetAddress = streetAddress,
                             city = city,
                             postalCode = postalCode,
@@ -332,7 +303,7 @@ fun ProfileDetailsScreen(navController: NavController, viewModel: SignupViewMode
                             elevation = 4.dp,
                             shape = RoundedCornerShape(12.dp)
                         ),
-                    enabled = signupState !is UiState.Loading,
+                    enabled = signupState !is UiState.Loading && addressSectionValid,
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary

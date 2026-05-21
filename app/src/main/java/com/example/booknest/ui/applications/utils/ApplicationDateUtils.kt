@@ -16,24 +16,40 @@ fun formatDate(dateString: String?): String {
     }
 }
 
-fun getDeadlineStatus(deadline: String): String {
+private fun daysUntilDeadline(deadline: String): Int? {
     return try {
         val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
         val date = inputFormat.parse(deadline) ?: SimpleDateFormat(
             "yyyy-MM-dd",
-            Locale.getDefault()
+            Locale.getDefault(),
         ).parse(deadline)
         date?.let {
             val now = Date()
-            val daysUntil = ((it.time - now.time) / (1000 * 60 * 60 * 24)).toInt()
-            when {
-                daysUntil < 0 -> "Overdue (${-daysUntil} days ago)"
-                daysUntil == 0 -> "Today"
-                daysUntil == 1 -> "Tomorrow"
-                else -> "$daysUntil days remaining"
-            }
-        } ?: deadline
-    } catch (e: Exception) {
-        deadline
+            ((it.time - now.time) / (1000 * 60 * 60 * 24)).toInt()
+        }
+    } catch (_: Exception) {
+        null
+    }
+}
+
+/** Application deadline: no overdue label — hide status once the date has passed. */
+fun getApplicationDeadlineStatus(deadline: String): String? {
+    return when (val daysUntil = daysUntilDeadline(deadline)) {
+        null -> null
+        in Int.MIN_VALUE..-1 -> null
+        0 -> "Today"
+        1 -> "Tomorrow"
+        else -> "$daysUntil days remaining"
+    }
+}
+
+/** Review deadline: may show overdue when past due. */
+fun getReviewDeadlineStatus(deadline: String): String? {
+    return when (val daysUntil = daysUntilDeadline(deadline)) {
+        null -> null
+        in Int.MIN_VALUE..-1 -> "Overdue (${-daysUntil} days ago)"
+        0 -> "Today"
+        1 -> "Tomorrow"
+        else -> "$daysUntil days remaining"
     }
 }

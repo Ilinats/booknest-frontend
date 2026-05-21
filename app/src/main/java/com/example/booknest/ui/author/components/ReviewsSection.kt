@@ -78,7 +78,7 @@ fun RecentReviewsSection(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 reviews.take(3).forEach { review ->
-                    ReviewCard(
+                    AuthorReviewSummaryCard(
                         review = review,
                         onClick = { onReviewClick(review) }
                     )
@@ -89,7 +89,7 @@ fun RecentReviewsSection(
 }
 
 @Composable
-fun ReviewCard(
+fun AuthorReviewSummaryCard(
     review: ReviewResponse,
     onClick: () -> Unit
 ) {

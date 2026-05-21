@@ -24,7 +24,9 @@ import retrofit2.http.Query
 interface NotificationsService {
     @GET(Notifications.LIST)
     suspend fun getNotifications(
-        @Query(QueryConstants.UNREAD_ONLY) unreadOnly: Boolean?
+        @Query(QueryConstants.UNREAD_ONLY) unreadOnly: Boolean? = null,
+        @Query(QueryConstants.SKIP) skip: Int? = null,
+        @Query(QueryConstants.TAKE) take: Int? = null,
     ): Response<NotificationsListResponse>
 
     @GET(Notifications.UNREAD_COUNT)

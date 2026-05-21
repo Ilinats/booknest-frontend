@@ -23,6 +23,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.model.response.SocialMediaResponse
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.ui.components.social.SocialMediaLinkChip
 import org.koin.compose.koinInject
 
@@ -122,7 +123,7 @@ fun AuthorProfileHeader(
                     )
                 }
                 IconButton(
-                    onClick = { navController.navigate("profile_edit") },
+                    onClick = { navController.navigate(Screen.ProfileEdit.route) },
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .size(36.dp)
@@ -267,7 +268,7 @@ fun AuthorProfileHeader(
             }
 
             Button(
-                onClick = { navController.navigate("profile_edit") },
+                onClick = { navController.navigate(Screen.ProfileEdit.route) },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(

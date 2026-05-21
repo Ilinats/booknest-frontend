@@ -21,25 +21,33 @@ fun SummaryCardsSection(summary: BookAnalyticsSummaryResponse) {
             color = MaterialTheme.colorScheme.onSurface
         )
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            StatCard(
-                title = "Total Reviews",
-                value = summary.totalReviews.toString(),
-                modifier = Modifier.weight(1f)
-            )
-            StatCard(
-                title = "Average Rating",
-                value = String.format("%.1f", summary.averageRating),
-                modifier = Modifier.weight(1f)
-            )
-            StatCard(
-                title = "Positive Feedback",
-                value = "${summary.positiveFeedback}%",
-                modifier = Modifier.weight(1f)
-            )
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                StatCard(
+                    title = "Total Reviews",
+                    value = summary.totalReviews.toString(),
+                    modifier = Modifier.weight(1f)
+                )
+                StatCard(
+                    title = "Average Rating",
+                    value = String.format("%.1f", summary.averageRating),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                StatCard(
+                    title = "Positive Feedback",
+                    value = "${summary.positiveFeedback}%",
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(modifier = Modifier.weight(1f))
+            }
         }
     }
 }

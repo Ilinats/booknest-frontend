@@ -3,33 +3,18 @@ package com.example.booknest.ui.author.utils
 import android.os.Build
 import androidx.annotation.RequiresApi
 import java.text.SimpleDateFormat
-import java.time.Instant
-import java.time.temporal.ChronoUnit
 import java.util.Locale
 
 object AuthorHomeUtils {
     
     @RequiresApi(Build.VERSION_CODES.O)
-    fun calculateDaysUntilDeadline(deadline: String): Long {
-        return try {
-            val deadlineDate = Instant.parse(deadline)
-            val now = Instant.now()
-            ChronoUnit.DAYS.between(now, deadlineDate)
-        } catch (e: Exception) {
-            0L
-        }
-    }
+    fun calculateDaysUntilDeadline(deadline: String): Long? =
+        DeadlineDisplayUtils.daysUntilDeadline(deadline)
 
     @RequiresApi(Build.VERSION_CODES.O)
     fun isDeadlineApproaching(deadline: String): Boolean {
-        return try {
-            val deadlineDate = Instant.parse(deadline)
-            val now = Instant.now()
-            val daysUntil = ChronoUnit.DAYS.between(now, deadlineDate)
-            daysUntil in 0..7
-        } catch (e: Exception) {
-            false
-        }
+        val daysUntil = DeadlineDisplayUtils.daysUntilDeadline(deadline) ?: return false
+        return daysUntil in 0..7
     }
 
     fun formatDate(dateString: String): String {

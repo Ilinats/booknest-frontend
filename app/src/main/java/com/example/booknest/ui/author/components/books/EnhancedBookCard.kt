@@ -19,10 +19,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 import com.example.booknest.domain.model.response.BookResponse
+import com.example.booknest.ui.components.BookCoverMetaRow
 import com.example.booknest.domain.model.response.BookStatsResponse
-import com.example.booknest.ui.author.BookStatus
+import com.example.booknest.ui.author.utils.DeadlineDisplayUtils
+import com.example.booknest.viewmodel.author.BookStatus
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -55,54 +56,92 @@ fun EnhancedBookCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(80.dp, 120.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (book.coverImageUrl != null) {
-                        AsyncImage(
-                            model = book.coverImageUrl,
-                            contentDescription = book.title,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Text("📖", fontSize = 32.sp)
+            BookCoverMetaRow(
+                coverUrl = book.coverImageUrl,
+                title = book.title,
+                actions = {
+                    Box {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                        }
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Edit") },
+                                onClick = {
+                                    showMenu = false
+                                    onEdit()
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Edit, contentDescription = null)
+                                }
+                            )
+                            if (book.status == BookStatus.DRAFT.value) {
+                                DropdownMenuItem(
+                                    text = { Text("Publish") },
+                                    onClick = {
+                                        showMenu = false
+                                        onPublish()
+                                    },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Publish, contentDescription = null)
+                                    }
+                                )
+                            }
+                            DropdownMenuItem(
+                                text = { Text("View Stats") },
+                                onClick = {
+                                    showMenu = false
+                                    onViewStats()
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Analytics, contentDescription = null)
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                                onClick = {
+                                    showMenu = false
+                                    onDelete()
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            )
+                        }
                     }
+                },
+            ) {
+                StatusChip(status = book.status)
+
+                Text(
+                    text = book.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = 16.sp,
+                )
+
+                book.selectionMethod?.takeIf { it.isNotBlank() }?.let { selectionMethod ->
+                    val displayName = formatSelectionMethod(selectionMethod)
+                    Text(
+                        text = "Selection: $displayName",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
 
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    StatusChip(status = book.status)
-
-                    Text(
-                        text = book.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    book.selectionMethod?.takeIf { it.isNotBlank() }?.let { selectionMethod ->
-                        val displayName = formatSelectionMethod(selectionMethod)
-                        Text(
-                            text = "Selection: $displayName",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    when (book.status) {
+                when (book.status) {
                         BookStatus.DRAFT.value -> {
                             book.createdAt?.let { date ->
                                 Text(
@@ -124,16 +163,26 @@ fun EnhancedBookCard(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            book.applicationDeadline?.let { deadline ->
-                                val daysLeft = calculateDaysLeft(deadline)
-                                Text(
-                                    text = if (daysLeft >= 0) "Ends in $daysLeft ${if (daysLeft == 1L) "day" else "days"}" else "Deadline passed",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = if (daysLeft <= 3L) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            val pendingCount = (stats?.effectiveTotalApplications
-                                ?: 0) - (stats?.approvedReaders ?: 0)
+                            book.applicationDeadline
+                                ?.takeIf { DeadlineDisplayUtils.hasDisplayableDeadline(it) }
+                                ?.let { deadline ->
+                                    val daysLeft =
+                                        DeadlineDisplayUtils.daysUntilDeadline(deadline)
+                                    val label =
+                                        DeadlineDisplayUtils.formatEndsInText(deadline)
+                                    if (label != null) {
+                                        Text(
+                                            text = label,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = if ((daysLeft ?: 0) <= 3L) {
+                                                MaterialTheme.colorScheme.error
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                            }
+                                        )
+                                    }
+                                }
+                            val pendingCount = stats?.pendingApplications ?: 0
                             if (pendingCount > 0) {
                                 Surface(
                                     color = MaterialTheme.colorScheme.primaryContainer,
@@ -196,68 +245,6 @@ fun EnhancedBookCard(
                             }
                         }
                     }
-                }
-
-                Box {
-                    IconButton(onClick = { showMenu = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "More options")
-                    }
-
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Edit") },
-                            onClick = {
-                                showMenu = false
-                                onEdit()
-                            },
-                            leadingIcon = {
-                                Icon(Icons.Default.Edit, contentDescription = null)
-                            }
-                        )
-
-                        if (book.status == BookStatus.DRAFT.value) {
-                            DropdownMenuItem(
-                                text = { Text("Publish") },
-                                onClick = {
-                                    showMenu = false
-                                    onPublish()
-                                },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Publish, contentDescription = null)
-                                }
-                            )
-                        }
-
-                        DropdownMenuItem(
-                            text = { Text("View Stats") },
-                            onClick = {
-                                showMenu = false
-                                onViewStats()
-                            },
-                            leadingIcon = {
-                                Icon(Icons.Default.Analytics, contentDescription = null)
-                            }
-                        )
-
-                        DropdownMenuItem(
-                            text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
-                            onClick = {
-                                showMenu = false
-                                onDelete()
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.Delete,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.error
-                                )
-                            }
-                        )
-                    }
-                }
             }
 
             when (book.status) {
