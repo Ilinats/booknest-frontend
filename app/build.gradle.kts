@@ -69,6 +69,7 @@ dependencies {
     implementation(libs.squareup.okhttp3.loggingInterceptor)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.security.crypto)
     implementation(libs.kotlinx.serialization.json)
     implementation("com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter:1.0.0")
 
