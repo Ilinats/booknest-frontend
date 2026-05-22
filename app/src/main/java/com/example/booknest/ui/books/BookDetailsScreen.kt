@@ -50,6 +50,7 @@ import com.example.booknest.ui.books.components.details.GenreTagsSection
 import com.example.booknest.ui.books.components.dialogs.ApplicationFormDialog
 import com.example.booknest.ui.books.components.dialogs.WithdrawApplicationDialog
 import com.example.booknest.ui.books.components.reviews.ReviewsSection
+import com.example.booknest.ui.books.utils.isFullyBooked
 import com.example.booknest.viewmodel.applications.ApplicationViewModel
 import com.example.booknest.viewmodel.books.BookDetailsViewModel
 import com.example.booknest.viewmodel.analytics.ReviewViewModel
@@ -441,7 +442,11 @@ fun BookDetailsContent(
                             userApplication = userApplication,
                             onApplyClick = onApplyClick,
                             onWithdrawClick = onWithdrawClick,
-                            showApplyButton = !isApplicationDeadlinePassed && (userApplication == null || userApplication.status == "withdrawn") && !isApplicationLoading && !isApplying,
+                            showApplyButton = !isApplicationDeadlinePassed &&
+                                !book.isFullyBooked() &&
+                                (userApplication == null || userApplication.status == "withdrawn") &&
+                                !isApplicationLoading &&
+                                !isApplying,
                             showWithdrawButton = !isApplicationDeadlinePassed && userApplication?.status == "pending",
                             navController = navController,
                             sessionReader = sessionReader

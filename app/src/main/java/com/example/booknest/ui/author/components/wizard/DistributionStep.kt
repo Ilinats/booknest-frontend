@@ -12,7 +12,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.example.booknest.domain.validation.BookFormRules
 import com.example.booknest.ui.author.components.common.AgeRating
+import com.example.booknest.ui.author.components.common.bookFormFieldSupportingText
 import com.example.booknest.ui.author.components.common.DistributionType
 
 @Composable
@@ -97,7 +99,7 @@ fun DistributionStep(
             onValueChange = { newValue ->
                 if (newValue.all { it.isDigit() }) {
                     onUpdate(selectedAgeRating, selectedDistributionType, newValue)
-                    onValidationChange?.invoke(validateTotalCopies(newValue))
+                    onValidationChange?.invoke(BookFormRules.validateTotalCopies(newValue))
                 }
             },
             label = { Text("Total Copies") },
@@ -105,28 +107,7 @@ fun DistributionStep(
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             isError = totalCopiesError != null,
-            supportingText = totalCopiesError?.let {
-                {
-                    Text(
-                        it,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            } ?: {
-                Text("Optional: Minimum 1 copy")
-            }
+            supportingText = bookFormFieldSupportingText(totalCopiesError),
         )
     }
-}
-
-private fun validateTotalCopies(copies: String): String? {
-    val trimmed = copies.trim()
-    return if (trimmed.isNotBlank()) {
-        trimmed.toIntOrNull()?.let { num ->
-            when {
-                num < 1 -> "Total copies must be at least 1"
-                else -> null
-            }
-        }
-    } else null
 }

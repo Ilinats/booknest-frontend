@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.booknest.domain.validation.BookFormRules
 import com.example.booknest.ui.author.components.common.AgeRating
 import com.example.booknest.ui.author.components.common.DistributionType
 import com.example.booknest.ui.author.components.common.SelectionMethod
@@ -19,6 +20,10 @@ fun BookEditNavigation(
     currentStep: Int,
     totalSteps: Int,
     title: String,
+    shortDescription: String,
+    fullDescription: String,
+    pageCount: String,
+    selectionCriteriaError: String?,
     selectedAgeRating: AgeRating?,
     selectedDistributionType: DistributionType?,
     applicationDeadline: String?,
@@ -44,8 +49,10 @@ fun BookEditNavigation(
             enabled = !isSaving &&
                 !isLoading &&
                 hasChanges &&
+                BookFormRules.isBasicInfoValid(title, shortDescription, fullDescription, pageCount) &&
                 applicationDeadlineError == null &&
-                reviewDeadlineError == null
+                reviewDeadlineError == null &&
+                selectionCriteriaError == null
         ) {
             if (isSaving) {
                 CircularProgressIndicator(
@@ -77,17 +84,21 @@ fun BookEditNavigation(
                 Button(
                     onClick = onNextStep,
                     enabled = isStepValid(
-                        currentStep,
-                        title,
-                        selectedAgeRating,
-                        selectedDistributionType,
-                        applicationDeadline,
-                        applicationDeadlineError,
-                        reviewDeadlineError,
-                        selectedSelectionMethod,
-                        bookFileUri,
-                        selectedDistributionType,
-                        existingFileUrl
+                        step = currentStep,
+                        title = title,
+                        shortDescription = shortDescription,
+                        fullDescription = fullDescription,
+                        pageCount = pageCount,
+                        ageRating = selectedAgeRating,
+                        distributionType = selectedDistributionType,
+                        applicationDeadline = applicationDeadline,
+                        applicationDeadlineError = applicationDeadlineError,
+                        reviewDeadlineError = reviewDeadlineError,
+                        selectionCriteriaError = selectionCriteriaError,
+                        selectionMethod = selectedSelectionMethod,
+                        bookFileUri = bookFileUri,
+                        currentDistributionType = selectedDistributionType,
+                        existingFileUrl = existingFileUrl,
                     )
                 ) {
                     Text("Next")
@@ -104,23 +115,28 @@ fun BookEditNavigation(
 private fun isStepValid(
     step: Int,
     title: String,
+    shortDescription: String,
+    fullDescription: String,
+    pageCount: String,
     ageRating: AgeRating?,
     distributionType: DistributionType?,
     applicationDeadline: String?,
     applicationDeadlineError: String?,
     reviewDeadlineError: String?,
+    selectionCriteriaError: String?,
     selectionMethod: SelectionMethod?,
     bookFileUri: Uri?,
     currentDistributionType: DistributionType?,
-    existingFileUrl: String?
+    existingFileUrl: String?,
 ): Boolean {
     return when (step) {
-        1 -> title.isNotBlank()
+        1 -> BookFormRules.isBasicInfoValid(title, shortDescription, fullDescription, pageCount)
         2 -> true
         3 -> ageRating != null && distributionType != null
         4 -> applicationDeadline != null &&
             applicationDeadlineError == null &&
-            reviewDeadlineError == null
+            reviewDeadlineError == null &&
+            selectionCriteriaError == null
         5 -> {
             val requiresFile = currentDistributionType == DistributionType.DIGITAL ||
                     currentDistributionType == DistributionType.BOTH

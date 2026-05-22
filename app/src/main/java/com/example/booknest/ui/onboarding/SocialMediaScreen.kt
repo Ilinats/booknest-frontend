@@ -35,6 +35,7 @@ import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.model.response.CustomSocialLinkResponse
 import com.example.booknest.domain.model.response.SocialMediaResponse
 import com.example.booknest.presentation.navigation.Screen
+import com.example.booknest.presentation.navigation.navigateToMainAsRoot
 import com.example.booknest.ui.components.social.CustomLinkCard
 import com.example.booknest.ui.onboarding.components.fields.SocialMediaInputField
 import com.example.booknest.ui.auth.components.utils.isValidUrl
@@ -401,9 +402,7 @@ fun SocialMediaScreen(
                             custom = customLinks.takeIf { it.isNotEmpty() }
                         )
                     )
-                    navController.navigate(Screen.Main.route) {
-                        popUpTo(Screen.SocialMedia.route) { inclusive = true }
-                    }
+                    navController.navigateToMainAsRoot()
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -430,11 +429,7 @@ fun SocialMediaScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             TextButton(
-                onClick = {
-                    navController.navigate(Screen.Main.route) {
-                        popUpTo(Screen.SocialMedia.route) { inclusive = true }
-                    }
-                },
+                onClick = { navController.navigateToMainAsRoot() },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(

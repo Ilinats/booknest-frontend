@@ -199,7 +199,11 @@ class BNBooksDataSource(private val booksService: BooksService) : BooksDataSourc
         file: MultipartBody.Part
     ): Result<BookResponse> {
         return runSuspendRequest { booksService.uploadBookCoverImage(bookId, file) }.fold(
-            onSuccess = { response -> Result.success(response.book) },
+            onSuccess = { response ->
+                val coverUrl = response.book.coverImageUrl?.takeIf { it.isNotBlank() }
+                    ?: response.coverImage.url
+                Result.success(response.book.copy(coverImageUrl = coverUrl))
+            },
             onFailure = { error -> Result.failure(error) }
         )
     }

@@ -61,6 +61,7 @@ import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.repository.AuthRepository
 import com.example.booknest.navigation.BottomBarScreen
 import com.example.booknest.navigation.HomeNavGraph
+import com.example.booknest.navigation.MainRootBackHandler
 import com.example.booknest.navigation.consumeNotificationLaunchExtras
 import com.example.booknest.navigation.readNotificationLaunchExtras
 import com.example.booknest.presentation.navigation.Screen
@@ -79,6 +80,7 @@ fun MainScreen(
     mainViewModel: MainViewModel = getViewModel()
 ) {
     val navController = rememberNavController()
+    MainRootBackHandler(navController)
     val currentUser by sessionManager.currentUser.collectAsState()
 
     val notificationViewModel: NotificationViewModel = getViewModel()

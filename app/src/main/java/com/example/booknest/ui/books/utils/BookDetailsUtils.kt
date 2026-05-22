@@ -1,7 +1,16 @@
 package com.example.booknest.ui.books.utils
 
+import com.example.booknest.domain.model.response.BookResponse
 import java.text.SimpleDateFormat
 import java.util.*
+
+/** No review copies left (same rule as browse list "Fully Booked" badge). */
+fun BookResponse.isFullyBooked(): Boolean {
+    val total = totalCopies ?: return false
+    if (total <= 0) return false
+    val available = availableCopies ?: return false
+    return available <= 0
+}
 
 internal fun formatDateDMY(dateString: String): String {
     return try {
