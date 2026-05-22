@@ -3,8 +3,10 @@ package com.example.booknest.viewmodel.genres
 import androidx.lifecycle.ViewModel
 import com.example.booknest.viewmodel.common.UserFeedback
 import androidx.lifecycle.viewModelScope
+import com.example.booknest.domain.model.request.DeleteGenrePreferenceRequest
 import com.example.booknest.domain.model.request.UpsertPreferenceRequest
 import com.example.booknest.domain.model.response.GenreResponse
+import com.example.booknest.domain.usecase.genres.DeleteUserGenrePreferenceUseCase
 import com.example.booknest.domain.usecase.genres.GetGenrePreferencesUseCase
 import com.example.booknest.domain.usecase.genres.GetGenresUseCase
 import com.example.booknest.domain.usecase.genres.SaveUserGenrePreferenceUseCase
@@ -17,7 +19,8 @@ class FavoriteGenresViewModel(
     private val feedback: UserFeedback,
     private val getGenresUseCase: GetGenresUseCase,
     private val getGenrePreferencesUseCase: GetGenrePreferencesUseCase,
-    private val saveUserGenrePreferenceUseCase: SaveUserGenrePreferenceUseCase
+    private val saveUserGenrePreferenceUseCase: SaveUserGenrePreferenceUseCase,
+    private val deleteUserGenrePreferenceUseCase: DeleteUserGenrePreferenceUseCase,
 ) : ViewModel() {
 
     private val _genres = MutableStateFlow<List<GenreResponse>>(emptyList())
@@ -25,6 +28,9 @@ class FavoriteGenresViewModel(
 
     private val _selectedGenreIds = MutableStateFlow<Set<Int>>(emptySet())
     val selectedGenreIds: StateFlow<Set<Int>> = _selectedGenreIds.asStateFlow()
+
+    /** Genre ids last loaded from or successfully synced with the server. */
+    private val _persistedGenreIds = MutableStateFlow<Set<Int>>(emptySet())
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -62,9 +68,11 @@ class FavoriteGenresViewModel(
                 val preferencesResult = getGenrePreferencesUseCase()
                 preferencesResult
                     .onSuccess { preferences ->
-                        _selectedGenreIds.value = preferences
+                        val ids = preferences
                             .mapNotNull { it.resolvedGenreId.takeIf { id -> id > 0 } }
                             .toSet()
+                        _selectedGenreIds.value = ids
+                        _persistedGenreIds.value = ids
                     }
                     .onFailure { _ -> }
             } catch (e: Exception) {
@@ -87,24 +95,37 @@ class FavoriteGenresViewModel(
 
     fun savePreferences() {
         viewModelScope.launch {
-            if (_selectedGenreIds.value.isEmpty()) {
+            val selected = _selectedGenreIds.value
+            if (selected.isEmpty()) {
                 val errorMsg = "Select at least one genre."
                 _message.value = errorMsg
                 notifyError(errorMsg)
                 return@launch
             }
+
+            val persisted = _persistedGenreIds.value
+            val toDelete = persisted - selected
+            val toSave = selected - persisted
+
+            if (toDelete.isEmpty() && toSave.isEmpty()) {
+                val msg = "Favorite genres saved."
+                _message.value = msg
+                notifySuccess(msg)
+                return@launch
+            }
+
             _isLoading.value = true
             try {
-                val results = _selectedGenreIds.value.map { genreId ->
-                    saveUserGenrePreferenceUseCase(
-                        UpsertPreferenceRequest(
-                            genreId = genreId
-                        )
-                    )
+                val deleteResults = toDelete.map { genreId ->
+                    deleteUserGenrePreferenceUseCase(DeleteGenrePreferenceRequest(genreId = genreId))
+                }
+                val saveResults = toSave.map { genreId ->
+                    saveUserGenrePreferenceUseCase(UpsertPreferenceRequest(genreId = genreId))
                 }
 
-                val allSucceeded = results.all { it.isSuccess }
+                val allSucceeded = (deleteResults + saveResults).all { it.isSuccess }
                 val msg = if (allSucceeded) {
+                    _persistedGenreIds.value = selected
                     "Favorite genres saved."
                 } else {
                     "Some preferences could not be saved."

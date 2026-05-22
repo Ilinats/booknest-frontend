@@ -307,7 +307,8 @@ val viewModelModule = module {
             feedback = get(),
             getGenresUseCase = get(),
             getGenrePreferencesUseCase = get(),
-            saveUserGenrePreferenceUseCase = get()
+            saveUserGenrePreferenceUseCase = get(),
+            deleteUserGenrePreferenceUseCase = get(),
         )
     }
 
