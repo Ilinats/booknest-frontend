@@ -136,7 +136,7 @@ interface BooksService {
     @POST(Books.COVER)
     suspend fun uploadBookCoverImage(
         @Path(PathConstants.BOOK_ID) bookId: String,
-        @Part("cover") cover: MultipartBody.Part,
+        @Part cover: MultipartBody.Part,
     ): Response<com.example.booknest.domain.model.response.UploadBookCoverResponse>
 
     @DELETE(Books.DELETE_COVER)

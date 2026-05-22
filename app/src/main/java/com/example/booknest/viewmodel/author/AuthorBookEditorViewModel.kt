@@ -175,11 +175,20 @@ class AuthorBookEditorViewModel(
                 val bookWithoutCover = book.copy(coverImageUrl = null)
                 createBookUseCase(bookWithoutCover, filePart)
                     .onSuccess { createdBook ->
-                        coverImageUri?.let { uri ->
-                            uploadBookCoverImage(createdBook.id, uri, context!!)
+                        val bookWithCover = if (coverImageUri != null) {
+                            uploadCoverImageInternal(createdBook.id, coverImageUri, context!!)
+                                .getOrElse { e ->
+                                    _bookCreationState.value =
+                                        UiState.Error(
+                                            e.message ?: "Book created but cover image upload failed",
+                                        )
+                                    return@launch
+                                }
+                        } else {
+                            createdBook
                         }
                         notifySuccess("Book created successfully!")
-                        _bookCreationState.value = UiState.Success(createdBook)
+                        _bookCreationState.value = UiState.Success(bookWithCover)
                         catalogRefresher.requestRefresh()
                     }
                     .onFailure { e ->
@@ -273,55 +282,62 @@ class AuthorBookEditorViewModel(
         viewModelScope.launch(NonCancellable) {
             try {
                 _coverImageUploadState.value = UiState.Loading
-                val mimeType = withContext(Dispatchers.IO) {
-                    context.contentResolver.getType(imageUri) ?: "image/png"
-                }
-                val file = withContext(Dispatchers.IO) { uriToFile(context, imageUri, mimeType) }
-                    ?: run {
-                        _coverImageUploadState.value = UiState.Error("Failed to process image file")
-                        return@launch
-                    }
-                val finalMimeType = when {
-                    mimeType.isNotEmpty() && mimeType.startsWith("image/") -> mimeType
-                    else -> {
-                        val extension = file.name.substringAfterLast('.', "").lowercase()
-                        when (extension) {
-                            "jpg", "jpeg" -> "image/jpeg"
-                            "png" -> "image/png"
-                            "gif" -> "image/gif"
-                            "webp" -> "image/webp"
-                            else -> "image/png"
-                        }
-                    }
-                }
-                val uploadManager = com.example.booknest.utils.FileUploadManager(context)
-                val requestFile = file.asRequestBody(finalMimeType.toMediaType())
-                val multipartBody = MultipartBody.Part.createFormData("cover", file.name, requestFile)
-                uploadBookCoverImageUseCase(bookId, multipartBody)
+                uploadCoverImageInternal(bookId, imageUri, context)
                     .onSuccess { bookResponse ->
-                        val coverUrl = bookResponse.coverImageUrl ?: ""
+                        val coverUrl = bookResponse.coverImageUrl.orEmpty()
                         _coverImageUploadState.value = UiState.Success(bookId to coverUrl)
                         notifySuccess("Cover image uploaded successfully")
                         catalogRefresher.requestRefresh()
-                        withContext(Dispatchers.IO) {
-                            try {
-                                if (file.exists()) file.delete()
-                            } catch (e: Exception) {
-                                DebugLog.w("AuthorBookEditorVM", "Temp file delete failed after cover upload", e)
-                            }
-                        }
                     }
                     .onFailure { e ->
-                        if (e !is kotlinx.coroutines.CancellationException) {
+                        if (e !is CancellationException) {
                             _coverImageUploadState.value =
                                 UiState.Error(e.message ?: "Failed to upload cover image")
                         }
                     }
-            } catch (e: kotlinx.coroutines.CancellationException) {
+            } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                if (e !is kotlinx.coroutines.CancellationException) {
+                if (e !is CancellationException) {
                     _coverImageUploadState.value = UiState.Error(e.message ?: "Error uploading cover image")
+                }
+            }
+        }
+    }
+
+    private suspend fun uploadCoverImageInternal(
+        bookId: String,
+        imageUri: Uri,
+        context: Context,
+    ): Result<BookResponse> {
+        val mimeType = withContext(Dispatchers.IO) {
+            context.contentResolver.getType(imageUri) ?: "image/png"
+        }
+        val file = withContext(Dispatchers.IO) { uriToFile(context, imageUri, mimeType) }
+            ?: return Result.failure(Exception("Failed to process image file"))
+        return try {
+            val finalMimeType = when {
+                mimeType.isNotEmpty() && mimeType.startsWith("image/") -> mimeType
+                else -> {
+                    val extension = file.name.substringAfterLast('.', "").lowercase()
+                    when (extension) {
+                        "jpg", "jpeg" -> "image/jpeg"
+                        "png" -> "image/png"
+                        "gif" -> "image/gif"
+                        "webp" -> "image/webp"
+                        else -> "image/png"
+                    }
+                }
+            }
+            val requestFile = file.asRequestBody(finalMimeType.toMediaType())
+            val multipartBody = MultipartBody.Part.createFormData("cover", file.name, requestFile)
+            uploadBookCoverImageUseCase(bookId, multipartBody)
+        } finally {
+            withContext(Dispatchers.IO) {
+                try {
+                    if (file.exists()) file.delete()
+                } catch (e: Exception) {
+                    DebugLog.w("AuthorBookEditorVM", "Temp file delete failed after cover upload", e)
                 }
             }
         }

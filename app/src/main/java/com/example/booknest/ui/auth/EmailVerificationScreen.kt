@@ -27,6 +27,7 @@ import com.example.booknest.ui.components.auth.ResendCodeButton
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.viewmodel.auth.EmailVerificationViewModel
 import com.example.booknest.presentation.navigation.Screen
+import com.example.booknest.presentation.navigation.navigateToMainAsRoot
 import com.example.booknest.ui.components.BackgroundDecoration
 
 @Composable
@@ -56,9 +57,7 @@ fun EmailVerificationScreen(
                         popUpTo("email_verification") { inclusive = true }
                     }
                 } else {
-                    navController.navigate(Screen.Main.route) {
-                        popUpTo("email_verification") { inclusive = true }
-                    }
+                    navController.navigateToMainAsRoot()
                 }
             } else {
                 navController.popBackStack()
@@ -198,9 +197,7 @@ fun EmailVerificationScreen(
                                 popUpTo("email_verification") { inclusive = true }
                             }
                         } else {
-                            navController.navigate(Screen.Main.route) {
-                                popUpTo("email_verification") { inclusive = true }
-                            }
+                            navController.navigateToMainAsRoot()
                         }
                     } else {
                         navController.popBackStack()

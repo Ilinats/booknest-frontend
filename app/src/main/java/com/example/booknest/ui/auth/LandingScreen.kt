@@ -39,6 +39,7 @@ import androidx.navigation.NavController
 import com.example.booknest.R
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.presentation.navigation.Screen
+import com.example.booknest.presentation.navigation.navigateToMainAsRoot
 
 @Composable
 fun LandingScreen(navController: NavController, sessionManager: SessionManager) {
@@ -49,9 +50,7 @@ fun LandingScreen(navController: NavController, sessionManager: SessionManager) 
 
     LaunchedEffect(isLoggedIn) {
         if (isLoggedIn == true) {
-            navController.navigate(Screen.Main.route) {
-                popUpTo(Screen.Landing.route) { inclusive = true }
-            }
+            navController.navigateToMainAsRoot()
         }
     }
 

@@ -14,8 +14,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.booknest.domain.validation.BookFormRules
 import com.example.booknest.ui.author.components.bookedit.REVIEW_DEADLINE_MIN_OFFSET_MESSAGE
 import com.example.booknest.ui.author.components.bookedit.validateDeadlines
+import com.example.booknest.ui.author.components.common.bookFormFieldSupportingText
 import com.example.booknest.ui.author.components.common.DatePickerDialog
 import com.example.booknest.ui.author.components.common.SelectionMethod
 import java.text.SimpleDateFormat
@@ -34,12 +36,13 @@ fun ReviewConfigStep(
     reviewDatePickerState: DatePickerState,
     applicationDeadlineError: String? = null,
     reviewDeadlineError: String? = null,
+    selectionCriteriaError: String? = null,
     onUpdate: (String?, String?, SelectionMethod?, String) -> Unit,
     onShowApplicationDatePicker: () -> Unit,
     onShowReviewDatePicker: () -> Unit,
     onDismissApplicationDatePicker: () -> Unit,
     onDismissReviewDatePicker: () -> Unit,
-    onValidationChange: ((String?, String?) -> Unit)? = null
+    onValidationChange: ((String?, String?, String?) -> Unit)? = null
 ) {
     val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
     val inputDateFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
@@ -211,18 +214,18 @@ fun ReviewConfigStep(
                     selectedSelectionMethod,
                     it
                 )
+                onValidationChange?.invoke(
+                    applicationDeadlineError,
+                    reviewDeadlineError,
+                    BookFormRules.validateSelectionCriteria(it),
+                )
             },
             label = { Text("Selection Criteria") },
             modifier = Modifier.fillMaxWidth(),
             maxLines = 4,
             placeholder = { Text("Describe what you're looking for in reviewers (optional)") },
-            supportingText = {
-                Text(
-                    text = "Help reviewers understand what you're looking for",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            isError = selectionCriteriaError != null,
+            supportingText = bookFormFieldSupportingText(selectionCriteriaError),
         )
     }
 
@@ -249,11 +252,19 @@ fun ReviewConfigStep(
                     selectedCalendar.set(Calendar.MILLISECOND, 0)
 
                     if (selectedCalendar.timeInMillis <= calendar.timeInMillis) {
-                        onValidationChange?.invoke("Application deadline must be at least tomorrow", reviewDeadlineError)
+                        onValidationChange?.invoke(
+                            "Application deadline must be at least tomorrow",
+                            reviewDeadlineError,
+                            BookFormRules.validateSelectionCriteria(selectionCriteria),
+                        )
                     } else {
                         onUpdate(newDeadline, reviewDeadline, selectedSelectionMethod, selectionCriteria)
                         val (appErr, revErr) = validateDeadlines(newDeadline, reviewDeadline)
-                        onValidationChange?.invoke(appErr, revErr)
+                        onValidationChange?.invoke(
+                            appErr,
+                            revErr,
+                            BookFormRules.validateSelectionCriteria(selectionCriteria),
+                        )
                     }
                 }
                 onDismissApplicationDatePicker()
@@ -271,7 +282,11 @@ fun ReviewConfigStep(
                     val newDeadline = dateFormat.format(Date(millis))
                     onUpdate(applicationDeadline, newDeadline, selectedSelectionMethod, selectionCriteria)
                     val (appErr, revErr) = validateDeadlines(applicationDeadline, newDeadline)
-                    onValidationChange?.invoke(appErr, revErr)
+                    onValidationChange?.invoke(
+                        appErr,
+                        revErr,
+                        BookFormRules.validateSelectionCriteria(selectionCriteria),
+                    )
                 }
                 onDismissReviewDatePicker()
             },

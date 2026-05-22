@@ -35,6 +35,10 @@ import com.example.booknest.domain.model.response.ApplicationCheckApplicationRes
 import com.example.booknest.domain.model.response.BookResponse
 import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.ui.books.utils.formatDate
+import com.example.booknest.ui.author.components.books.formatBookStatus
+import com.example.booknest.ui.author.components.books.formatDistributionType
+import com.example.booknest.ui.author.components.books.formatSelectionMethod
+import com.example.booknest.ui.books.utils.isFullyBooked
 import com.example.booknest.viewmodel.profile.AddressViewModel
 import com.example.booknest.viewmodel.applications.ApplicationViewModel
 import com.example.booknest.viewmodel.profile.ProfileViewModel
@@ -129,7 +133,7 @@ fun ApplicationInfoSection(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = it.replaceFirstChar { char -> char.uppercase() },
+                                text = formatDistributionType(it),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -148,7 +152,7 @@ fun ApplicationInfoSection(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = it.replaceFirstChar { char -> char.uppercase() },
+                                text = formatSelectionMethod(it),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -167,7 +171,7 @@ fun ApplicationInfoSection(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = it.replaceFirstChar { char -> char.uppercase() },
+                                text = formatBookStatus(it),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -206,6 +210,15 @@ fun ApplicationInfoSection(
                     text = "Application Withdrawn",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            book.isFullyBooked() && userApplication == null -> {
+                Text(
+                    text = "Fully booked — no review copies available.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.fillMaxWidth()
                 )
             }

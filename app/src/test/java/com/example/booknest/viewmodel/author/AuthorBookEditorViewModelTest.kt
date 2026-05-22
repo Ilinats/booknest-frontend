@@ -91,6 +91,25 @@ class AuthorBookEditorViewModelTest {
     }
 
     @Test
+    fun createBook_withoutContextWhenCoverProvided_setsError() = runTest(testDispatcher) {
+        val created = TestFixtures.bookDetails(id = "new-book")
+        coEvery { createBookUseCase(any(), any()) } returns Result.success(created)
+        val coverUri = mockk<Uri>()
+
+        val viewModel = createViewModel()
+        viewModel.createBook(
+            TestFixtures.createBookRequest(),
+            coverImageUri = coverUri,
+            context = null,
+        )
+        advanceUntilIdle()
+
+        val state = viewModel.bookCreationState.value
+        assertTrue(state is UiState.Error)
+        assertEquals("Context required for file upload", (state as UiState.Error).message)
+    }
+
+    @Test
     fun clearBookCreationState_resetsToIdle() = runTest(testDispatcher) {
         val viewModel = createViewModel()
         viewModel.clearBookCreationState()

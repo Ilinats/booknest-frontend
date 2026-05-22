@@ -25,6 +25,7 @@ import com.example.booknest.domain.repository.AuthRepository
 import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.ui.author.components.ActiveCampaignsSection
 import com.example.booknest.ui.author.components.ActionNeededSection
+import com.example.booknest.ui.author.components.hasActionNeeded
 import com.example.booknest.ui.author.components.AuthorTopBar
 import com.example.booknest.ui.author.components.QuickActionsSection
 import com.example.booknest.ui.author.components.QuickStatsSection
@@ -113,17 +114,25 @@ fun AuthorHomeScreen(
                     )
                 }
 
-                item {
-                    ActionNeededSection(
+                val booksWithDeadline = myBooks.filter { book ->
+                    val deadline = book.applicationDeadline
+                    deadline != null &&
+                        DeadlineDisplayUtils.hasDisplayableDeadline(deadline) &&
+                        AuthorHomeUtils.isDeadlineApproaching(deadline)
+                }
+                if (hasActionNeeded(
                         pendingApplications = quickStats.pendingApplications,
                         overdueReviews = overdueReviews.size,
-                        booksWithDeadline = myBooks.filter { book ->
-                            val deadline = book.applicationDeadline
-                            deadline != null &&
-                                DeadlineDisplayUtils.hasDisplayableDeadline(deadline) &&
-                                AuthorHomeUtils.isDeadlineApproaching(deadline)
-                        }
+                        booksWithDeadline = booksWithDeadline,
                     )
+                ) {
+                    item {
+                        ActionNeededSection(
+                            pendingApplications = quickStats.pendingApplications,
+                            overdueReviews = overdueReviews.size,
+                            booksWithDeadline = booksWithDeadline,
+                        )
+                    }
                 }
 
                 item {

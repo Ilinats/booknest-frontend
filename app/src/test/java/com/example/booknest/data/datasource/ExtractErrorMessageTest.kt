@@ -1,5 +1,6 @@
 package com.example.booknest.data.datasource
 
+import com.example.booknest.data.error.ApiErrorMessages
 import com.example.booknest.data.error.BNError
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
@@ -26,15 +27,33 @@ class ExtractErrorMessageTest {
     fun extractErrorMessage_mapsAlreadyAppliedFromRawBody() {
         val body = """{"error":"APPLICATION_ALREADY_EXISTS"}"""
         assertEquals(
-            "You have already applied for this book",
+            "You have already applied for this book.",
             extractErrorMessage(body),
         )
     }
 
     @Test
     fun extractErrorMessage_returnsDefaultForBlank() {
-        assertEquals("An error occurred", extractErrorMessage(null))
-        assertEquals("An error occurred", extractErrorMessage("  "))
+        assertEquals(ApiErrorMessages.DEFAULT, extractErrorMessage(null))
+        assertEquals(ApiErrorMessages.DEFAULT, extractErrorMessage("  "))
+    }
+
+    @Test
+    fun extractErrorMessage_mapsErrorCodeField() {
+        val body = """{"message":"APPLICATION_NO_AVAILABLE_COPIES","error":"APPLICATION_NO_AVAILABLE_COPIES","statusCode":400}"""
+        assertEquals(
+            "This book has no review copies available.",
+            extractErrorMessage(body),
+        )
+    }
+
+    @Test
+    fun extractErrorMessage_mapsFriendErrorFromErrorField() {
+        val body = """{"error":"FRIEND_REQUEST_ALREADY_PENDING","statusCode":409}"""
+        assertEquals(
+            "A friend request is already pending.",
+            extractErrorMessage(body),
+        )
     }
 
     @Test

@@ -128,6 +128,7 @@ fun BookCreationWizard(
     var seriesOrderError by remember { mutableStateOf<String?>(null) }
     var applicationDeadlineError by remember { mutableStateOf<String?>(null) }
     var reviewDeadlineError by remember { mutableStateOf<String?>(null) }
+    var selectionCriteriaError by remember { mutableStateOf<String?>(null) }
 
     val mySeries by authorSeriesViewModel.mySeries.collectAsState()
     val bookCreationState by authorBookEditorViewModel.bookCreationState.collectAsState()
@@ -292,22 +293,21 @@ fun BookCreationWizard(
                             reviewDatePickerState = reviewDatePickerState,
                             applicationDeadlineError = applicationDeadlineError,
                             reviewDeadlineError = reviewDeadlineError,
+                            selectionCriteriaError = selectionCriteriaError,
                             onUpdate = { ad, rd, ssm, sc ->
                                 applicationDeadline = ad
                                 reviewDeadline = rd
                                 selectedSelectionMethod = ssm
                                 selectionCriteria = sc
-                                val (appErr, revErr) = validateDeadlines(ad, rd)
-                                applicationDeadlineError = appErr
-                                reviewDeadlineError = revErr
                             },
                             onShowApplicationDatePicker = { showApplicationDatePicker = true },
                             onShowReviewDatePicker = { showReviewDatePicker = true },
                             onDismissApplicationDatePicker = { showApplicationDatePicker = false },
                             onDismissReviewDatePicker = { showReviewDatePicker = false },
-                            onValidationChange = { appErr, revErr ->
+                            onValidationChange = { appErr, revErr, criteriaErr ->
                                 applicationDeadlineError = appErr
                                 reviewDeadlineError = revErr
+                                selectionCriteriaError = criteriaErr
                             }
                         )
                     }
@@ -364,9 +364,9 @@ fun BookCreationWizard(
                     applicationDeadline = applicationDeadline,
                     selectedSelectionMethod = selectedSelectionMethod,
                     bookFileUri = bookFileUri,
-                    titleError = titleError,
                     applicationDeadlineError = applicationDeadlineError,
                     reviewDeadlineError = reviewDeadlineError,
+                    selectionCriteriaError = selectionCriteriaError,
                     isCreating = isCreating,
                     isUploadingFile = isUploadingFile,
                     coverImageUrl = coverImageUrl,
@@ -583,13 +583,5 @@ fun BookCreationWizard(
         )
     }
 
-    @Composable
-    fun validateTitle(title: String): String? {
-        return when {
-            title.isBlank() -> "Title is required"
-            title.length > 255 -> "Title must be 255 characters or less"
-            else -> null
-        }
-    }
 }
 

@@ -40,6 +40,7 @@ import com.example.booknest.ui.components.BackButton
 import com.example.booknest.ui.components.paddingTopFromScaffold
 import com.example.booknest.navigation.rememberAuthorBookEditorViewModel
 import com.example.booknest.ui.author.components.LeakFingerprintDecodeSection
+import com.example.booknest.ui.author.components.books.formatBookStatus
 import com.example.booknest.viewmodel.applications.BookApplicationViewModel
 import com.example.booknest.viewmodel.books.BookDetailsViewModel
 import com.example.booknest.viewmodel.author.AuthorBookEditorViewModel
@@ -203,9 +204,7 @@ fun BookApplicationDetailContent(
         topBar = {
             AppTopBar(
                 title = book?.title ?: "Book Details",
-                subtitle = "Status: ${
-                    book?.status?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "Unknown"
-                }",
+                subtitle = "Status: ${formatBookStatus(book?.status)}",
                 navigationIcon = {
                     BackButton(onClick = { navController.popBackStack() })
                 },

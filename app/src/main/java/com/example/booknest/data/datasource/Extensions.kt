@@ -1,5 +1,6 @@
 package com.example.booknest.data.datasource
 
+import com.example.booknest.data.error.ApiErrorMessages
 import com.example.booknest.data.error.BNError
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerializationException
@@ -11,92 +12,58 @@ import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 
 fun extractErrorMessage(errorBody: String?): String {
-    if (errorBody.isNullOrBlank()) return "An error occurred"
+    if (errorBody.isNullOrBlank()) return ApiErrorMessages.DEFAULT
 
     return try {
         val json = Json { ignoreUnknownKeys = true }
         val error = json.decodeFromString<BNError.Generic>(errorBody)
-
-        val message = error.messageString
-        if (message != null) {
-            if (message.startsWith("[") && message.endsWith("]")) {
-                try {
-                    val messages = json.decodeFromString<List<String>>(message)
-                    messages.joinToString(", ")
-                } catch (e: Exception) {
-                    message
-                }
-            } else {
-                message
-            }
-        } else {
-            error.error ?: "An error occurred"
-        }
+        val parsedMessage = parseMessageField(json, error.messageString)
+        ApiErrorMessages.resolve(
+            message = parsedMessage,
+            errorCode = error.error,
+            rawBody = errorBody,
+        )
     } catch (e: Exception) {
-        try {
-            val arrayRegex = Regex(""""message"\s*:\s*\[(.*?)\]""", RegexOption.DOT_MATCHES_ALL)
-            val arrayMatch = arrayRegex.find(errorBody)
-            if (arrayMatch != null) {
-                val messages = arrayMatch.groupValues[1]
-                    .split(",")
-                    .map { it.trim().removeSurrounding("\"") }
-                    .filter { it.isNotBlank() }
-                if (messages.isNotEmpty()) {
-                    return messages.joinToString(", ")
-                }
+        parseErrorMessageFallback(errorBody)
+    }
+}
+
+private fun parseMessageField(json: Json, message: String?): String? {
+    if (message == null) return null
+    if (!message.startsWith("[") || !message.endsWith("]")) return message
+    return try {
+        json.decodeFromString<List<String>>(message)
+            .map { part -> ApiErrorMessages.resolve(message = part, errorCode = null) }
+            .joinToString(", ")
+    } catch (e: Exception) {
+        message
+    }
+}
+
+private fun parseErrorMessageFallback(errorBody: String): String {
+    return try {
+        val arrayRegex = Regex(""""message"\s*:\s*\[(.*?)\]""", RegexOption.DOT_MATCHES_ALL)
+        val arrayMatch = arrayRegex.find(errorBody)
+        if (arrayMatch != null) {
+            val messages = arrayMatch.groupValues[1]
+                .split(",")
+                .map { it.trim().removeSurrounding("\"") }
+                .filter { it.isNotBlank() }
+                .map { part -> ApiErrorMessages.resolve(message = part, errorCode = null, rawBody = errorBody) }
+            if (messages.isNotEmpty()) {
+                return messages.joinToString(", ")
             }
-
-            val messageRegex = Regex(""""message"\s*:\s*"([^"]+)"""")
-            messageRegex.find(errorBody)?.groupValues?.get(1)
-                ?: when {
-                    errorBody.contains("already applied", ignoreCase = true) ||
-                            errorBody.contains("APPLICATION_ALREADY_EXISTS", ignoreCase = true) -> {
-                        "You have already applied for this book"
-                    }
-
-                    errorBody.contains("email verification", ignoreCase = true) -> {
-                        "Please verify your email address before applying"
-                    }
-
-                    errorBody.contains("address", ignoreCase = true) &&
-                            errorBody.contains("physical", ignoreCase = true) -> {
-                        "Please add your address in your profile to apply for physical copies"
-                    }
-
-                    errorBody.contains("REVIEW_APPLICATION_NOT_RECEIVED", ignoreCase = true) -> {
-                        "You must mark the book copy as received before submitting a review"
-                    }
-
-                    errorBody.contains("APPLICATION_NOT_RECEIVED", ignoreCase = true) -> {
-                        "You must mark the book copy as received before submitting a review"
-                    }
-
-                    errorBody.contains("BOOK_FILE_NOT_AVAILABLE", ignoreCase = true) -> {
-                        "No downloadable file is available for this book"
-                    }
-
-                    errorBody.contains("BOOK_PDF_WATERMARK_FAILED", ignoreCase = true) -> {
-                        "Could not prepare the PDF for download. Please try again later."
-                    }
-
-                    errorBody.contains("BOOK_EPUB_FINGERPRINT_FAILED", ignoreCase = true) ||
-                        errorBody.contains("BOOK_EPUB_INVALID", ignoreCase = true) -> {
-                        "Could not prepare the EPUB for download. Please try again later."
-                    }
-
-                    errorBody.contains("BOOK_FINGERPRINT_NOT_FOUND", ignoreCase = true) -> {
-                        "No verifiable fingerprint was found in this file"
-                    }
-
-                    errorBody.contains("BOOK_FINGERPRINT_WRONG_BOOK", ignoreCase = true) -> {
-                        "This file does not match this book"
-                    }
-
-                    else -> "An error occurred"
-                }
-        } catch (ex: Exception) {
-            "An error occurred"
         }
+
+        val errorCodeRegex = Regex(""""error"\s*:\s*"([^"]+)"""")
+        val errorCode = errorCodeRegex.find(errorBody)?.groupValues?.get(1)
+
+        val messageRegex = Regex(""""message"\s*:\s*"([^"]+)"""")
+        val message = messageRegex.find(errorBody)?.groupValues?.get(1)
+
+        ApiErrorMessages.resolve(message = message, errorCode = errorCode, rawBody = errorBody)
+    } catch (ex: Exception) {
+        ApiErrorMessages.findInText(errorBody) ?: ApiErrorMessages.DEFAULT
     }
 }
 
@@ -112,7 +79,7 @@ internal fun mapNetworkOrUnknown(e: Exception): Throwable {
         )
         is HttpException -> BNError.Generic(
             messageString = extractErrorMessage(root.response()?.errorBody()?.string())
-                .takeIf { it != "An error occurred" }
+                .takeIf { it != ApiErrorMessages.DEFAULT }
                 ?: "Request failed (${root.code()})",
             error = null,
             statusCode = root.code(),

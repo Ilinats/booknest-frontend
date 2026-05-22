@@ -16,7 +16,7 @@ sealed class BNError : Exception() {
         val stringRes: Int? = null
     ) : BNError() {
         override val message: String
-            get() = messageString ?: error ?: "Unknown error"
+            get() = ApiErrorMessages.resolve(message = messageString, errorCode = error)
     }
     
     @Serializable

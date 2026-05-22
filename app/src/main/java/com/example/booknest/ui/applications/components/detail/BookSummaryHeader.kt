@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.booknest.domain.model.response.BookResponse
+import com.example.booknest.ui.author.components.books.formatBookStatus
 import com.example.booknest.ui.applications.utils.formatDate
 import com.example.booknest.ui.applications.utils.getApplicationDeadlineStatus
 import com.example.booknest.ui.applications.utils.getReviewDeadlineStatus
@@ -71,10 +72,7 @@ fun BookSummaryHeader(
                         tint = MaterialTheme.colorScheme.primary,
                     )
                     Text(
-                        text = "Status: ${
-                            book.status?.lowercase()
-                                ?.replaceFirstChar { it.uppercase() } ?: "Unknown"
-                        }",
+                        text = "Status: ${formatBookStatus(book.status)}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

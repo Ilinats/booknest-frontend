@@ -13,6 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.example.booknest.domain.validation.BookFormRules
+import com.example.booknest.ui.author.components.common.bookFormFieldSupportingText
 import com.example.booknest.ui.author.components.common.CoverImagePicker
 
 @Composable
@@ -49,9 +51,9 @@ fun BasicInfoStep(
                     coverImageUrl
                 )
                 onValidationChange?.invoke(
-                    validateTitle(it),
-                    validateShortDescription(shortDescription),
-                    validateFullDescription(fullDescription),
+                    BookFormRules.validateTitle(it),
+                    BookFormRules.validateShortDescription(shortDescription),
+                    BookFormRules.validateFullDescription(fullDescription),
                     pageCountError
                 )
             },
@@ -59,16 +61,7 @@ fun BasicInfoStep(
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             isError = titleError != null,
-            supportingText = titleError?.let {
-                {
-                    Text(
-                        it,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            } ?: {
-                Text("${title.length}/255 characters")
-            }
+            supportingText = bookFormFieldSupportingText(titleError),
         )
 
         OutlinedTextField(
@@ -76,9 +69,9 @@ fun BasicInfoStep(
             onValueChange = {
                 onUpdate(title, it, fullDescription, pageCount, coverImageUri, coverImageUrl)
                 onValidationChange?.invoke(
-                    validateTitle(title),
-                    validateShortDescription(it),
-                    validateFullDescription(fullDescription),
+                    BookFormRules.validateTitle(title),
+                    BookFormRules.validateShortDescription(it),
+                    BookFormRules.validateFullDescription(fullDescription),
                     pageCountError
                 )
             },
@@ -86,16 +79,7 @@ fun BasicInfoStep(
             modifier = Modifier.fillMaxWidth(),
             maxLines = 3,
             isError = shortDescriptionError != null,
-            supportingText = shortDescriptionError?.let {
-                {
-                    Text(
-                        it,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            } ?: {
-                Text("${shortDescription.length}/500 characters (optional)")
-            }
+            supportingText = bookFormFieldSupportingText(shortDescriptionError),
         )
 
         OutlinedTextField(
@@ -103,9 +87,9 @@ fun BasicInfoStep(
             onValueChange = {
                 onUpdate(title, shortDescription, it, pageCount, coverImageUri, coverImageUrl)
                 onValidationChange?.invoke(
-                    validateTitle(title),
-                    validateShortDescription(shortDescription),
-                    validateFullDescription(it),
+                    BookFormRules.validateTitle(title),
+                    BookFormRules.validateShortDescription(shortDescription),
+                    BookFormRules.validateFullDescription(it),
                     pageCountError
                 )
             },
@@ -113,16 +97,7 @@ fun BasicInfoStep(
             modifier = Modifier.fillMaxWidth(),
             maxLines = 10,
             isError = fullDescriptionError != null,
-            supportingText = fullDescriptionError?.let {
-                {
-                    Text(
-                        it,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            } ?: {
-                Text("${fullDescription.length}/10,000 characters (optional)")
-            }
+            supportingText = bookFormFieldSupportingText(fullDescriptionError),
         )
 
         OutlinedTextField(
@@ -137,17 +112,11 @@ fun BasicInfoStep(
                         coverImageUri,
                         coverImageUrl
                     )
-
-                    val validationResult = validatePageCount(newValue)
-                    val titleValidation = validateTitle(title)
-                    val shortDescValidation = validateShortDescription(shortDescription)
-                    val fullDescValidation = validateFullDescription(fullDescription)
-
                     onValidationChange?.invoke(
-                        titleValidation,
-                        shortDescValidation,
-                        fullDescValidation,
-                        validationResult
+                        BookFormRules.validateTitle(title),
+                        BookFormRules.validateShortDescription(shortDescription),
+                        BookFormRules.validateFullDescription(fullDescription),
+                        BookFormRules.validatePageCount(newValue),
                     )
                 }
             },
@@ -156,21 +125,7 @@ fun BasicInfoStep(
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             isError = pageCountError != null,
-            supportingText = pageCountError?.let {
-                {
-                    Text(
-                        it,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            } ?: {
-                if (pageCount.isNotBlank() && pageCountError == null) {
-                    Text(
-                        "Valid page count",
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                } else null
-            }
+            supportingText = bookFormFieldSupportingText(pageCountError),
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -220,42 +175,5 @@ fun BasicInfoStep(
                 onUpdate(title, shortDescription, fullDescription, pageCount, uri, url)
             }
         )
-    }
-}
-
-private fun validateTitle(title: String): String? {
-    return when {
-        title.isBlank() -> "Title is required"
-        title.length > 255 -> "Title must be 255 characters or less"
-        else -> null
-    }
-}
-
-private fun validateShortDescription(description: String): String? {
-    return if (description.length > 500) {
-        "Short description must be 500 characters or less"
-    } else null
-}
-
-private fun validateFullDescription(description: String): String? {
-    return if (description.length > 10000) {
-        "Full description must be 10,000 characters or less"
-    } else null
-}
-
-private fun validatePageCount(pageCount: String): String? {
-    val trimmed = pageCount.trim()
-    return if (trimmed.isNotBlank()) {
-        val parsed = trimmed.toIntOrNull()
-        parsed?.let { pages ->
-            val result = when {
-                pages < 1 -> "Page count must be at least 1"
-                pages > 100000 -> "Page count must be 100,000 or less"
-                else -> null
-            }
-            result
-        }
-    } else {
-        null
     }
 }

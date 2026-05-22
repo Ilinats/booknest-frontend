@@ -162,6 +162,7 @@ fun BookEditScreen(
     var seriesOrderError by remember { mutableStateOf<String?>(null) }
     var applicationDeadlineError by remember { mutableStateOf<String?>(null) }
     var reviewDeadlineError by remember { mutableStateOf<String?>(null) }
+    var selectionCriteriaError by remember { mutableStateOf<String?>(null) }
 
     var showCreateSeriesDialog by remember { mutableStateOf(false) }
 
@@ -480,14 +481,12 @@ fun BookEditScreen(
                     reviewDatePickerState = reviewDatePickerState,
                     applicationDeadlineError = applicationDeadlineError,
                     reviewDeadlineError = reviewDeadlineError,
+                    selectionCriteriaError = selectionCriteriaError,
                     onReviewConfigUpdate = { ad, rd, ssm, sc ->
                         applicationDeadline = ad
                         reviewDeadline = rd
                         selectedSelectionMethod = ssm
                         selectionCriteria = sc
-                        val (appErr, revErr) = validateDeadlines(ad, rd)
-                        applicationDeadlineError = appErr
-                        reviewDeadlineError = revErr
                     },
                     onShowApplicationDatePicker = { showApplicationDatePicker = true },
                     onShowReviewDatePicker = { showReviewDatePicker = true },
@@ -495,9 +494,10 @@ fun BookEditScreen(
                         showApplicationDatePicker = false
                     },
                     onDismissReviewDatePicker = { showReviewDatePicker = false },
-                    onReviewDeadlineValidationChange = { appErr, revErr ->
+                    onReviewDeadlineValidationChange = { appErr, revErr, criteriaErr ->
                         applicationDeadlineError = appErr
                         reviewDeadlineError = revErr
+                        selectionCriteriaError = criteriaErr
                     },
                     bookFileUri = bookFileUri,
                     bookFileName = bookFileName,
@@ -514,6 +514,10 @@ fun BookEditScreen(
                         currentStep = currentStep,
                         totalSteps = totalSteps,
                         title = title,
+                        shortDescription = shortDescription,
+                        fullDescription = fullDescription,
+                        pageCount = pageCount,
+                        selectionCriteriaError = selectionCriteriaError,
                         selectedAgeRating = selectedAgeRating,
                         selectedDistributionType = selectedDistributionType,
                         applicationDeadline = applicationDeadline,

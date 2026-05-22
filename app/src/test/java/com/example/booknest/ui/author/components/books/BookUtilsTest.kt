@@ -23,6 +23,13 @@ class BookUtilsTest {
     }
 
     @Test
+    fun formatBookStatus_mapsKnownValues() {
+        assertEquals("In Progress", formatBookStatus("in_progress"))
+        assertEquals("First Come First Served", formatSelectionMethod("first_come"))
+        assertEquals("Physical", formatDistributionType("physical"))
+    }
+
+    @Test
     fun formatDate_parsesIsoTimestamp() {
         val formatted = formatDate("2024-06-15T10:30:00.000Z")
         assertEquals("Jun 15, 2024", formatted)
