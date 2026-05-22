@@ -204,8 +204,7 @@ fun BookDetailsScreen(
             book = book!!,
             onDismiss = { showWithdrawDialog = false },
             onConfirm = {
-                applicationViewModel.withdrawApplication(userApplication!!.id)
-                applicationViewModel.checkApplication(bookId)
+                applicationViewModel.withdrawApplication(userApplication!!.id, bookId)
                 showWithdrawDialog = false
             }
         )

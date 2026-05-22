@@ -40,6 +40,14 @@ cd "`dirname \"$PRG\"`/" >/dev/null
 APP_HOME="`pwd -P`"
 cd "$SAVED" >/dev/null
 
+if [ -z "$JAVA_HOME" ] && [ "$(uname)" = "Darwin" ]; then
+    AS_JBR="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+    if [ -x "$AS_JBR/bin/java" ]; then
+        JAVA_HOME="$AS_JBR"
+        export JAVA_HOME
+    fi
+fi
+
 APP_NAME="Gradle"
 APP_BASE_NAME=`basename "$0"`
 

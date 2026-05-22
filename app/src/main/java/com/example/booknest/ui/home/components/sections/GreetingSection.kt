@@ -6,7 +6,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import com.example.booknest.ui.testing.UiTestTags
 import androidx.compose.ui.unit.dp
 import com.example.booknest.domain.model.response.UserResponse
 
@@ -24,6 +26,7 @@ fun GreetingSection(
 
         Text(
             text = greeting,
+            modifier = Modifier.testTag(UiTestTags.GREETING_TITLE),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground

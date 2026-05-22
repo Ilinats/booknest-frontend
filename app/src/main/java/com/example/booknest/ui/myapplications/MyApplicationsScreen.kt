@@ -19,7 +19,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.shadow
+import com.example.booknest.ui.testing.UiTestTags
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -119,6 +121,7 @@ fun MyApplicationsScreen(
                             onValueChange = { applicationViewModel.updateSearchQuery(it) },
                             modifier = Modifier
                                 .weight(1f)
+                                .testTag(UiTestTags.APPLICATIONS_SEARCH_FIELD)
                                 .shadow(elevation = 2.dp, shape = RoundedCornerShape(28.dp)),
                             placeholder = { Text("Search applications...") },
                             leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
@@ -192,6 +195,7 @@ fun MyApplicationsScreen(
                             Tab(
                                 selected = selectedTab == index,
                                 onClick = { applicationViewModel.updateSelectedTab(index) },
+                                modifier = Modifier.testTag("${UiTestTags.APPLICATIONS_TAB_PREFIX}$index"),
                                 text = {
                                     Text(
                                         if (count > 0) "$title ($count)" else title,

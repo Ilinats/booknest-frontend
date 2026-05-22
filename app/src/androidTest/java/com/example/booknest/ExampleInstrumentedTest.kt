@@ -1,24 +1,25 @@
 package com.example.booknest
 
-import androidx.test.platform.app.InstrumentationRegistry
+import android.os.Build
 import androidx.test.ext.junit.runners.AndroidJUnit4
-
+import androidx.test.filters.SdkSuppress
+import androidx.test.platform.app.InstrumentationRegistry
+import com.example.booknest.testutil.Api24AssumeRule
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-import org.junit.Assert.*
-
-/**
- * Instrumented test, which will execute on an Android device.
- *
- * See [testing documentation](http://d.android.com/tools/testing).
- */
 @RunWith(AndroidJUnit4::class)
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.N)
 class ExampleInstrumentedTest {
+
+    @JvmField
+    @Rule(order = 0)
+    val api24AssumeRule = Api24AssumeRule()
+
     @Test
     fun useAppContext() {
-        // Context of the app under test.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("com.example.booknest", appContext.packageName)
+        assert(appContext.packageName == "com.example.booknest")
     }
 }
