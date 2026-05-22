@@ -1,5 +1,6 @@
 package com.example.booknest.ui.main
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,7 +29,6 @@ import androidx.navigation.compose.rememberNavController
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.navigation.AuthorBottomBarScreen
 import com.example.booknest.navigation.AuthorNavGraph
-import com.example.booknest.navigation.MainRootBackHandler
 import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.viewmodel.main.MainViewModel
 import org.koin.androidx.compose.getViewModel
@@ -41,11 +41,14 @@ fun AuthorMainScreen(
     mainViewModel: MainViewModel = getViewModel()
 ) {
     val navController = rememberNavController()
-    MainRootBackHandler(navController)
     val currentUser by sessionManager.currentUser.collectAsState()
     val isLoggedIn by sessionManager.isLoggedIn.collectAsState()
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val canPopInnerStack = navController.previousBackStackEntry != null
+    BackHandler(enabled = !canPopInnerStack) {
+        // Consume system back at tab root so the outer graph never reveals login/landing.
+    }
     val currentRoute = navBackStackEntry?.destination?.route
     val arguments = navBackStackEntry?.arguments
 

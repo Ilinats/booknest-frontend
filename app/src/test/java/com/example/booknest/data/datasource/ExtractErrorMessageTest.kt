@@ -48,6 +48,16 @@ class ExtractErrorMessageTest {
     }
 
     @Test
+    fun extractErrorMessage_mapsInvalidCredentialsOverUnauthorizedWrapper() {
+        val body =
+            """{"success":false,"statusCode":401,"error":"UNAUTHORIZED","message":"INVALID_CREDENTIALS","path":"/auth/login"}"""
+        assertEquals(
+            "Email/username or password is incorrect.",
+            extractErrorMessage(body),
+        )
+    }
+
+    @Test
     fun extractErrorMessage_mapsFriendErrorFromErrorField() {
         val body = """{"error":"FRIEND_REQUEST_ALREADY_PENDING","statusCode":409}"""
         assertEquals(
