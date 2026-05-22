@@ -33,6 +33,7 @@ fun QuickActionsSection(
                 title = "Reading",
                 subtitle = "${activeReadingApplications.size} book(s)",
                 icon = Icons.Filled.Book,
+                testTagSuffix = "reading",
                 onClick = {
                     navController.navigate(BottomBarScreen.MyApplications.route)
                 }
@@ -45,6 +46,7 @@ fun QuickActionsSection(
                 title = "Pending",
                 subtitle = "${pendingApplications.size} waiting",
                 icon = Icons.Filled.Book,
+                testTagSuffix = "pending",
                 onClick = {
                     navController.navigate(BottomBarScreen.MyApplications.route)
                 }
@@ -57,6 +59,7 @@ fun QuickActionsSection(
                 title = "Alerts",
                 subtitle = "$unreadCount new",
                 icon = Icons.Filled.Notifications,
+                testTagSuffix = "alerts",
                 onClick = {
                     navController.navigate(Screen.Notifications.route)
                 }

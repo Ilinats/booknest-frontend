@@ -16,7 +16,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.shadow
+import com.example.booknest.ui.testing.UiTestTags
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -28,10 +30,18 @@ fun QuickActionCard(
     title: String,
     subtitle: String,
     icon: ImageVector,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    testTagSuffix: String? = null,
 ) {
     Card(
         modifier = modifier
+            .then(
+                if (testTagSuffix != null) {
+                    Modifier.testTag("${UiTestTags.QUICK_ACTION_CARD_PREFIX}$testTagSuffix")
+                } else {
+                    Modifier
+                },
+            )
             .clickable(onClick = onClick)
             .shadow(
                 elevation = 2.dp,

@@ -19,7 +19,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import com.example.booknest.ui.testing.UiTestTags
 import androidx.compose.ui.unit.dp
 import com.example.booknest.domain.model.response.GenreResponse
 import com.example.booknest.viewmodel.books.BookListBrowseUiState
@@ -103,7 +105,9 @@ fun BookListActiveFiltersBanner(
                         )
                     }
                 },
-                modifier = Modifier.padding(end = 0.dp),
+                modifier = Modifier
+                    .testTag(UiTestTags.BROWSE_ACTIVE_FILTERS_CLEAR)
+                    .padding(end = 0.dp),
             ) {
                 Text("Clear all")
             }

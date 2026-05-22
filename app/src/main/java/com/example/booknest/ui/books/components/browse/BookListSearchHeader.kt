@@ -33,7 +33,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.shadow
+import com.example.booknest.ui.testing.UiTestTags
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -79,6 +81,7 @@ fun BookListSearchHeader(
             },
             modifier = Modifier
                 .weight(1f)
+                .testTag(UiTestTags.BROWSE_SEARCH_FIELD)
                 .shadow(
                     elevation = 2.dp,
                     shape = RoundedCornerShape(28.dp)
@@ -124,7 +127,9 @@ fun BookListSearchHeader(
         if (showFiltersForBrowse) {
             IconButton(
                 onClick = { browseBooksViewModel.setBookListShowFilters(!browseUi.showFilters) },
-                modifier = Modifier.size(48.dp)
+                modifier = Modifier
+                    .size(48.dp)
+                    .testTag(UiTestTags.BROWSE_FILTER_BUTTON),
             ) {
                 Icon(
                     Icons.Filled.FilterList,
@@ -144,6 +149,7 @@ fun BookListRecentSearchesCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .testTag(UiTestTags.BROWSE_RECENT_SEARCHES)
             .shadow(
                 elevation = 2.dp,
                 shape = RoundedCornerShape(16.dp)

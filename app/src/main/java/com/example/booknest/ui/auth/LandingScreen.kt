@@ -26,7 +26,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
+import com.example.booknest.ui.testing.UiTestTags
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -135,6 +137,7 @@ fun LandingScreen(navController: NavController, sessionManager: SessionManager) 
                         modifier = Modifier
                             .weight(1f)
                             .height(56.dp)
+                            .testTag(UiTestTags.LANDING_LOGIN_BUTTON)
                             .shadow(
                                 elevation = 4.dp,
                                 shape = RoundedCornerShape(24.dp)
@@ -160,6 +163,7 @@ fun LandingScreen(navController: NavController, sessionManager: SessionManager) 
                         modifier = Modifier
                             .weight(1f)
                             .height(56.dp)
+                            .testTag(UiTestTags.LANDING_SIGNUP_BUTTON)
                             .shadow(
                                 elevation = 4.dp,
                                 shape = RoundedCornerShape(24.dp)

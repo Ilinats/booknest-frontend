@@ -17,7 +17,7 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "com.example.booknest.BookNestAndroidTestRunner"
     }
 
     buildTypes {
@@ -41,6 +41,14 @@ android {
         compose = true
         viewBinding = true
     }
+    packaging {
+        resources {
+            pickFirsts += listOf(
+                "META-INF/LICENSE.md",
+                "META-INF/LICENSE-notice.md",
+            )
+        }
+    }
 }
 
 dependencies {
@@ -57,7 +65,6 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation(libs.androidx.navigation.fragmentKtx)
     implementation(libs.androidx.navigation.uiKtx)
-    implementation(libs.compose.testing)
     implementation(libs.squareup.retrofit.core)
     implementation(libs.squareup.retrofit.converterGson)
     implementation(libs.androidx.lifecycle.viewmodelKtx)
@@ -93,10 +100,33 @@ dependencies {
     implementation(libs.androidx.compose.foundation)
 
     testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.androidx.arch.core.testing)
+    testImplementation(libs.squareup.okhttp3.mockwebserver)
     androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    androidTestImplementation("androidx.compose.ui:ui-test-manifest")
+    androidTestImplementation(libs.mockk.android)
+    androidTestImplementation(libs.androidx.navigation.compose)
+    androidTestImplementation("androidx.navigation:navigation-testing:${libs.versions.androidxNavigation.get()}")
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+}
+
+configurations.configureEach {
+    if (name.contains("androidTest", ignoreCase = true)) {
+        val espresso = libs.versions.espressoCore.get()
+        resolutionStrategy {
+            force(
+                "androidx.test.ext:junit:${libs.versions.junitVersion.get()}",
+                "androidx.test.espresso:espresso-core:$espresso",
+                "androidx.test.espresso:espresso-idling-resource:$espresso",
+                "androidx.test:runner:${libs.versions.testRunner.get()}",
+            )
+        }
+    }
 }

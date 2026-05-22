@@ -29,7 +29,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import com.example.booknest.ui.testing.UiTestTags
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
@@ -217,6 +219,7 @@ fun BookListScreen(
                                         browseUi.debouncedSearchQuery.isBlank() && browseUi.selectedGenres.isEmpty() && browseUi.selectedAgeRating == null && browseUi.selectedDistributionType == null -> "No books available"
                                         else -> "No books found matching your filters"
                                     },
+                                    modifier = Modifier.testTag(UiTestTags.BROWSE_EMPTY_MESSAGE),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

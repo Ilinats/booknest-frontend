@@ -211,20 +211,29 @@ class ApplicationViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val result = checkApplicationUseCase(bookId)
-                result
-                    .onSuccess { check ->
-                        _applicationCheck.value = check
-                    }
-                    .onFailure { e ->
-                        notifyError(e.message ?: "Failed to check application status")
-                    }
+                refreshApplicationCheck(bookId)
             } catch (e: Exception) {
                 notifyError("Error checking application status: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
         }
+    }
+
+    private suspend fun refreshApplicationCheck(bookId: String) {
+        checkApplicationUseCase(bookId)
+            .onSuccess { check -> _applicationCheck.value = check }
+            .onFailure { e ->
+                notifyError(e.message ?: "Failed to check application status")
+            }
+    }
+
+    private fun markApplicationWithdrawnLocally(applicationId: String) {
+        val current = _applicationCheck.value ?: return
+        if (current.application?.id != applicationId) return
+        _applicationCheck.value = current.copy(
+            application = current.application.copy(status = "withdrawn")
+        )
     }
 
     suspend fun getApplication(applicationId: String) =
@@ -324,7 +333,7 @@ class ApplicationViewModel(
             }
         }
     }
-    fun withdrawApplication(applicationId: String) {
+    fun withdrawApplication(applicationId: String, bookId: String? = null) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
@@ -332,7 +341,9 @@ class ApplicationViewModel(
                 result
                     .onSuccess {
                         notifySuccess("Application withdrawn successfully!")
+                        markApplicationWithdrawnLocally(applicationId)
                         loadMyApplications()
+                        bookId?.let { refreshApplicationCheck(it) }
                     }
                     .onFailure { e ->
                         notifyError(e.message ?: "Failed to withdraw application")

@@ -26,7 +26,9 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.shadow
+import com.example.booknest.ui.testing.UiTestTags
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -62,6 +64,7 @@ fun SearchSection(
             },
             modifier = Modifier
                 .fillMaxWidth()
+                .testTag(UiTestTags.HOME_SEARCH_FIELD)
                 .padding(horizontal = 16.dp)
                 .shadow(
                     elevation = 3.dp,
