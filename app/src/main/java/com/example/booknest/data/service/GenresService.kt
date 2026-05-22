@@ -2,15 +2,14 @@ package com.example.booknest.data.service
 
 import com.example.booknest.data.constants.GenrePreferences
 import com.example.booknest.data.constants.Genres
-import com.example.booknest.data.constants.PathConstants
 import com.example.booknest.domain.model.request.DeleteGenrePreferenceRequest
 import com.example.booknest.domain.model.request.UpsertPreferenceRequest
 import com.example.booknest.domain.model.response.GenrePreferenceResponse
 import com.example.booknest.domain.model.response.GenreResponse
 import retrofit2.Response
 import retrofit2.http.Body
-import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.HTTP
 import retrofit2.http.POST
 
 interface GenresService {
@@ -23,7 +22,7 @@ interface GenresService {
     @POST(GenrePreferences.LIST)
     suspend fun saveUserGenre(@Body preference: UpsertPreferenceRequest): Response<GenrePreferenceResponse>
 
-    @DELETE(GenrePreferences.LIST)
+    /** Nest expects DELETE with JSON body `{ "genreId": N }`; @DELETE does not send bodies. */
+    @HTTP(method = "DELETE", path = GenrePreferences.LIST, hasBody = true)
     suspend fun deleteGenrePreference(@Body request: DeleteGenrePreferenceRequest): Response<Unit>
 }
-

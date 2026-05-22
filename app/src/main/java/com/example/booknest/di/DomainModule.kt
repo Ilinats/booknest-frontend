@@ -53,6 +53,7 @@ import com.example.booknest.domain.usecase.friends.SendFriendRequestUseCase
 import com.example.booknest.domain.usecase.friends.UnfriendUserUseCase
 import com.example.booknest.domain.usecase.genres.GetGenrePreferencesUseCase
 import com.example.booknest.domain.usecase.genres.GetGenresUseCase
+import com.example.booknest.domain.usecase.genres.DeleteUserGenrePreferenceUseCase
 import com.example.booknest.domain.usecase.genres.SaveUserGenrePreferenceUseCase
 import com.example.booknest.domain.usecase.notifications.DeleteAllNotificationsUseCase
 import com.example.booknest.domain.usecase.notifications.DeleteNotificationUseCase
@@ -184,6 +185,7 @@ val domainModule = module {
     factory { GetGenresUseCase(get()) }
     factory { GetGenrePreferencesUseCase(get()) }
     factory { SaveUserGenrePreferenceUseCase(get()) }
+    factory { DeleteUserGenrePreferenceUseCase(get()) }
 
     factory { GetFriendsUseCase(get()) }
     factory { GetSentFriendRequestsUseCase(get()) }

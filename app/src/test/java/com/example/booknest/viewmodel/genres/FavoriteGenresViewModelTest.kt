@@ -1,5 +1,7 @@
 package com.example.booknest.viewmodel.genres
 
+import com.example.booknest.domain.model.response.GenrePreferenceResponse
+import com.example.booknest.domain.usecase.genres.DeleteUserGenrePreferenceUseCase
 import com.example.booknest.domain.usecase.genres.GetGenrePreferencesUseCase
 import com.example.booknest.domain.usecase.genres.GetGenresUseCase
 import com.example.booknest.domain.usecase.genres.SaveUserGenrePreferenceUseCase
@@ -8,6 +10,7 @@ import com.example.booknest.testutil.MainDispatcherRule
 import com.example.booknest.testutil.TestFixtures
 import com.example.booknest.viewmodel.common.UserFeedback
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -29,6 +32,7 @@ class FavoriteGenresViewModelTest {
     private val getGenresUseCase = mockk<GetGenresUseCase>()
     private val getGenrePreferencesUseCase = mockk<GetGenrePreferencesUseCase>()
     private val saveUserGenrePreferenceUseCase = mockk<SaveUserGenrePreferenceUseCase>(relaxed = true)
+    private val deleteUserGenrePreferenceUseCase = mockk<DeleteUserGenrePreferenceUseCase>(relaxed = true)
     private val feedback = UserFeedback(mockk<ToastNotifier>(relaxed = true))
 
     private fun createViewModel() = FavoriteGenresViewModel(
@@ -36,6 +40,7 @@ class FavoriteGenresViewModelTest {
         getGenresUseCase = getGenresUseCase,
         getGenrePreferencesUseCase = getGenrePreferencesUseCase,
         saveUserGenrePreferenceUseCase = saveUserGenrePreferenceUseCase,
+        deleteUserGenrePreferenceUseCase = deleteUserGenrePreferenceUseCase,
     )
 
     @Test
@@ -68,5 +73,29 @@ class FavoriteGenresViewModelTest {
         advanceUntilIdle()
 
         assertEquals("Select at least one genre.", viewModel.message.value)
+    }
+
+    @Test
+    fun savePreferences_deletesRemovedGenres() = runTest(testDispatcher) {
+        coEvery { getGenresUseCase() } returns Result.success(listOf(TestFixtures.genre(1, "Fantasy")))
+        coEvery { getGenrePreferencesUseCase() } returns Result.success(
+            listOf(
+                GenrePreferenceResponse(id = "p1", genreId = 1),
+                GenrePreferenceResponse(id = "p2", genreId = 2),
+            ),
+        )
+        coEvery { deleteUserGenrePreferenceUseCase(any()) } returns Result.success(Unit)
+
+        val viewModel = createViewModel()
+        viewModel.loadGenres()
+        advanceUntilIdle()
+
+        viewModel.toggleGenre(2)
+        viewModel.savePreferences()
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { deleteUserGenrePreferenceUseCase(match { it.genreId == 2 }) }
+        coVerify(exactly = 0) { saveUserGenrePreferenceUseCase(any()) }
+        assertEquals("Favorite genres saved.", viewModel.message.value)
     }
 }
