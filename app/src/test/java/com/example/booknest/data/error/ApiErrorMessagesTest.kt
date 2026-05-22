@@ -48,6 +48,17 @@ class ApiErrorMessagesTest {
     }
 
     @Test
+    fun resolve_prefersSpecificMessageCodeOverGenericErrorWrapper() {
+        assertEquals(
+            "Email/username or password is incorrect.",
+            ApiErrorMessages.resolve(
+                message = "INVALID_CREDENTIALS",
+                errorCode = "UNAUTHORIZED",
+            ),
+        )
+    }
+
+    @Test
     fun looksLikeMachineCode_detectsSnakeCaseCodes() {
         assertTrue(ApiErrorMessages.looksLikeMachineCode("APPLICATION_NOT_FOUND"))
         assertFalse(ApiErrorMessages.looksLikeMachineCode("Please verify your email"))

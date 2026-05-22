@@ -1,5 +1,6 @@
 package com.example.booknest.ui.main
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -61,7 +62,6 @@ import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.repository.AuthRepository
 import com.example.booknest.navigation.BottomBarScreen
 import com.example.booknest.navigation.HomeNavGraph
-import com.example.booknest.navigation.MainRootBackHandler
 import com.example.booknest.navigation.consumeNotificationLaunchExtras
 import com.example.booknest.navigation.readNotificationLaunchExtras
 import com.example.booknest.presentation.navigation.Screen
@@ -80,7 +80,6 @@ fun MainScreen(
     mainViewModel: MainViewModel = getViewModel()
 ) {
     val navController = rememberNavController()
-    MainRootBackHandler(navController)
     val currentUser by sessionManager.currentUser.collectAsState()
 
     val notificationViewModel: NotificationViewModel = getViewModel()
@@ -95,6 +94,10 @@ fun MainScreen(
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    val canPopInnerStack = navController.previousBackStackEntry != null
+    BackHandler(enabled = !canPopInnerStack) {
+        // Consume system back at tab root so the outer graph never reveals login/landing.
+    }
 
     val context = LocalContext.current
 

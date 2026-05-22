@@ -161,6 +161,7 @@ object ApiErrorMessages {
 
         forCode(errorCode)?.let { return it }
         trimmedMessage?.let { forCode(it) }?.let { return it }
+        forCode(errorCode)?.let { return it }
 
         rawBody?.let { findInText(it) }?.let { return it }
 
