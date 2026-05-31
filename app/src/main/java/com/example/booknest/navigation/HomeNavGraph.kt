@@ -7,7 +7,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.example.booknest.data.session.SessionManager
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.ui.myapplications.MyApplicationsScreen
 import com.example.booknest.ui.books.BookDetailsScreen
 import com.example.booknest.ui.books.BookListScreen
@@ -23,16 +23,16 @@ import com.example.booknest.ui.friends.FriendsScreen
 import com.example.booknest.ui.account.PrivacySettingsScreen
 import com.example.booknest.ui.account.SocialMediaManagementScreen
 import com.example.booknest.ui.reviews.ReviewSubmissionScreen
+import com.example.booknest.data.session.SessionManager
 import com.example.booknest.ui.notifications.NotificationsScreen
-import com.example.booknest.ui.auth.PasswordResetScreen
-import com.example.booknest.ui.auth.EmailVerificationScreen
+import org.koin.compose.koinInject
 
 @Composable
 fun HomeNavGraph(
     navController: NavHostController,
-    sessionManager: SessionManager,
     modifier: Modifier = Modifier
 ) {
+    val sessionManager: SessionManager = koinInject()
     NavHost(
         navController = navController,
         startDestination = BottomBarScreen.Home.route,
@@ -117,14 +117,12 @@ fun HomeNavGraph(
             SeriesBooksScreen(navController, seriesId, seriesName)
         }
 
-        composable(route = "profile") {
-            ProfileScreen(navController, sessionManager, userId = null)
-        }
-
         composable(
-            route = "profile/{userId}",
+            route = Screen.Profile.route,
             arguments = listOf(navArgument("userId") {
                 type = NavType.StringType
+                nullable = true
+                defaultValue = null
             })
         ) { backStackEntry ->
             val userId = backStackEntry.arguments?.getString("userId")
@@ -169,28 +167,6 @@ fun HomeNavGraph(
 
         composable(Screen.SocialMediaManagement.route) {
             SocialMediaManagementScreen(navController, sessionManager)
-        }
-
-        composable(
-            route = Screen.PasswordReset.route,
-            arguments = listOf(navArgument("email") {
-                type = NavType.StringType
-            })
-        ) { backStackEntry ->
-            val email = backStackEntry.arguments?.getString("email") ?: ""
-            PasswordResetScreen(navController, sessionManager, email)
-        }
-
-        composable(
-            route = "${Screen.EmailVerification.route}?email={email}",
-            arguments = listOf(navArgument("email") {
-                type = NavType.StringType
-                nullable = true
-                defaultValue = null
-            })
-        ) { backStackEntry ->
-            val email = backStackEntry.arguments?.getString("email")
-            EmailVerificationScreen(navController, sessionManager, email)
         }
 
         composable(

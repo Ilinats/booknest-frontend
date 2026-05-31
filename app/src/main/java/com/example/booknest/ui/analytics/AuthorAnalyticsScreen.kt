@@ -15,7 +15,10 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import com.example.booknest.ui.components.AppScaffoldContentInsets
+import com.example.booknest.ui.components.AppTopBar
 import com.example.booknest.ui.components.BackButton
+import com.example.booknest.ui.components.paddingTopFromScaffold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,10 +41,11 @@ import com.example.booknest.ui.author.components.analytics.demographics.ReaderAn
 import com.example.booknest.ui.author.components.analytics.overview.OverviewSection
 import com.example.booknest.ui.author.components.analytics.performance.PerformanceSection
 import com.example.booknest.ui.author.components.analytics.trends.TrendsSection
-import com.example.booknest.viewmodel.AnalyticsViewModel
+import com.example.booknest.viewmodel.analytics.AnalyticsViewModel
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
-import com.example.booknest.ui.state.UiState
+import com.example.booknest.presentation.common.UiState
+import com.example.booknest.ui.components.BackgroundDecoration
 import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -66,27 +70,15 @@ fun AuthorAnalyticsScreen(
     }
 
     Scaffold(
+        contentWindowInsets = AppScaffoldContentInsets,
         topBar = {
-            Surface(
-                shadowElevation = 4.dp,
-                tonalElevation = 2.dp,
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                TopAppBar(
-                    title = {
-                        Text(
-                            "Author Analytics",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                    },
-                    navigationIcon = {
-                        BackButton(onClick = { navController.popBackStack() })
-                    }
-                )
-            }
-        }
+            AppTopBar(
+                title = "Author Analytics",
+                navigationIcon = {
+                    BackButton(onClick = { navController.popBackStack() })
+                },
+            )
+        },
     ) { paddingValues ->
         val currentState = analyticsState
         when (currentState) {
@@ -94,7 +86,7 @@ fun AuthorAnalyticsScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(paddingValues),
+                        .paddingTopFromScaffold(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()
@@ -105,7 +97,7 @@ fun AuthorAnalyticsScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(paddingValues),
+                        .paddingTopFromScaffold(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(
@@ -140,7 +132,7 @@ fun AuthorAnalyticsScreen(
                     selectedDateRange = selectedDateRange,
                     onDateRangeChange = { selectedDateRange = it },
                     navController = navController,
-                    modifier = Modifier.padding(paddingValues)
+                    modifier = Modifier.paddingTopFromScaffold(paddingValues)
                 )
             }
 
@@ -164,45 +156,14 @@ fun AuthorAnalyticsContent(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .offset(x = (-175).dp, y = (-175).dp)
-                .size(350.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .offset(x = (-135).dp, y = (-135).dp)
-                .size(270.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary)
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .offset(x = 175.dp, y = 175.dp)
-                .size(350.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .offset(x = 135.dp, y = 135.dp)
-                .size(270.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary)
-        )
+        BackgroundDecoration(modifier = Modifier.fillMaxSize())
 
         Column(
             modifier = modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
-                .padding(bottom = 80.dp),
+                .padding(bottom = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             DateRangeSelector(

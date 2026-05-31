@@ -1,11 +1,8 @@
 package com.example.booknest.ui.notifications.components.item
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -31,7 +28,6 @@ import com.example.booknest.domain.model.enums.NotificationType
 import com.example.booknest.domain.model.response.NotificationResponse
 import com.example.booknest.ui.notifications.utils.formatNotificationTime
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun NotificationItem(
     notification: NotificationResponse,
@@ -64,54 +60,48 @@ fun NotificationItem(
         },
         shape = RoundedCornerShape(16.dp)
     ) {
-        Box(
-            modifier = Modifier.fillMaxWidth()
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, top = 16.dp, bottom = 16.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
+                    .weight(1f)
+                    .then(
+                        if (notification.type != NotificationType.FRIEND_REQUEST_RECEIVED) {
+                            Modifier.clickable(onClick = onNotificationClick)
+                        } else {
+                            Modifier
+                        }
+                    ),
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(
-                            enabled = notification.type != NotificationType.FRIEND_REQUEST_RECEIVED,
-                            onClick = onNotificationClick
-                        ),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Column(
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(
-                            text = notification.title,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = if (notification.isRead) FontWeight.Medium else FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                Text(
+                    text = notification.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = if (notification.isRead) FontWeight.Medium else FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
 
-                        Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
-                        Text(
-                            text = notification.body,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = if (notification.type == NotificationType.FRIEND_REQUEST_RECEIVED) 2 else 3,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                Text(
+                    text = notification.body,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = if (notification.type == NotificationType.FRIEND_REQUEST_RECEIVED) 2 else 3,
+                    overflow = TextOverflow.Ellipsis
+                )
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                        Text(
-                            text = formatNotificationTime(notification.createdAt),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        )
-                    }
-                }
+                Text(
+                    text = formatNotificationTime(notification.createdAt),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
 
                 if (notification.type == NotificationType.FRIEND_REQUEST_RECEIVED) {
                     Spacer(modifier = Modifier.height(12.dp))
@@ -119,30 +109,22 @@ fun NotificationItem(
                         notification = notification,
                         onAcceptFriendRequest = onAcceptFriendRequest,
                         onDeclineFriendRequest = onDeclineFriendRequest,
-                        onDeleteClick = onDeleteClick,
-                        onNotificationClick = onNotificationClick,
                         isProcessing = isProcessing
                     )
                 }
             }
 
-            if (notification.type != NotificationType.FRIEND_REQUEST_RECEIVED) {
-                IconButton(
-                    onClick = onDeleteClick,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp)
-                        .size(40.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = "Delete",
-                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+            IconButton(
+                onClick = onDeleteClick,
+                modifier = Modifier.size(48.dp),
+            ) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "Delete",
+                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                    modifier = Modifier.size(22.dp)
+                )
             }
         }
     }
 }
-

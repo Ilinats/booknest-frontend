@@ -1,7 +1,14 @@
 package com.example.booknest.ui.author
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -13,7 +20,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -22,12 +28,18 @@ import com.example.booknest.ui.theme.SkyBluePeriwinkle
 import androidx.navigation.NavController
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.ui.author.components.profile.AuthorProfileHeader
+import com.example.booknest.ui.components.AppScaffoldContentInsets
+import com.example.booknest.ui.components.AppTopBar
+import com.example.booknest.ui.components.paddingTopFromScaffold
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.ui.author.components.profile.AuthorStatisticsSection
-import com.example.booknest.ui.author.components.AuthorBooksSection
-import com.example.booknest.viewmodel.AuthorViewModel
+import com.example.booknest.ui.author.components.AuthorProfileMyBooksSection
+import com.example.booknest.navigation.rememberAuthorBooksViewModel
+import com.example.booknest.viewmodel.author.AuthorBooksViewModel
+import com.example.booknest.viewmodel.author.withBookStatusCountsFrom
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
-import com.example.booknest.viewmodel.ProfileViewModel
+import com.example.booknest.viewmodel.profile.ProfileViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,16 +47,16 @@ fun AuthorProfileScreen(
     navController: NavController,
     sessionManager: SessionManager = koinInject(),
     profileViewModel: ProfileViewModel = getViewModel(),
-    authorViewModel: AuthorViewModel = getViewModel()
+    authorBooksViewModel: AuthorBooksViewModel = rememberAuthorBooksViewModel(navController)
 ) {
     val currentUser by sessionManager.currentUser.collectAsState()
     val myProfile by profileViewModel.myProfile.collectAsState()
-    val myBooks by authorViewModel.myBooks.collectAsState()
+    val myBooks by authorBooksViewModel.myBooks.collectAsState()
     val isLoadingProfile by profileViewModel.isLoading.collectAsState()
 
     LaunchedEffect(Unit) {
         profileViewModel.loadMyProfile()
-        authorViewModel.loadMyBooks()
+        authorBooksViewModel.loadMyBooks()
     }
 
     val authorName = myProfile?.firstName?.let { firstName ->
@@ -54,39 +66,30 @@ fun AuthorProfileScreen(
     } ?: myProfile?.username ?: currentUser?.username ?: "Author"
     val authorBio = myProfile?.bio ?: "No bio available"
     val joinYear = myProfile?.createdAt?.take(4) ?: "N/A"
+    val displayStats = remember(myProfile?.stats, myBooks) {
+        myProfile?.stats?.withBookStatusCountsFrom(myBooks)
+    }
 
     Scaffold(
+        contentWindowInsets = AppScaffoldContentInsets,
         topBar = {
-            Surface(
-                shadowElevation = 4.dp,
-                tonalElevation = 2.dp,
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                TopAppBar(
-                    title = {
-                        Text(
-                            "Profile",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp,
-                            color = DarkNavyBlue
-                        )
-                    },
-                    actions = {
-                        IconButton(onClick = {
-                            navController.navigate("profile_edit")
-                        }) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit Profile")
-                        }
+            AppTopBar(
+                title = "Profile",
+                actions = {
+                    IconButton(onClick = {
+                        navController.navigate(Screen.ProfileEdit.route)
+                    }) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit Profile")
                     }
-                )
-            }
-        }
+                },
+            )
+        },
     ) { paddingValues ->
         if (isLoadingProfile && myProfile == null) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
+                    .paddingTopFromScaffold(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
@@ -134,9 +137,8 @@ fun AuthorProfileScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(paddingValues)
-                        .padding(16.dp)
-                        .padding(bottom = 80.dp),
+                        .paddingTopFromScaffold(paddingValues)
+                        .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     AuthorProfileHeader(
@@ -149,9 +151,9 @@ fun AuthorProfileScreen(
                         sessionManager = sessionManager
                     )
 
-                    AuthorStatisticsSection(stats = myProfile?.stats)
+                    AuthorStatisticsSection(stats = displayStats)
 
-                    AuthorBooksSection(
+                    AuthorProfileMyBooksSection(
                         myBooks = myBooks,
                         navController = navController
                     )

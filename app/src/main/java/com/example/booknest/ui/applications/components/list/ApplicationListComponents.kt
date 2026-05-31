@@ -48,10 +48,11 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.booknest.domain.model.response.ApplicationResponse
 import com.example.booknest.domain.model.response.BookResponse
-import com.example.booknest.navigation.Screen
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.ui.applications.components.review.ReaderAddressesSection
 import com.example.booknest.ui.applications.components.statistics.ReaderStatsRow
 import com.example.booknest.ui.applications.utils.formatDate
+import com.example.booknest.viewmodel.applications.isPending
 
 @Composable
 fun ApplicantsTab(
@@ -280,7 +281,7 @@ fun EnhancedApplicationCard(
                 navController = navController
             )
 
-            if (application.status == "pending" && !isSelectionMode) {
+            if (application.isPending()) {
                 if (isLotteryBook) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),

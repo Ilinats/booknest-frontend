@@ -19,11 +19,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.example.booknest.viewmodel.AuthorViewModel
+import com.example.booknest.viewmodel.author.AuthorDashboardViewModel
 import com.example.booknest.ui.components.stats.StatCard
 
 @Composable
-fun QuickStatsSection(quickStats: AuthorViewModel.QuickStats) {
+fun QuickStatsSection(quickStats: AuthorDashboardViewModel.QuickStats) {
     Column {
         Text(
             text = "Quick Stats",

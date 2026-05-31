@@ -1,61 +1,65 @@
 package com.example.booknest.ui.profile
 
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import com.example.booknest.ui.components.BackButton
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
+import com.example.booknest.presentation.common.UiState
+import com.example.booknest.presentation.navigation.Screen
+import com.example.booknest.presentation.navigation.applyProfileUiEffect
+import com.example.booknest.ui.components.BackButton
+import com.example.booknest.ui.profile.components.edit.ProfileEditBottomSaveBar
+import com.example.booknest.ui.profile.components.edit.ProfileEditDeleteAccountDialog
+import com.example.booknest.ui.profile.components.edit.ProfileEditErrorBanner
+import com.example.booknest.ui.profile.components.edit.sections.AccountSettingsSection
+import com.example.booknest.ui.profile.components.edit.sections.BioSection
+import com.example.booknest.ui.profile.components.edit.sections.DangerZoneSection
+import com.example.booknest.ui.profile.components.edit.sections.PersonalInfoSection
+import com.example.booknest.ui.profile.components.edit.sections.ProfilePictureSection
+import com.example.booknest.ui.profile.components.edit.sections.SocialMediaSection
 import com.example.booknest.data.session.SessionManager
-import com.example.booknest.data.service.AuthService
-import com.example.booknest.viewmodel.ProfileViewModel
+import com.example.booknest.viewmodel.profile.ProfileEditViewModel
+import com.example.booknest.viewmodel.profile.ProfileViewModel
+import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import androidx.compose.runtime.rememberCoroutineScope
-import android.util.Log
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
-import androidx.compose.material.icons.filled.*
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.sp
-import com.example.booknest.navigation.Screen
-import com.example.booknest.ui.state.UiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileEditScreen(
     navController: NavController,
     sessionManager: SessionManager = koinInject(),
-    profileViewModel: ProfileViewModel = getViewModel()
+    profileViewModel: ProfileViewModel = getViewModel(),
+    profileEditViewModel: ProfileEditViewModel = getViewModel(),
 ) {
     val context = LocalContext.current
     val currentUser by sessionManager.currentUser.collectAsState()
-    val editState by profileViewModel.profileEditState.collectAsState()
-    val isLoading by profileViewModel.isLoading.collectAsState()
+    val editState by profileEditViewModel.profileEditState.collectAsState()
+    val isLoading by profileEditViewModel.isLoading.collectAsState()
     var firstName by remember { mutableStateOf(currentUser?.firstName ?: "") }
     var lastName by remember { mutableStateOf(currentUser?.lastName ?: "") }
     var username by remember { mutableStateOf(currentUser?.username ?: "") }
@@ -72,7 +76,6 @@ fun ProfileEditScreen(
     var initialAvatarUrl by remember { mutableStateOf<String?>(null) }
 
     var isCheckingUsername by remember { mutableStateOf(false) }
-    var usernameStatus by remember { mutableStateOf<UsernameStatus>(UsernameStatus.Idle) }
     var usernameAvailable by remember { mutableStateOf<Boolean?>(null) }
     var showDeleteAccountDialog by remember { mutableStateOf(false) }
 
@@ -87,12 +90,18 @@ fun ProfileEditScreen(
         uri?.let {
             selectedImageUri = it
             isUploadingImage = true
-            profileViewModel.uploadProfileImage(context, it)
+            profileEditViewModel.uploadProfileImage(context, it)
         }
     }
 
     LaunchedEffect(Unit) {
         profileViewModel.loadMyProfile()
+    }
+
+    LaunchedEffect(Unit) {
+        profileEditViewModel.profileUiEffect.collectLatest { effect ->
+            navController.applyProfileUiEffect(effect)
+        }
     }
 
     val myProfile by profileViewModel.myProfile.collectAsState()
@@ -247,7 +256,6 @@ fun ProfileEditScreen(
                     (username == (initialUsername ?: "") || usernameAvailable == true)
         }
 
-
     LaunchedEffect(editState) {
         when (editState) {
             is UiState.Success -> {
@@ -286,6 +294,42 @@ fun ProfileEditScreen(
         }
     }
 
+    fun performSave() {
+        firstNameError = null
+        lastNameError = null
+        usernameError = null
+        bioError = null
+
+        if (isFormValid) {
+            if (shouldRemoveAvatar) {
+                profileEditViewModel.removeAvatar()
+            } else {
+                val usernameToUpdate =
+                    if (username.trim() != (initialUsername?.trim()
+                            ?: "") && username.trim().isNotBlank()
+                    ) {
+                        username.trim()
+                    } else {
+                        null
+                    }
+                profileEditViewModel.updateProfile(
+                    username = usernameToUpdate,
+                    firstName = firstName.takeIf { it.isNotBlank() },
+                    lastName = lastName.takeIf { it.isNotBlank() },
+                    bio = bio.takeIf { it.isNotBlank() },
+                    avatarUrl = if (avatarUrl.isNotBlank()) avatarUrl else null
+                )
+                initialFirstName = firstName.trim()
+                initialLastName = lastName.trim()
+                initialUsername = username.trim()
+                initialBio = bio.trim()
+                initialAvatarUrl = avatarUrl
+            }
+        }
+    }
+
+    val saveEnabled = hasChanges && isFormValid && editState !is UiState.Loading
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -295,40 +339,8 @@ fun ProfileEditScreen(
                 },
                 actions = {
                     TextButton(
-                        onClick = {
-                            firstNameError = null
-                            lastNameError = null
-                            usernameError = null
-                            bioError = null
-
-                            if (isFormValid) {
-                                if (shouldRemoveAvatar) {
-                                    profileViewModel.removeAvatar()
-                                } else {
-                                    val usernameToUpdate =
-                                        if (username.trim() != (initialUsername?.trim()
-                                                ?: "") && username.trim().isNotBlank()
-                                        ) {
-                                            username.trim()
-                                        } else {
-                                            null
-                                        }
-                                    profileViewModel.updateProfile(
-                                        username = usernameToUpdate,
-                                        firstName = firstName.takeIf { it.isNotBlank() },
-                                        lastName = lastName.takeIf { it.isNotBlank() },
-                                        bio = bio.takeIf { it.isNotBlank() },
-                                        avatarUrl = if (avatarUrl.isNotBlank()) avatarUrl else null
-                                    )
-                                    initialFirstName = firstName.trim()
-                                    initialLastName = lastName.trim()
-                                    initialUsername = username.trim()
-                                    initialBio = bio.trim()
-                                    initialAvatarUrl = avatarUrl
-                                }
-                            }
-                        },
-                        enabled = hasChanges && isFormValid && editState !is UiState.Loading
+                        onClick = { performSave() },
+                        enabled = saveEnabled
                     ) {
                         if (editState is UiState.Loading) {
                             CircularProgressIndicator(
@@ -351,734 +363,102 @@ fun ProfileEditScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "Profile Picture",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
+            ProfilePictureSection(
+                avatarUrl = avatarUrl,
+                selectedImageUri = selectedImageUri,
+                isUploadingImage = isUploadingImage,
+                isLoading = isLoading,
+                onSelectImage = { imagePickerLauncher.launch("image/*") },
+                onRemoveImage = {
+                    Log.d(
+                        "ProfileEditScreen",
+                        "Remove button clicked. Current avatarUrl: $avatarUrl, initialAvatarUrl: $initialAvatarUrl"
                     )
-
-                    Box(
-                        modifier = Modifier
-                            .size(120.dp)
-                            .clip(CircleShape)
-                            .clickable(enabled = !isUploadingImage && !isLoading) {
-                                imagePickerLauncher.launch("image/*")
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        when {
-                            isUploadingImage -> {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(48.dp),
-                                    strokeWidth = 4.dp
-                                )
-                            }
-
-                            selectedImageUri != null -> {
-                                AsyncImage(
-                                    model = selectedImageUri,
-                                    contentDescription = "Selected Profile Picture",
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .clip(CircleShape),
-                                    contentScale = ContentScale.Crop
-                                )
-                            }
-
-                            !avatarUrl.isNullOrBlank() -> {
-                                AsyncImage(
-                                    model = avatarUrl,
-                                    contentDescription = "Profile Picture",
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .clip(CircleShape),
-                                    contentScale = ContentScale.Crop
-                                )
-                            }
-
-                            else -> {
-                                Icon(
-                                    Icons.Default.Person,
-                                    contentDescription = "Add Profile Picture",
-                                    modifier = Modifier.size(60.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = {
-                                imagePickerLauncher.launch("image/*")
-                            },
-                            modifier = Modifier.weight(1f),
-                            enabled = !isUploadingImage && !isLoading
-                        ) {
-                            if (isUploadingImage) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp
-                                )
-                            } else {
-                                Icon(
-                                    Icons.Default.Add,
-                                    contentDescription = "Select Image",
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(if (avatarUrl.isNotBlank()) "Change" else "Add Photo")
-                            }
-                        }
-
-                        if (avatarUrl.isNotBlank() || selectedImageUri != null) {
-                            OutlinedButton(
-                                onClick = {
-                                    Log.d(
-                                        "ProfileEditScreen",
-                                        "Remove button clicked. Current avatarUrl: $avatarUrl, initialAvatarUrl: $initialAvatarUrl"
-                                    )
-                                    avatarUrl = ""
-                                    selectedImageUri = null
-                                    shouldRemoveAvatar = true
-                                    Log.d(
-                                        "ProfileEditScreen",
-                                        "After remove click: shouldRemoveAvatar=$shouldRemoveAvatar, hasChanges should be: ${shouldRemoveAvatar && !initialAvatarUrl.isNullOrBlank()}"
-                                    )
-                                },
-                                modifier = Modifier.weight(1f),
-                                enabled = !isUploadingImage && !isLoading
-                            ) {
-                                Icon(
-                                    Icons.Default.Delete,
-                                    contentDescription = "Remove",
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Remove")
-                            }
-                        }
-                    }
+                    avatarUrl = ""
+                    selectedImageUri = null
+                    shouldRemoveAvatar = true
+                    Log.d(
+                        "ProfileEditScreen",
+                        "After remove click: shouldRemoveAvatar=$shouldRemoveAvatar, hasChanges should be: ${shouldRemoveAvatar && !initialAvatarUrl.isNullOrBlank()}"
+                    )
                 }
-            }
+            )
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        text = "Personal Information",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = firstName,
-                            onValueChange = {
-                                firstName = it
-                                firstNameError = null
-                            },
-                            label = { Text("First Name") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            isError = firstNameError != null,
-                            supportingText = firstNameError?.let { { Text(it) } }
-                        )
-
-                        OutlinedTextField(
-                            value = lastName,
-                            onValueChange = {
-                                lastName = it
-                                lastNameError = null
-                            },
-                            label = { Text("Last Name") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            isError = lastNameError != null,
-                            supportingText = lastNameError?.let { { Text(it) } }
-                        )
-                    }
-
-                    val authService: AuthService = org.koin.compose.koinInject()
-                    val usernamePattern = remember { Regex("^[a-zA-Z0-9_.-]+$") }
-                    val isUsernameValid = remember(username) {
-                        username.length in 3..50 && usernamePattern.matches(username)
-                    }
-
-                    val scope = rememberCoroutineScope()
-                    LaunchedEffect(username) {
-                        if (username.isNotBlank() && username != currentUser?.username) {
-                            isCheckingUsername = true
-                            delay(500)
-
-                            when {
-                                username.length < 3 -> {
-                                    usernameStatus = UsernameStatus.TooShort
-                                    usernameAvailable = null
-                                    isCheckingUsername = false
-                                }
-
-                                username.length > 50 -> {
-                                    usernameStatus = UsernameStatus.TooLong
-                                    usernameAvailable = null
-                                    isCheckingUsername = false
-                                }
-
-                                !usernamePattern.matches(username) -> {
-                                    usernameStatus = UsernameStatus.InvalidFormat
-                                    usernameAvailable = null
-                                    isCheckingUsername = false
-                                }
-
-                                else -> {
-                                    usernameStatus = UsernameStatus.ValidFormat
-                                    scope.launch {
-                                        try {
-                                            val response =
-                                                authService.checkUsernameAvailability(username)
-                                            if (response.isSuccessful) {
-                                                val body = response.body()
-                                                usernameAvailable = body?.available
-                                            } else {
-                                                usernameAvailable = false
-                                            }
-                                        } catch (e: Exception) {
-                                            usernameAvailable = false
-                                        } finally {
-                                            isCheckingUsername = false
-                                        }
-                                    }
-                                }
-                            }
-                        } else {
-                            usernameStatus = UsernameStatus.Idle
-                            usernameAvailable = null
-                            isCheckingUsername = false
-                        }
-                    }
-
-                    OutlinedTextField(
-                        value = username,
-                        onValueChange = {
-                            username = it
-                            usernameError = null
-                        },
-                        label = { Text("Username") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        placeholder = { Text("@username") },
-                        trailingIcon = {
-                            when {
-                                isCheckingUsername -> {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(16.dp),
-                                        strokeWidth = 2.dp
-                                    )
-                                }
-
-                                usernameAvailable == true && username != (initialUsername
-                                    ?: "") -> {
-                                    Icon(
-                                        Icons.Default.CheckCircle,
-                                        contentDescription = "Available",
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-
-                                usernameAvailable == false && username != (initialUsername
-                                    ?: "") -> {
-                                    Icon(
-                                        Icons.Default.Close,
-                                        contentDescription = "Unavailable",
-                                        tint = MaterialTheme.colorScheme.error
-                                    )
-                                }
-                            }
-                        },
-                        isError = usernameError != null || (usernameAvailable == false && username != (initialUsername
-                            ?: "")),
-                        supportingText = {
-                            when {
-                                isCheckingUsername -> Text("Checking availability...")
-                                usernameError != null -> Text(
-                                    usernameError ?: "",
-                                    color = MaterialTheme.colorScheme.error
-                                )
-
-                                usernameAvailable == true && username != (initialUsername
-                                    ?: "") -> Text(
-                                    "Username is available",
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-
-                                usernameAvailable == false && username != (initialUsername
-                                    ?: "") -> Text(
-                                    "Username is already taken",
-                                    color = MaterialTheme.colorScheme.error
-                                )
-
-                                !isUsernameValid && username.isNotBlank() -> Text(
-                                    "Username must be 3-30 characters and contain only letters, numbers, and underscores",
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                            }
-                        }
-                    )
-
-                    OutlinedTextField(
-                        value = currentUser?.email ?: "",
-                        onValueChange = { },
-                        label = { Text("Email") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        readOnly = true,
-                        enabled = false,
-                        trailingIcon = {
-                            Icon(
-                                Icons.Default.Email,
-                                contentDescription = "Email",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        },
-                        supportingText = {
-                            Text(
-                                "Email cannot be changed",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    )
-
-                }
-            }
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        text = "Bio",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    OutlinedTextField(
-                        value = bio,
-                        onValueChange = {
-                            bio = it
-                            bioError = null
-                        },
-                        label = { Text("Tell us about yourself") },
-                        modifier = Modifier.fillMaxWidth(),
-                        minLines = 3,
-                        maxLines = 5,
-                        placeholder = { Text("Write a short bio about yourself...") },
-                        isError = bioError != null,
-                        supportingText = bioError?.let { { Text(it) } }
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "Character limit: 1000",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "${bio.length}/1000",
-                            fontSize = 12.sp,
-                            color = if (bio.length > 1000)
-                                MaterialTheme.colorScheme.error
-                            else
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        text = "Social Media",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Text(
-                        text = "Manage your social media links",
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Button(
-                        onClick = { navController.navigate(Screen.SocialMediaManagement.route) },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(
-                            Icons.Default.Link,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Manage Social Media Links")
-                    }
-                }
-            }
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        text = "Account Settings",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                currentUser?.email?.let { email ->
-                                    navController.navigate(Screen.PasswordReset.createRoute(email))
-                                }
-                            },
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Lock,
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Column {
-                                Text(
-                                    text = "Change Password",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                Text(
-                                    text = "Update your account password",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                        Icon(
-                            Icons.Default.ChevronRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    if (currentUser?.userType != "author") {
-                        Divider()
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { navController.navigate("privacy_settings") },
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.PrivacyTip,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                Column {
-                                    Text(
-                                        text = "Privacy Settings",
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = "Control your privacy preferences",
-                                        fontSize = 12.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                            Icon(
-                                Icons.Default.ChevronRight,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        Divider()
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { navController.navigate(Screen.Notifications.route) },
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.Notifications,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                Column {
-                                    Text(
-                                        text = "Notification Preferences",
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = "Manage your notification settings",
-                                        fontSize = 12.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                            Icon(
-                                Icons.Default.ChevronRight,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(elevation = 2.dp, shape = RoundedCornerShape(16.dp)),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text(
-                        text = "Danger Zone",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.error
-                    )
-
-                    OutlinedButton(
-                        onClick = { showDeleteAccountDialog = true },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        ),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Delete Account")
-                    }
-                }
-            }
-
-            if (showDeleteAccountDialog) {
-                AlertDialog(
-                    onDismissRequest = { showDeleteAccountDialog = false },
-                    title = { Text("Delete Account", color = MaterialTheme.colorScheme.error) },
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    text = {
-                        Text(
-                            "Are you sure you want to delete your account? This action cannot be undone. All your data, applications, and reviews will be permanently deleted."
-                        )
-                    },
-                    confirmButton = {
-                        val scope = rememberCoroutineScope()
-                        var isDeleting by remember { mutableStateOf(false) }
-                        TextButton(
-                            onClick = {
-                                if (!isDeleting) {
-                                    isDeleting = true
-                                    scope.launch {
-                                        profileViewModel.deleteAccount()
-                                        showDeleteAccountDialog = false
-                                    }
-                                }
-                            },
-                            enabled = !isDeleting,
-                            colors = ButtonDefaults.textButtonColors(
-                                contentColor = MaterialTheme.colorScheme.error
-                            )
-                        ) {
-                            if (isDeleting) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    color = MaterialTheme.colorScheme.error,
-                                    strokeWidth = 2.dp
-                                )
-                            } else {
-                            Text("Delete")
-                            }
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showDeleteAccountDialog = false }) {
-                            Text("Cancel")
-                        }
-                    }
-                )
-            }
-
-            val currentEditState = editState
-            if (currentEditState is UiState.Error) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .shadow(elevation = 2.dp, shape = RoundedCornerShape(16.dp)),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Close,
-                            contentDescription = "Error",
-                            tint = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                        Text(
-                            text = (currentEditState as UiState.Error).message,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    }
-                }
-            }
-
-            Button(
-                onClick = {
+            PersonalInfoSection(
+                firstName = firstName,
+                onFirstNameChange = {
+                    firstName = it
                     firstNameError = null
+                },
+                firstNameError = firstNameError,
+                lastName = lastName,
+                onLastNameChange = {
+                    lastName = it
                     lastNameError = null
+                },
+                lastNameError = lastNameError,
+                username = username,
+                onUsernameChange = {
+                    username = it
                     usernameError = null
-                    bioError = null
+                },
+                usernameError = usernameError,
+                initialUsername = initialUsername,
+                currentUserEmail = currentUser?.email,
+                sessionUsername = currentUser?.username,
+                isCheckingUsername = isCheckingUsername,
+                onIsCheckingUsernameChange = { isCheckingUsername = it },
+                usernameAvailable = usernameAvailable,
+                onUsernameAvailableChange = { usernameAvailable = it },
+            )
 
-                    if (isFormValid) {
-                        if (shouldRemoveAvatar) {
-                            profileViewModel.removeAvatar()
-                        } else {
-                            val usernameToUpdate = if (username.trim() != (initialUsername?.trim()
-                                    ?: "") && username.trim().isNotBlank()
-                            ) {
-                                username.trim()
-                            } else {
-                                null
-                            }
-                            profileViewModel.updateProfile(
-                                username = usernameToUpdate,
-                                firstName = firstName.takeIf { it.isNotBlank() },
-                                lastName = lastName.takeIf { it.isNotBlank() },
-                                bio = bio.takeIf { it.isNotBlank() },
-                                avatarUrl = if (avatarUrl.isNotBlank()) avatarUrl else null
-                            )
-                            initialFirstName = firstName.trim()
-                            initialLastName = lastName.trim()
-                            initialUsername = username.trim()
-                            initialBio = bio.trim()
-                            initialAvatarUrl = avatarUrl
-                        }
+            BioSection(
+                bio = bio,
+                bioError = bioError,
+                onBioChange = {
+                    bio = it
+                    bioError = null
+                }
+            )
+
+            SocialMediaSection(
+                onNavigateToSocialMediaManagement = {
+                    navController.navigate(Screen.SocialMediaManagement.route)
+                }
+            )
+
+            AccountSettingsSection(
+                isAuthor = currentUser?.userType == "author",
+                onPasswordResetClick = {
+                    currentUser?.email?.let { email ->
+                        navController.navigate(Screen.PasswordReset.createRoute(email))
                     }
                 },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = hasChanges && isFormValid && editState !is UiState.Loading
-            ) {
-                if (editState is UiState.Loading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-                Text("Save Changes")
+                onPrivacySettingsClick = { navController.navigate(Screen.PrivacySettings.route) },
+                onNotificationsClick = { navController.navigate(Screen.Notifications.route) }
+            )
+
+            DangerZoneSection(
+                onDeleteAccountClick = { showDeleteAccountDialog = true }
+            )
+
+            if (showDeleteAccountDialog) {
+                ProfileEditDeleteAccountDialog(
+                    profileEditViewModel = profileEditViewModel,
+                    onDismiss = { showDeleteAccountDialog = false }
+                )
             }
+
+            val editError = editState as? UiState.Error
+            if (editError != null) {
+                ProfileEditErrorBanner(message = editError.message)
+            }
+
+            ProfileEditBottomSaveBar(
+                enabled = saveEnabled,
+                editState = editState,
+                onSaveClick = { performSave() }
+            )
         }
     }
-}
-
-private sealed class UsernameStatus {
-    object Idle : UsernameStatus()
-    object TooShort : UsernameStatus()
-    object TooLong : UsernameStatus()
-    object InvalidFormat : UsernameStatus()
-    object ValidFormat : UsernameStatus()
 }

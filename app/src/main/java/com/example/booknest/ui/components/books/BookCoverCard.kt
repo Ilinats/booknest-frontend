@@ -15,9 +15,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.booknest.domain.model.response.BookResponse
+import com.example.booknest.ui.components.BookCoverHeight
+import com.example.booknest.ui.components.BookCoverWidth
 import com.example.booknest.ui.theme.DarkNavyBlue
 
 @Composable
@@ -26,13 +30,15 @@ fun BookCoverCard(
     onClick: () -> Unit = {}
 ) {
     Column(
+        modifier = Modifier
+            .width(BookCoverWidth)
+            .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.clickable(onClick = onClick)
     ) {
         Box(
             modifier = Modifier
-                .size(80.dp, 120.dp)
+                .size(BookCoverWidth, BookCoverHeight)
                 .clip(RoundedCornerShape(8.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
@@ -63,9 +69,12 @@ fun BookCoverCard(
 
         Text(
             text = book.title,
+            modifier = Modifier.fillMaxWidth(),
             style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.Medium,
-            maxLines = 2
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
         )
     }
 }

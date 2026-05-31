@@ -7,7 +7,9 @@ class GetNotificationsUseCase(
     private val repository: NotificationsRepository
 ) {
     suspend operator fun invoke(
-        unreadOnly: Boolean? = false
+        unreadOnly: Boolean? = null,
+        skip: Int? = null,
+        take: Int? = null,
     ): Result<NotificationsListResponse> =
-        repository.getNotifications(unreadOnly)
+        repository.getNotifications(unreadOnly, skip, take)
 }

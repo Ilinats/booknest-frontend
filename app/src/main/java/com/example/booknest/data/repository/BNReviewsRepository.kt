@@ -28,10 +28,6 @@ class BNReviewsRepository(private val reviewsDataSource: ReviewsDataSource) : Re
         return resultBody(reviewsDataSource.deleteReview(reviewId))
     }
 
-    override suspend fun getBookReviews(bookId: String): Result<List<ReviewResponse>> {
-        return resultBody(reviewsDataSource.getBookReviews(bookId))
-    }
-
     override suspend fun getUserReviews(userId: String): Result<List<ReviewResponse>> {
         return resultBody(reviewsDataSource.getUserReviews(userId))
     }

@@ -2,7 +2,21 @@ package com.example.booknest.ui.auth
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -12,7 +26,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
+import com.example.booknest.ui.testing.UiTestTags
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -22,17 +38,19 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.booknest.R
 import com.example.booknest.data.session.SessionManager
-import com.example.booknest.navigation.Screen
+import com.example.booknest.presentation.navigation.Screen
+import com.example.booknest.presentation.navigation.navigateToMainAsRoot
 
 @Composable
 fun LandingScreen(navController: NavController, sessionManager: SessionManager) {
+    val navigationBarBottom = WindowInsets.navigationBars
+        .asPaddingValues()
+        .calculateBottomPadding()
     val isLoggedIn by sessionManager.isLoggedIn.collectAsState()
 
     LaunchedEffect(isLoggedIn) {
         if (isLoggedIn == true) {
-            navController.navigate(Screen.Main.route) {
-                popUpTo(Screen.Landing.route) { inclusive = true }
-            }
+            navController.navigateToMainAsRoot()
         }
     }
 
@@ -110,7 +128,7 @@ fun LandingScreen(navController: NavController, sessionManager: SessionManager) 
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 50.dp),
+                        .padding(bottom = 24.dp + navigationBarBottom),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Button(
@@ -118,6 +136,7 @@ fun LandingScreen(navController: NavController, sessionManager: SessionManager) 
                         modifier = Modifier
                             .weight(1f)
                             .height(56.dp)
+                            .testTag(UiTestTags.LANDING_LOGIN_BUTTON)
                             .shadow(
                                 elevation = 4.dp,
                                 shape = RoundedCornerShape(24.dp)
@@ -143,6 +162,7 @@ fun LandingScreen(navController: NavController, sessionManager: SessionManager) 
                         modifier = Modifier
                             .weight(1f)
                             .height(56.dp)
+                            .testTag(UiTestTags.LANDING_SIGNUP_BUTTON)
                             .shadow(
                                 elevation = 4.dp,
                                 shape = RoundedCornerShape(24.dp)

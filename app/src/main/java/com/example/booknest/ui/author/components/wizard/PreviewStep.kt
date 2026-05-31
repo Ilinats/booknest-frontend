@@ -16,8 +16,7 @@ import com.example.booknest.domain.model.response.SeriesResponse
 import com.example.booknest.ui.author.components.common.AgeRating
 import com.example.booknest.ui.author.components.common.DistributionType
 import com.example.booknest.ui.author.components.common.SelectionMethod
-import java.text.SimpleDateFormat
-import java.util.*
+import com.example.booknest.utils.BookDateUtils
 
 @Composable
 fun PreviewStep(
@@ -39,29 +38,12 @@ fun PreviewStep(
     hasCoverImage: Boolean,
     hasBookFile: Boolean
 ) {
-    val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
-    val inputDateFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
-
     val formattedApplicationDeadline = remember(applicationDeadline) {
-        applicationDeadline?.let {
-            try {
-                val date = inputDateFormat.parse(it)
-                date?.let { dateFormat.format(it) } ?: it
-            } catch (e: Exception) {
-                it
-            }
-        } ?: "Not set"
+        applicationDeadline?.let { BookDateUtils.formatDateOnlyForDisplay(it) } ?: "Not set"
     }
 
     val formattedReviewDeadline = remember(reviewDeadline) {
-        reviewDeadline?.let {
-            try {
-                val date = inputDateFormat.parse(it)
-                date?.let { dateFormat.format(it) } ?: it
-            } catch (e: Exception) {
-                it
-            }
-        } ?: "Not set"
+        reviewDeadline?.let { BookDateUtils.formatDateOnlyForDisplay(it) } ?: "Not set"
     }
 
     val selectedGenreNames = remember(genres, genreList) {

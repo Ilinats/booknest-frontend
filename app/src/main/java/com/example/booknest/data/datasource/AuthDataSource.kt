@@ -14,6 +14,7 @@ interface AuthDataSource {
     suspend fun register(body: RegisterRequest): Result<RegisterResponse>
     suspend fun refresh(refreshToken: String): Result<AuthTokenResponse>
     suspend fun logout(refreshToken: String): Result<Unit>
+    suspend fun logoutAll(): Result<Unit>
     suspend fun verifyEmail(code: String): Result<UserResponse>
     suspend fun resendVerification(email: String): Result<Unit>
     suspend fun requestPasswordReset(body: RequestPasswordResetRequest): Result<Unit>

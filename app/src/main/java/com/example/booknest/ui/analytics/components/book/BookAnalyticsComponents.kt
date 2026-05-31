@@ -11,10 +11,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.booknest.domain.model.response.DetailedBookAnalyticsResponse
-import com.example.booknest.viewmodel.AnalyticsViewModel
+import com.example.booknest.viewmodel.analytics.AnalyticsViewModel
+
+@Composable
+private fun StatCardTitle(
+    title: String,
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text = title,
+        fontSize = 12.sp,
+        lineHeight = 14.sp,
+        textAlign = TextAlign.Center,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier.fillMaxWidth(),
+    )
+}
 
 @Composable
 fun StatCard(
@@ -45,13 +63,7 @@ fun StatCard(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
-            Text(
-                text = title,
-                fontSize = 12.sp,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.fillMaxWidth()
-            )
+            StatCardTitle(title = title)
         }
     }
 }
@@ -86,13 +98,7 @@ fun ApplicationStatCard(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
-            Text(
-                text = title,
-                fontSize = 12.sp,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.fillMaxWidth()
-            )
+            StatCardTitle(title = title)
         }
     }
 }

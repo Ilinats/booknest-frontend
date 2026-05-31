@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -17,7 +18,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.model.response.ApplicationResponse
-import com.example.booknest.navigation.Screen
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.ui.applications.components.detail.BookSummaryHeader
 import com.example.booknest.ui.applications.components.detail.BulkActionsBar
 import com.example.booknest.ui.applications.components.detail.OverdueReviewsCard
@@ -28,15 +29,24 @@ import com.example.booknest.ui.applications.components.list.EnhancedApplicationC
 import com.example.booknest.ui.applications.components.list.EnhancedApprovedApplicationCard
 import com.example.booknest.ui.applications.components.list.RejectedApplicationCard
 import com.example.booknest.ui.applications.components.lottery.LotterySelectionCard
-import com.example.booknest.ui.applications.components.review.ReviewCard
+import com.example.booknest.ui.applications.components.review.ApplicationReaderReviewCard
 import com.example.booknest.ui.applications.components.statistics.StatisticsTabContent
 import com.example.booknest.ui.applications.dialogs.RunLotteryDialog
 import com.example.booknest.ui.applications.models.ApplicationStats
 import com.example.booknest.ui.applications.models.SortOption
+import com.example.booknest.ui.components.AppScaffoldContentInsets
+import com.example.booknest.ui.components.AppTopBar
 import com.example.booknest.ui.components.BackButton
-import com.example.booknest.viewmodel.ApplicationViewModel
-import com.example.booknest.viewmodel.BookViewModel
-import com.example.booknest.viewmodel.ReviewViewModel
+import com.example.booknest.ui.components.paddingTopFromScaffold
+import com.example.booknest.navigation.rememberAuthorBookEditorViewModel
+import com.example.booknest.ui.author.components.LeakFingerprintDecodeSection
+import com.example.booknest.ui.author.components.books.formatBookStatus
+import com.example.booknest.viewmodel.applications.BookApplicationViewModel
+import com.example.booknest.utils.BookDateUtils
+import com.example.booknest.viewmodel.applications.isPending
+import com.example.booknest.viewmodel.books.BookDetailsViewModel
+import com.example.booknest.viewmodel.author.AuthorBookEditorViewModel
+import com.example.booknest.viewmodel.analytics.ReviewViewModel
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
 import java.text.SimpleDateFormat
@@ -50,36 +60,37 @@ fun BookApplicationDetailContent(
     navController: NavController,
     sessionManager: SessionManager = koinInject(),
     bookId: String,
-    applicationViewModel: ApplicationViewModel = getViewModel(),
-    bookViewModel: BookViewModel = getViewModel(),
-    reviewViewModel: ReviewViewModel = getViewModel()
+    bookApplicationViewModel: BookApplicationViewModel = getViewModel(),
+    bookDetailsViewModel: BookDetailsViewModel = getViewModel(),
+    reviewViewModel: ReviewViewModel = getViewModel(),
+    authorBookEditorViewModel: AuthorBookEditorViewModel = rememberAuthorBookEditorViewModel(navController),
 ) {
-    val bookApplications by applicationViewModel.bookApplications.collectAsState()
-    val isLoading by applicationViewModel.isLoading.collectAsState()
-    val bookDetails by bookViewModel.bookDetails.collectAsState()
+    val context = LocalContext.current
+    val bookApplications by bookApplicationViewModel.bookApplications.collectAsState()
+    val leakFingerprintState by authorBookEditorViewModel.leakFingerprintState.collectAsState()
+    val isLoading by bookApplicationViewModel.isLoading.collectAsState()
+    val bookDetails by bookDetailsViewModel.bookDetails.collectAsState()
     val bookReviews by reviewViewModel.bookReviews.collectAsState()
-    val allOverdueReviews by applicationViewModel.overdueReviews.collectAsState()
+    val allOverdueReviews by bookApplicationViewModel.overdueReviews.collectAsState()
 
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("All", "Pending", "Approved", "Rejected", "Reviews", "Statistics")
 
     val book = bookDetails ?: bookApplications.firstOrNull()?.book
 
+    val showLeakFingerprintTool = book?.let { b ->
+        !b.fileUrl.isNullOrBlank() &&
+            b.distributionType?.lowercase() != "physical"
+    } == true
+
     val isLotteryBook = book?.selectionMethod?.let { method ->
         method.lowercase().trim() == "lottery" || method.lowercase().trim() == "random_selection"
     } ?: false
 
     val lotteryDeadlinePassed = book?.applicationDeadline?.let { deadline ->
-        try {
-            val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
-            inputFormat.timeZone = TimeZone.getTimeZone("UTC")
-            val deadlineDate = inputFormat.parse(deadline)
-            deadlineDate?.before(Date()) ?: false
-        } catch (e: Exception) {
-            false
-        }
+        BookDateUtils.isApplicationDeadlinePassed(deadline)
     } ?: false
-    val lotteryHasPending = bookApplications.any { it.status == "pending" }
+    val lotteryHasPending = bookApplications.any { it.isPending() }
     val lotteryHasProcessed = bookApplications.any { it.status in listOf("approved", "rejected") }
     var showLotteryDialog by remember { mutableStateOf(false) }
 
@@ -89,11 +100,15 @@ fun BookApplicationDetailContent(
     var sortOption by remember { mutableStateOf<SortOption>(SortOption.DATE_DESC) }
     var showSortMenu by remember { mutableStateOf(false) }
 
+    LaunchedEffect(Unit) {
+        bookApplicationViewModel.loadOverdueReviews()
+    }
+
     LaunchedEffect(bookId) {
-        bookViewModel.getBookDetails(bookId)
-        applicationViewModel.loadBookApplications(bookId)
+        bookDetailsViewModel.getBookDetails(bookId)
+        bookApplicationViewModel.loadBookApplications(bookId)
         reviewViewModel.loadBookReviews(bookId)
-        applicationViewModel.loadOverdueReviews()
+        authorBookEditorViewModel.clearLeakFingerprintState()
     }
 
     LaunchedEffect(selectedTab) {
@@ -113,10 +128,10 @@ fun BookApplicationDetailContent(
 
     val applicationStats = remember(applicationsWithReviews) {
         val total = applicationsWithReviews.size
-        val pending = applicationsWithReviews.count { it.status == "pending" }
-        val approved = applicationsWithReviews.count { it.status == "approved" }
-        val rejected = applicationsWithReviews.count { it.status == "rejected" }
-        val withdrawn = applicationsWithReviews.count { it.status == "withdrawn" }
+        val pending = applicationsWithReviews.count { it.isPending() }
+        val approved = applicationsWithReviews.count { it.status.equals("approved", ignoreCase = true) }
+        val rejected = applicationsWithReviews.count { it.status.equals("rejected", ignoreCase = true) }
+        val withdrawn = applicationsWithReviews.count { it.status.equals("withdrawn", ignoreCase = true) }
         ApplicationStats(
             total = total,
             pending = pending,
@@ -136,9 +151,9 @@ fun BookApplicationDetailContent(
         remember(selectedTab, applicationsWithReviews, sortOption) {
             val filtered = when (selectedTab) {
                 0 -> applicationsWithReviews
-                1 -> applicationsWithReviews.filter { it.status == "pending" }
-                2 -> applicationsWithReviews.filter { it.status == "approved" }
-                3 -> applicationsWithReviews.filter { it.status == "rejected" }
+                1 -> applicationsWithReviews.filter { it.isPending() }
+                2 -> applicationsWithReviews.filter { it.status.equals("approved", ignoreCase = true) }
+                3 -> applicationsWithReviews.filter { it.status.equals("rejected", ignoreCase = true) }
                 else -> applicationsWithReviews
             }
 
@@ -180,62 +195,39 @@ fun BookApplicationDetailContent(
     val approvedCount = applicationStats.approved
 
     Scaffold(
+        contentWindowInsets = AppScaffoldContentInsets,
         topBar = {
-            Surface(
-                shadowElevation = 4.dp,
-                tonalElevation = 2.dp,
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                TopAppBar(
-                    title = {
-                        Column {
-                            Text(
-                                book?.title ?: "Book Details",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 20.sp,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                "Status: ${
-                                    book?.status?.lowercase()
-                                        ?.replaceFirstChar { it.uppercase() } ?: "Unknown"
-                                }",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+            AppTopBar(
+                title = book?.title ?: "Book Details",
+                subtitle = "Status: ${formatBookStatus(book?.status)}",
+                navigationIcon = {
+                    BackButton(onClick = { navController.popBackStack() })
+                },
+                actions = {
+                    IconButton(onClick = {
+                        book?.id?.let {
+                            navController.navigate(Screen.BookEdit.createRoute(it))
                         }
-                    },
-                    navigationIcon = {
-                        BackButton(onClick = { navController.popBackStack() })
-                    },
-                    actions = {
-                        IconButton(onClick = {
-                            book?.id?.let {
-                                navController.navigate(Screen.BookEdit.createRoute(it))
-                            }
-                        }) {
-                            Icon(Icons.Filled.Edit, contentDescription = "Edit Book")
-                        }
-                        IconButton(onClick = { }) {
-                            Icon(Icons.Filled.Share, contentDescription = "Share")
-                        }
-                        IconButton(onClick = {
-                            bookId.let {
-                                navController.navigate("book_analytics/$it")
-                            }
-                        }) {
-                            Icon(Icons.Filled.Info, contentDescription = "Analytics")
-                        }
+                    }) {
+                        Icon(Icons.Filled.Edit, contentDescription = "Edit Book")
                     }
-                )
-            }
-        }
+                    IconButton(onClick = { }) {
+                        Icon(Icons.Filled.Share, contentDescription = "Share")
+                    }
+                    IconButton(onClick = {
+                        navController.navigate(Screen.BookAnalytics.createRoute(bookId))
+                    }) {
+                        Icon(Icons.Filled.Info, contentDescription = "Analytics")
+                    }
+                },
+            )
+        },
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(bottom = 80.dp),
+                .paddingTopFromScaffold(paddingValues),
+            contentPadding = PaddingValues(bottom = 0.dp),
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
             item {
@@ -248,6 +240,23 @@ fun BookApplicationDetailContent(
 
             item {
                 ApplicationStatsSection(stats = applicationStats)
+            }
+
+            if (showLeakFingerprintTool) {
+                item {
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+                item {
+                    LeakFingerprintDecodeSection(
+                        leakFingerprintState = leakFingerprintState,
+                        bookApplications = applicationsWithReviews,
+                        onFileChosen = { uri ->
+                            authorBookEditorViewModel.decodeLeakFingerprint(bookId, uri, context)
+                        },
+                        onDismissResult = { authorBookEditorViewModel.clearLeakFingerprintState() },
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
+                }
             }
 
             if (overdueReviews.isNotEmpty()) {
@@ -328,7 +337,8 @@ fun BookApplicationDetailContent(
                         selectedCount = selectedApplicationIds.size,
                         availableSlots = availableSlots,
                         onApproveSelected = {
-                            applicationViewModel.bulkActionApplications(
+                            bookApplicationViewModel.bulkActionApplications(
+                                bookId,
                                 selectedApplicationIds.toList(),
                                 "approved"
                             )
@@ -336,7 +346,8 @@ fun BookApplicationDetailContent(
                             isSelectionMode = false
                         },
                         onRejectSelected = {
-                            applicationViewModel.bulkActionApplications(
+                            bookApplicationViewModel.bulkActionApplications(
+                                bookId,
                                 selectedApplicationIds.toList(),
                                 "rejected"
                             )
@@ -345,7 +356,7 @@ fun BookApplicationDetailContent(
                         },
                         onMarkSentSelected = {
                             selectedApplicationIds.forEach { id ->
-                                applicationViewModel.markCopySent(id)
+                                bookApplicationViewModel.markCopySent(bookId, id)
                             }
                             selectedApplicationIds = emptySet()
                             isSelectionMode = false
@@ -418,13 +429,15 @@ fun BookApplicationDetailContent(
                                     },
                                     navController = navController,
                                     onApprove = { app, notes ->
-                                        applicationViewModel.approveApplication(
+                                        bookApplicationViewModel.approveApplication(
+                                            bookId,
                                             app.id,
                                             notes
                                         )
                                     },
                                     onReject = { app, notes ->
-                                        applicationViewModel.rejectApplication(
+                                        bookApplicationViewModel.rejectApplication(
+                                            bookId,
                                             app.id,
                                             notes
                                         )
@@ -477,13 +490,15 @@ fun BookApplicationDetailContent(
                                     },
                                     navController = navController,
                                     onApprove = { app, notes ->
-                                        applicationViewModel.approveApplication(
+                                        bookApplicationViewModel.approveApplication(
+                                            bookId,
                                             app.id,
                                             notes
                                         )
                                     },
                                     onReject = { app, notes ->
-                                        applicationViewModel.rejectApplication(
+                                        bookApplicationViewModel.rejectApplication(
+                                            bookId,
                                             app.id,
                                             notes
                                         )
@@ -535,7 +550,9 @@ fun BookApplicationDetailContent(
                                             }
                                     },
                                     navController = navController,
-                                    onMarkSent = { app -> applicationViewModel.markCopySent(app.id) }
+                                    onMarkSent = { app ->
+                                        bookApplicationViewModel.markCopySent(bookId, app.id)
+                                    }
                                 )
                             }
                         }
@@ -606,7 +623,7 @@ fun BookApplicationDetailContent(
                             reviewsApplications.size,
                             key = { reviewsApplications[it].id }
                         ) { index ->
-                            ReviewCard(
+                            ApplicationReaderReviewCard(
                                 application = reviewsApplications[index],
                                 navController = navController
                             )
@@ -631,7 +648,7 @@ fun BookApplicationDetailContent(
             availableCopies = book?.availableCopies ?: 0,
             pendingCount = applicationStats.pending,
             onConfirm = {
-                applicationViewModel.runLottery(bookId)
+                bookApplicationViewModel.runLottery(bookId)
                 showLotteryDialog = false
             },
             onDismiss = { showLotteryDialog = false }

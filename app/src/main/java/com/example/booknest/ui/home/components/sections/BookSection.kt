@@ -1,5 +1,6 @@
 package com.example.booknest.ui.home.components.sections
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -7,8 +8,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -36,7 +38,9 @@ fun BookSection(
 ) {
     Column(modifier = modifier) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -60,6 +64,7 @@ fun BookSection(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
                         .height(200.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -67,23 +72,30 @@ fun BookSection(
                 }
             }
             books.isNotEmpty() -> {
-                LazyRow(
+                val rowScroll = rememberScrollState()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rowScroll),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(books) { book ->
+                    Spacer(modifier = Modifier.width(16.dp))
+                    books.forEach { book ->
                         if (useSimpleItem) {
                             SimpleBookItem(book = book, navController = navController)
                         } else {
                             BookItem(book = book, navController = navController)
                         }
                     }
+                    Spacer(modifier = Modifier.width(16.dp))
                 }
             }
             emptyMessage != null -> {
                 Text(
                     text = emptyMessage,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp)
                 )
             }
         }

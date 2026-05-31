@@ -13,8 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.booknest.ui.author.components.common.*
-import com.example.booknest.domain.model.request.CreateBookRequest
-import com.example.booknest.viewmodel.AuthorViewModel
+import com.example.booknest.domain.validation.BookFormRules
 
 @Composable
 fun WizardNavigation(
@@ -26,8 +25,9 @@ fun WizardNavigation(
     applicationDeadline: String?,
     selectedSelectionMethod: SelectionMethod?,
     bookFileUri: android.net.Uri?,
-    titleError: String?,
     applicationDeadlineError: String?,
+    reviewDeadlineError: String?,
+    selectionCriteriaError: String?,
     isCreating: Boolean,
     isUploadingFile: Boolean,
     coverImageUrl: String?,
@@ -78,16 +78,20 @@ fun WizardNavigation(
             Button(
                 onClick = onNextStep,
                 enabled = !isCreating && !isUploadingFile && isStepValid(
-                    currentStep,
-                    title,
-                    selectedAgeRating,
-                    selectedDistributionType,
-                    applicationDeadline,
-                    selectedSelectionMethod,
-                    bookFileUri,
-                    selectedDistributionType,
-                    titleError,
-                    applicationDeadlineError
+                    step = currentStep,
+                    title = title,
+                    shortDescription = shortDescription,
+                    fullDescription = fullDescription,
+                    pageCount = pageCount,
+                    ageRating = selectedAgeRating,
+                    distributionType = selectedDistributionType,
+                    applicationDeadline = applicationDeadline,
+                    selectionMethod = selectedSelectionMethod,
+                    bookFileUri = bookFileUri,
+                    currentDistributionType = selectedDistributionType,
+                    applicationDeadlineError = applicationDeadlineError,
+                    reviewDeadlineError = reviewDeadlineError,
+                    selectionCriteriaError = selectionCriteriaError,
                 ),
                 modifier = Modifier
                     .weight(1f)
@@ -117,16 +121,20 @@ fun WizardNavigation(
                     .height(48.dp),
                 shape = RoundedCornerShape(12.dp),
                 enabled = !isCreating && !isUploadingFile && isStepValid(
-                    currentStep,
-                    title,
-                    selectedAgeRating,
-                    selectedDistributionType,
-                    applicationDeadline,
-                    selectedSelectionMethod,
-                    bookFileUri,
-                    selectedDistributionType,
-                    titleError,
-                    applicationDeadlineError
+                    step = currentStep,
+                    title = title,
+                    shortDescription = shortDescription,
+                    fullDescription = fullDescription,
+                    pageCount = pageCount,
+                    ageRating = selectedAgeRating,
+                    distributionType = selectedDistributionType,
+                    applicationDeadline = applicationDeadline,
+                    selectionMethod = selectedSelectionMethod,
+                    bookFileUri = bookFileUri,
+                    currentDistributionType = selectedDistributionType,
+                    applicationDeadlineError = applicationDeadlineError,
+                    reviewDeadlineError = reviewDeadlineError,
+                    selectionCriteriaError = selectionCriteriaError,
                 ),
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = MaterialTheme.colorScheme.onSurface
@@ -146,16 +154,20 @@ fun WizardNavigation(
                     .height(48.dp),
                 shape = RoundedCornerShape(12.dp),
                 enabled = !isCreating && !isUploadingFile && isStepValid(
-                    currentStep,
-                    title,
-                    selectedAgeRating,
-                    selectedDistributionType,
-                    applicationDeadline,
-                    selectedSelectionMethod,
-                    bookFileUri,
-                    selectedDistributionType,
-                    titleError,
-                    applicationDeadlineError
+                    step = currentStep,
+                    title = title,
+                    shortDescription = shortDescription,
+                    fullDescription = fullDescription,
+                    pageCount = pageCount,
+                    ageRating = selectedAgeRating,
+                    distributionType = selectedDistributionType,
+                    applicationDeadline = applicationDeadline,
+                    selectionMethod = selectedSelectionMethod,
+                    bookFileUri = bookFileUri,
+                    currentDistributionType = selectedDistributionType,
+                    applicationDeadlineError = applicationDeadlineError,
+                    reviewDeadlineError = reviewDeadlineError,
+                    selectionCriteriaError = selectionCriteriaError,
                 ),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary
@@ -183,20 +195,32 @@ fun WizardNavigation(
 private fun isStepValid(
     step: Int,
     title: String,
+    shortDescription: String,
+    fullDescription: String,
+    pageCount: String,
     ageRating: AgeRating?,
     distributionType: DistributionType?,
     applicationDeadline: String?,
     selectionMethod: SelectionMethod?,
     bookFileUri: android.net.Uri?,
     currentDistributionType: DistributionType?,
-    titleError: String? = null,
-    applicationDeadlineError: String? = null
+    applicationDeadlineError: String? = null,
+    reviewDeadlineError: String? = null,
+    selectionCriteriaError: String? = null,
 ): Boolean {
     return when (step) {
-        1 -> title.isNotBlank() && titleError == null
+        1 -> BookFormRules.isBasicInfoValid(
+            title = title,
+            shortDescription = shortDescription,
+            fullDescription = fullDescription,
+            pageCount = pageCount,
+        )
         2 -> true
         3 -> ageRating != null && distributionType != null
-        4 -> applicationDeadline != null && applicationDeadlineError == null
+        4 -> applicationDeadline != null &&
+            applicationDeadlineError == null &&
+            reviewDeadlineError == null &&
+            selectionCriteriaError == null
         5 -> {
             val requiresFile = currentDistributionType == DistributionType.DIGITAL ||
                     currentDistributionType == DistributionType.BOTH
@@ -206,7 +230,10 @@ private fun isStepValid(
                 true
             }
         }
-        6 -> true
+        6 -> applicationDeadline != null &&
+            applicationDeadlineError == null &&
+            reviewDeadlineError == null &&
+            selectionCriteriaError == null
         else -> false
     }
 }

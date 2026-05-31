@@ -15,16 +15,26 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.booknest.data.session.SessionManager
+import com.example.booknest.domain.repository.GenresRepository
 import com.example.booknest.domain.model.request.CreateBookRequest
 import com.example.booknest.domain.model.request.CreateSeriesRequest
 import com.example.booknest.domain.model.response.GenreResponse
 import com.example.booknest.domain.model.response.SeriesResponse
-import com.example.booknest.domain.repository.GenresRepository
+import com.example.booknest.port.ToastNotifier
 import com.example.booknest.ui.author.components.wizard.*
 import com.example.booknest.ui.author.components.common.*
 import com.example.booknest.ui.components.BackButton
-import com.example.booknest.viewmodel.AuthorViewModel
-import com.example.booknest.ui.state.UiState
+import com.example.booknest.ui.components.appListContentPadding
+import com.example.booknest.navigation.rememberAuthorBookEditorViewModel
+import com.example.booknest.navigation.rememberAuthorBooksViewModel
+import com.example.booknest.viewmodel.author.AuthorBookEditorViewModel
+import com.example.booknest.viewmodel.author.AuthorBooksViewModel
+import com.example.booknest.ui.author.components.bookedit.validateDeadlines
+import com.example.booknest.ui.author.components.bookedit.applicationDeadlineSelectableDates
+import com.example.booknest.ui.author.components.bookedit.reviewDeadlineSelectableDates
+import com.example.booknest.utils.BookDateUtils
+import com.example.booknest.viewmodel.author.AuthorSeriesViewModel
+import com.example.booknest.presentation.common.UiState
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
@@ -40,7 +50,10 @@ fun BookCreationWizard(
     navController: NavController,
     sessionManager: SessionManager = koinInject(),
     genresRepository: GenresRepository = koinInject(),
-    authorViewModel: AuthorViewModel = getViewModel()
+    toastNotifier: ToastNotifier = koinInject(),
+    authorBookEditorViewModel: AuthorBookEditorViewModel = rememberAuthorBookEditorViewModel(navController),
+    authorBooksViewModel: AuthorBooksViewModel = rememberAuthorBooksViewModel(navController),
+    authorSeriesViewModel: AuthorSeriesViewModel = getViewModel()
 ) {
     var currentStep by remember { mutableStateOf(1) }
     val totalSteps = 6
@@ -69,23 +82,23 @@ fun BookCreationWizard(
 
     val applicationDatePickerState = rememberDatePickerState(
         initialSelectedDateMillis = applicationDeadline?.let {
-            try {
-                SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(it)?.time
-            } catch (e: Exception) {
-                null
-            }
+            BookDateUtils.parseDeadlineInstant(
+                BookDateUtils.dateOnlyToApiDeadlineEndOfDay(it),
+            )?.toEpochMilli()
         },
-        initialDisplayedMonthMillis = tomorrowMillis
+        initialDisplayedMonthMillis = tomorrowMillis,
+        selectableDates = applicationDeadlineSelectableDates(),
     )
-    val reviewDatePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = reviewDeadline?.let {
-            try {
-                SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(it)?.time
-            } catch (e: Exception) {
-                null
-            }
-        }
-    )
+    val reviewDatePickerState = key(applicationDeadline) {
+        rememberDatePickerState(
+            initialSelectedDateMillis = reviewDeadline?.let {
+                BookDateUtils.parseDeadlineInstant(
+                    BookDateUtils.dateOnlyToApiDeadlineEndOfDay(it),
+                )?.toEpochMilli()
+            },
+            selectableDates = reviewDeadlineSelectableDates(applicationDeadline)
+        )
+    }
     var selectedSelectionMethod by remember { mutableStateOf<SelectionMethod?>(null) }
     var selectionCriteria by remember { mutableStateOf("") }
     var selectedGenres by remember { mutableStateOf<List<Int>>(emptyList()) }
@@ -114,34 +127,41 @@ fun BookCreationWizard(
     var seriesOrderError by remember { mutableStateOf<String?>(null) }
     var applicationDeadlineError by remember { mutableStateOf<String?>(null) }
     var reviewDeadlineError by remember { mutableStateOf<String?>(null) }
+    var selectionCriteriaError by remember { mutableStateOf<String?>(null) }
 
-    val mySeries by authorViewModel.mySeries.collectAsState()
-    val bookCreationState by authorViewModel.bookCreationState.collectAsState()
-    val bookFileUploadState by authorViewModel.bookFileUploadState.collectAsState()
+    val mySeries by authorSeriesViewModel.mySeries.collectAsState()
+    val bookCreationState by authorBookEditorViewModel.bookCreationState.collectAsState()
+    val bookFileUploadState by authorBookEditorViewModel.bookFileUploadState.collectAsState()
     var genres by remember { mutableStateOf(listOf<GenreResponse>()) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    LaunchedEffect(applicationDeadline, reviewDeadline) {
+        val (appErr, revErr) = validateDeadlines(applicationDeadline, reviewDeadline)
+        applicationDeadlineError = appErr
+        reviewDeadlineError = revErr
+    }
+
     LaunchedEffect(Unit) {
-        authorViewModel.loadMySeries()
+        authorSeriesViewModel.loadMySeries()
         try {
             val result = genresRepository.getGenres()
             result
                 .onSuccess { genreList ->
                     genres = genreList
-                    println("Genres loaded successfully: ${genreList.size} genres")
                 }
                 .onFailure { e ->
-                    com.example.booknest.ui.toast.GlobalToastHandler.showError(e)
+                    toastNotifier.showError(e)
                     genres = emptyList()
                 }
         } catch (e: Exception) {
-            com.example.booknest.ui.toast.GlobalToastHandler.showError(e)
+            toastNotifier.showError(e)
             genres = emptyList()
         }
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
                 title = {
@@ -160,12 +180,7 @@ fun BookCreationWizard(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
-            contentPadding = PaddingValues(
-                start = 16.dp,
-                top = 16.dp,
-                end = 16.dp,
-                bottom = 100.dp
-            ),
+            contentPadding = appListContentPadding(),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
@@ -203,12 +218,10 @@ fun BookCreationWizard(
                                 coverImageUrl = url
                             },
                             onValidationChange = { tErr, sdErr, fdErr, pcErr ->
-                                println("DEBUG: BookCreationWizard onValidationChange called with pcErr: $pcErr")
                                 titleError = tErr
                                 shortDescriptionError = sdErr
                                 fullDescriptionError = fdErr
                                 pageCountError = pcErr
-                                println("DEBUG: BookCreationWizard pageCountError set to: $pageCountError")
                             }
                         )
                     }
@@ -229,7 +242,7 @@ fun BookCreationWizard(
                                 seriesOrder = so
                             },
                             onCreateSeries = { name: String, description: String ->
-                                authorViewModel.createSeries(
+                                authorSeriesViewModel.createSeries(
                                     CreateSeriesRequest(
                                         name = name,
                                         description = description.ifBlank { null }
@@ -279,22 +292,21 @@ fun BookCreationWizard(
                             reviewDatePickerState = reviewDatePickerState,
                             applicationDeadlineError = applicationDeadlineError,
                             reviewDeadlineError = reviewDeadlineError,
+                            selectionCriteriaError = selectionCriteriaError,
                             onUpdate = { ad, rd, ssm, sc ->
                                 applicationDeadline = ad
                                 reviewDeadline = rd
                                 selectedSelectionMethod = ssm
                                 selectionCriteria = sc
-                                val (appErr, revErr) = validateDeadlines(ad, rd)
-                                applicationDeadlineError = appErr
-                                reviewDeadlineError = revErr
                             },
                             onShowApplicationDatePicker = { showApplicationDatePicker = true },
                             onShowReviewDatePicker = { showReviewDatePicker = true },
                             onDismissApplicationDatePicker = { showApplicationDatePicker = false },
                             onDismissReviewDatePicker = { showReviewDatePicker = false },
-                            onValidationChange = { appErr, revErr ->
+                            onValidationChange = { appErr, revErr, criteriaErr ->
                                 applicationDeadlineError = appErr
                                 reviewDeadlineError = revErr
+                                selectionCriteriaError = criteriaErr
                             }
                         )
                     }
@@ -351,8 +363,9 @@ fun BookCreationWizard(
                     applicationDeadline = applicationDeadline,
                     selectedSelectionMethod = selectedSelectionMethod,
                     bookFileUri = bookFileUri,
-                    titleError = titleError,
                     applicationDeadlineError = applicationDeadlineError,
+                    reviewDeadlineError = reviewDeadlineError,
+                    selectionCriteriaError = selectionCriteriaError,
                     isCreating = isCreating,
                     isUploadingFile = isUploadingFile,
                     coverImageUrl = coverImageUrl,
@@ -389,7 +402,7 @@ fun BookCreationWizard(
                             seriesOrder = seriesOrder.toIntOrNull(),
                             coverImageUrl = coverImageUrl
                         )
-                        authorViewModel.createBook(
+                        authorBookEditorViewModel.createBook(
                             book,
                             bookFileUri,
                             coverImageUri,
@@ -418,7 +431,7 @@ fun BookCreationWizard(
                             seriesOrder = seriesOrder.toIntOrNull(),
                             coverImageUrl = coverImageUrl
                         )
-                        authorViewModel.createBook(
+                        authorBookEditorViewModel.createBook(
                             book,
                             bookFileUri,
                             coverImageUri,
@@ -454,7 +467,7 @@ fun BookCreationWizard(
                 createdBookId = state.data.id
                 if (bookFileUri != null) {
                     isUploadingFile = true
-                    authorViewModel.uploadBookFile(
+                    authorBookEditorViewModel.uploadBookFile(
                         bookId = state.data.id,
                         fileUri = bookFileUri!!,
                         context = context,
@@ -473,7 +486,7 @@ fun BookCreationWizard(
                     if (shouldPublishAfterCreation) {
                         showPublishDialog = true
                     } else {
-                        authorViewModel.clearBookCreationState()
+                        authorBookEditorViewModel.clearBookCreationState()
                         navController.popBackStack()
                     }
                 }
@@ -502,7 +515,7 @@ fun BookCreationWizard(
                     if (shouldPublishAfterCreation) {
                         showPublishDialog = true
                     } else {
-                        authorViewModel.clearBookCreationState()
+                        authorBookEditorViewModel.clearBookCreationState()
                         navController.popBackStack()
                     }
                 }
@@ -525,7 +538,7 @@ fun BookCreationWizard(
         androidx.compose.material3.AlertDialog(
             onDismissRequest = {
                 showPublishDialog = false
-                authorViewModel.clearBookCreationState()
+                authorBookEditorViewModel.clearBookCreationState()
                 navController.popBackStack()
             },
             title = { Text("Book Created Successfully!") },
@@ -541,19 +554,24 @@ fun BookCreationWizard(
                     OutlinedButton(
                         onClick = {
                             showPublishDialog = false
-                            authorViewModel.clearBookCreationState()
+                            authorBookEditorViewModel.clearBookCreationState()
                             navController.popBackStack()
                         },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Keep as Draft")
+                        Text("Keep Draft")
                     }
                     Button(
                         onClick = {
                             showPublishDialog = false
-                            authorViewModel.publishBook(createdBookId!!)
-                            authorViewModel.clearBookCreationState()
-                            navController.popBackStack()
+                            val bookId = createdBookId!!
+                            authorBooksViewModel.publishBook(
+                                bookId = bookId,
+                                onSuccess = {
+                                    authorBookEditorViewModel.clearBookCreationState()
+                                    navController.popBackStack()
+                                }
+                            )
                         },
                         modifier = Modifier.weight(1f)
                     ) {
@@ -564,38 +582,5 @@ fun BookCreationWizard(
         )
     }
 
-    @Composable
-    fun validateTitle(title: String): String? {
-        return when {
-            title.isBlank() -> "Title is required"
-            title.length > 255 -> "Title must be 255 characters or less"
-            else -> null
-        }
-    }
 }
 
-private fun validateDeadlines(
-    applicationDeadline: String?,
-    reviewDeadline: String?
-): Pair<String?, String?> {
-    val appError = if (applicationDeadline.isNullOrBlank()) {
-        "Application deadline is required"
-    } else null
-
-    val revError = if (!reviewDeadline.isNullOrBlank()) {
-        try {
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-            val appDate = dateFormat.parse(applicationDeadline!!)
-            val revDate = dateFormat.parse(reviewDeadline)
-
-            if (appDate != null && revDate != null && revDate.before(appDate)) {
-                "Review deadline must be after application deadline"
-            } else null
-        } catch (e: Exception) {
-            "Invalid date format"
-        }
-    } else {
-        null
-    }
-    return Pair(appError, revError)
-}

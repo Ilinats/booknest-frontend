@@ -86,7 +86,7 @@ fun AuthorTopBar(
 
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
+                        .size(36.dp)
                         .clip(CircleShape)
                         .clickable { menuExpanded = true }
                         .background(MaterialTheme.colorScheme.secondary),
@@ -105,7 +105,8 @@ fun AuthorTopBar(
                         Text(
                             text = initials,
                             color = MaterialTheme.colorScheme.onBackground,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.labelLarge
                         )
                     }
                 }
@@ -145,6 +146,16 @@ fun AuthorTopBar(
                             menuExpanded = false
                             coroutineScope.launch {
                                 sessionManager.logout(authRepository)
+                                onSignOut()
+                            }
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Sign out on all devices", color = Color(0xFFD32F2F)) },
+                        onClick = {
+                            menuExpanded = false
+                            coroutineScope.launch {
+                                sessionManager.logoutAll(authRepository)
                                 onSignOut()
                             }
                         }

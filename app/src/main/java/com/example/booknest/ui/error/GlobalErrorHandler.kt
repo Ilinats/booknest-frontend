@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.example.booknest.data.datasource.extractErrorMessage
 import com.example.booknest.data.error.BNError
+import com.example.booknest.data.error.shouldShowErrorToast
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.ui.components.Toast
 import com.example.booknest.ui.components.ToastMessage
@@ -29,16 +30,18 @@ object GlobalErrorHandler {
     private val errorScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     fun showError(message: String) {
+        if (!shouldShowErrorToast(message = message)) return
         errorScope.launch {
             _errorMessage.emit(message)
         }
     }
 
     fun showError(exception: Throwable) {
+        if (!shouldShowErrorToast(throwable = exception)) return
         errorScope.launch {
             val message = when (exception) {
                 is BNError.Generic -> {
-                    val msg = exception.messageString ?: exception.error ?: "An error occurred"
+                    val msg = exception.message
                     if (msg.startsWith("[") && msg.endsWith("]")) {
                         try {
                             val messages = msg.removeSurrounding("[", "]")
@@ -74,8 +77,9 @@ object GlobalErrorHandler {
     }
 
     fun showErrorFromResponse(errorBody: String?) {
+        val message = extractErrorMessage(errorBody)
+        if (!shouldShowErrorToast(message = message)) return
         errorScope.launch {
-            val message = extractErrorMessage(errorBody)
             _errorMessage.emit(message)
         }
     }

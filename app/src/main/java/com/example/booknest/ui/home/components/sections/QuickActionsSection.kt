@@ -12,7 +12,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.booknest.domain.model.response.ApplicationResponse
 import com.example.booknest.navigation.BottomBarScreen
-import com.example.booknest.navigation.Screen
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.ui.home.components.cards.QuickActionCard
 
 @Composable
@@ -33,6 +33,7 @@ fun QuickActionsSection(
                 title = "Reading",
                 subtitle = "${activeReadingApplications.size} book(s)",
                 icon = Icons.Filled.Book,
+                testTagSuffix = "reading",
                 onClick = {
                     navController.navigate(BottomBarScreen.MyApplications.route)
                 }
@@ -45,6 +46,7 @@ fun QuickActionsSection(
                 title = "Pending",
                 subtitle = "${pendingApplications.size} waiting",
                 icon = Icons.Filled.Book,
+                testTagSuffix = "pending",
                 onClick = {
                     navController.navigate(BottomBarScreen.MyApplications.route)
                 }
@@ -57,6 +59,7 @@ fun QuickActionsSection(
                 title = "Alerts",
                 subtitle = "$unreadCount new",
                 icon = Icons.Filled.Notifications,
+                testTagSuffix = "alerts",
                 onClick = {
                     navController.navigate(Screen.Notifications.route)
                 }

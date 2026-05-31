@@ -11,8 +11,12 @@ import com.example.booknest.domain.model.response.LoginDataResponse
 import com.example.booknest.domain.model.response.RegisterResponse
 import com.example.booknest.domain.model.response.UserResponse
 import com.example.booknest.domain.repository.AuthRepository
+import com.example.booknest.port.AuthTokenAccessor
 
-class BNAuthRepository(private val authDataSource: AuthDataSource) : AuthRepository {
+class BNAuthRepository(
+    private val authDataSource: AuthDataSource,
+    private val authTokens: AuthTokenAccessor,
+) : AuthRepository {
 
     override suspend fun login(body: LoginRequest): Result<LoginDataResponse> {
         return resultBody(authDataSource.login(body))
@@ -24,14 +28,16 @@ class BNAuthRepository(private val authDataSource: AuthDataSource) : AuthReposit
 
     override suspend fun refresh(): Result<AuthTokenResponse> {
         return resultBody(
-            authDataSource.refresh(
-                com.example.booknest.data.session.SessionManager.getRefreshToken()
-            )
+            authDataSource.refresh(authTokens.getRefreshToken())
         )
     }
 
     override suspend fun logout(refreshToken: String): Result<Unit> {
         return authDataSource.logout(refreshToken)
+    }
+
+    override suspend fun logoutAll(): Result<Unit> {
+        return authDataSource.logoutAll()
     }
 
     override suspend fun verifyEmail(code: String): Result<UserResponse> {

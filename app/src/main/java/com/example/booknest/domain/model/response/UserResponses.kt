@@ -297,6 +297,8 @@ data class UserStatsDataResponse(
     val totalBooks: Int? = null,
     val publishedBooks: Int? = null,
     val draftBooks: Int? = null,
+    val inProgressBooks: Int? = null,
+    val completedBooks: Int? = null,
     val totalApplications: Int,
     val approvedApplications: Int,
     val pendingApplications: Int,

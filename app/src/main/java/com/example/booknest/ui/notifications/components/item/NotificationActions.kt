@@ -27,8 +27,6 @@ fun NotificationActions(
     notification: NotificationResponse,
     onAcceptFriendRequest: (String) -> Unit,
     onDeclineFriendRequest: (String) -> Unit,
-    onDeleteClick: () -> Unit,
-    onNotificationClick: () -> Unit,
     isProcessing: Boolean
 ) {
     if (notification.type == NotificationType.FRIEND_REQUEST_RECEIVED && notification.relatedUserId != null) {

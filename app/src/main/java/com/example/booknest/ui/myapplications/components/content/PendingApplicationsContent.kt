@@ -10,7 +10,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.booknest.domain.model.response.ApplicationResponse
 import com.example.booknest.ui.myapplications.components.cards.PendingApplicationCard
-import com.example.booknest.viewmodel.ApplicationViewModel
+import com.example.booknest.viewmodel.applications.ApplicationViewModel
 
 fun LazyListScope.PendingApplicationsContent(
     applications: List<ApplicationResponse>,

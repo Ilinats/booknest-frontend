@@ -8,7 +8,11 @@ import com.example.booknest.domain.model.response.NotificationsListResponse
 import com.example.booknest.domain.model.response.UnreadCountResponse
 
 interface NotificationsDataSource {
-    suspend fun getNotifications(unreadOnly: Boolean?): Result<NotificationsListResponse>
+    suspend fun getNotifications(
+        unreadOnly: Boolean? = null,
+        skip: Int? = null,
+        take: Int? = null,
+    ): Result<NotificationsListResponse>
     suspend fun getUnreadCount(): Result<UnreadCountResponse>
     suspend fun markNotificationAsRead(notificationId: String): Result<NotificationResponse>
     suspend fun markAllNotificationsAsRead(): Result<Unit>

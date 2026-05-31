@@ -24,12 +24,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.booknest.domain.model.response.BookResponse
 
+fun hasActionNeeded(
+    pendingApplications: Int,
+    overdueReviews: Int,
+    booksWithDeadline: List<BookResponse>,
+): Boolean = pendingApplications > 0 ||
+    overdueReviews > 0 ||
+    booksWithDeadline.isNotEmpty()
+
 @Composable
 fun ActionNeededSection(
     pendingApplications: Int,
     overdueReviews: Int,
     booksWithDeadline: List<BookResponse>
 ) {
+    if (!hasActionNeeded(pendingApplications, overdueReviews, booksWithDeadline)) return
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -60,32 +70,24 @@ fun ActionNeededSection(
                 )
             }
 
-            if (pendingApplications > 0 || overdueReviews > 0 || booksWithDeadline.isNotEmpty()) {
-                if (pendingApplications > 0) {
-                    ActionItem(
-                        title = "Pending Applications",
-                        count = pendingApplications
-                    )
-                }
+            if (pendingApplications > 0) {
+                ActionItem(
+                    title = "Pending Applications",
+                    count = pendingApplications
+                )
+            }
 
-                if (overdueReviews > 0) {
-                    ActionItem(
-                        title = "Overdue Reviews",
-                        count = overdueReviews
-                    )
-                }
+            if (overdueReviews > 0) {
+                ActionItem(
+                    title = "Overdue Reviews",
+                    count = overdueReviews
+                )
+            }
 
-                if (booksWithDeadline.isNotEmpty()) {
-                    ActionItem(
-                        title = "Books with Deadline Approaching",
-                        count = booksWithDeadline.size
-                    )
-                }
-            } else {
-                Text(
-                    text = "All caught up! No actions needed.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF757575)
+            if (booksWithDeadline.isNotEmpty()) {
+                ActionItem(
+                    title = "Books with Deadline Approaching",
+                    count = booksWithDeadline.size
                 )
             }
         }

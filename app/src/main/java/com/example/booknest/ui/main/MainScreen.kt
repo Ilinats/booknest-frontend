@@ -1,5 +1,6 @@
 package com.example.booknest.ui.main
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -43,7 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
@@ -54,14 +56,16 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
+import com.example.booknest.R
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.repository.AuthRepository
 import com.example.booknest.navigation.BottomBarScreen
 import com.example.booknest.navigation.HomeNavGraph
-import com.example.booknest.navigation.Screen
+import com.example.booknest.navigation.NotificationLaunchEffect
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.domain.model.response.UserResponse
-import com.example.booknest.viewmodel.MainViewModel
-import com.example.booknest.viewmodel.NotificationViewModel
+import com.example.booknest.viewmodel.main.MainViewModel
+import com.example.booknest.viewmodel.notifications.NotificationViewModel
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
@@ -81,9 +85,6 @@ fun MainScreen(
     val isLoggedIn by sessionManager.isLoggedIn.collectAsState()
 
     androidx.compose.runtime.LaunchedEffect(isLoggedIn) {
-        if (isLoggedIn == false) {
-            kotlinx.coroutines.delay(300)
-        }
         if (isLoggedIn == true && currentUser == null) {
             mainViewModel.fetchCurrentUser()
         }
@@ -91,32 +92,16 @@ fun MainScreen(
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-
-    val context = LocalContext.current
-
-    androidx.compose.runtime.LaunchedEffect(isLoggedIn) {
-        if (isLoggedIn == true && context is android.app.Activity) {
-            val intent = context.intent
-            val notificationId = intent?.getStringExtra("notificationId")
-            val notificationType = intent?.getStringExtra("notificationType")
-            val hasNotificationExtras = notificationId != null || notificationType != null
-
-            if (hasNotificationExtras) {
-                kotlinx.coroutines.delay(500)
-                try {
-                    navController.navigate(Screen.Notifications.route) {
-                        popUpTo(BottomBarScreen.Home.route) { inclusive = false }
-                        launchSingleTop = true
-                    }
-                    println("DEBUG: Navigated to notifications screen from push notification (ID: $notificationId, Type: $notificationType)")
-                    intent.removeExtra("notificationId")
-                    intent.removeExtra("notificationType")
-                } catch (e: Exception) {
-                    println("DEBUG: Error navigating to notifications from push: ${e.message}")
-                }
-            }
-        }
+    val canPopInnerStack = navController.previousBackStackEntry != null
+    BackHandler(enabled = !canPopInnerStack) {
+        // Consume system back at tab root so the outer graph never reveals login/landing.
     }
+
+    NotificationLaunchEffect(
+        navController = navController,
+        isLoggedIn = isLoggedIn,
+        popUpToRoute = BottomBarScreen.Home.route,
+    )
 
     androidx.compose.runtime.LaunchedEffect(isLoggedIn, currentRoute) {
         if (isLoggedIn == true && currentRoute != null) {
@@ -144,6 +129,7 @@ fun MainScreen(
             (currentRoute != null && currentRoute.startsWith("browse/"))
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             if (shouldShowBars) {
                 MainTopBar(
@@ -179,8 +165,9 @@ fun MainScreen(
     ) { paddingValues ->
         HomeNavGraph(
             navController = navController,
-            sessionManager = sessionManager,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
         )
     }
 }
@@ -223,10 +210,15 @@ fun RowScope.AddItem(
     val isSelected = currentDestination?.hierarchy?.any {
         it.route == screen.route
     } == true
-    
+
     NavigationBarItem(
         label = { Text(text = screen.title) },
-        icon = { Icon(imageVector = screen.icon, contentDescription = "Navigation Icon") },
+        icon = {
+            Icon(
+                imageVector = screen.icon,
+                contentDescription = screen.title
+            )
+        },
         selected = isSelected,
         onClick = {
             navController.navigate(screen.route) {
@@ -258,6 +250,9 @@ private fun MainTopBar(
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+    val cdNotifications = stringResource(R.string.cd_notifications)
+    val cdFriends = stringResource(R.string.cd_friends)
+    val cdProfileMenu = stringResource(R.string.cd_profile_menu)
 
     Surface(
         tonalElevation = 2.dp,
@@ -295,23 +290,33 @@ private fun MainTopBar(
                         }
                     }
                 ) {
-                    IconButton(onClick = onNotificationsClick) {
+                    IconButton(
+                        onClick = onNotificationsClick,
+                        modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                    ) {
                         Icon(
                             imageVector = Icons.Outlined.Notifications,
-                            contentDescription = "Notifications"
+                            contentDescription = cdNotifications
                         )
                     }
                 }
 
-                IconButton(onClick = onFriendsClick) {
+                IconButton(
+                    onClick = onFriendsClick,
+                    modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                ) {
                     Icon(
                         imageVector = Icons.Outlined.Group,
-                        contentDescription = "Friends"
+                        contentDescription = cdFriends
                     )
                 }
 
-                Box {
-                    ProfileAvatar(user = currentUser, onClick = { menuExpanded = true })
+                Box(modifier = Modifier.size(36.dp)) {
+                    ProfileAvatar(
+                        user = currentUser,
+                        contentDescription = cdProfileMenu,
+                        onClick = { menuExpanded = true }
+                    )
                     DropdownMenu(
                         expanded = menuExpanded,
                         onDismissRequest = { menuExpanded = false },
@@ -355,6 +360,21 @@ private fun MainTopBar(
                                 }
                             }
                         )
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    "Sign out on all devices",
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            },
+                            onClick = {
+                                menuExpanded = false
+                                coroutineScope.launch {
+                                    sessionManager.logoutAll(authRepository)
+                                    onSignOut()
+                                }
+                            }
+                        )
                     }
                 }
             }
@@ -363,7 +383,11 @@ private fun MainTopBar(
 }
 
 @Composable
-private fun ProfileAvatar(user: UserResponse?, onClick: () -> Unit) {
+private fun ProfileAvatar(
+    user: UserResponse?,
+    contentDescription: String,
+    onClick: () -> Unit
+) {
     val placeholderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
     val initials = remember(user) {
         val source = when {
@@ -376,18 +400,17 @@ private fun ProfileAvatar(user: UserResponse?, onClick: () -> Unit) {
 
     Box(
         modifier = Modifier
-            .size(40.dp)
+            .fillMaxSize()
             .clip(CircleShape)
             .background(placeholderColor)
-            .clickable { onClick() }
-            .padding(2.dp),
+            .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         val avatarUrl = user?.profilePictureUrl ?: user?.avatarUrl
         if (!avatarUrl.isNullOrEmpty()) {
             AsyncImage(
                 model = avatarUrl,
-                contentDescription = "Profile",
+                contentDescription = contentDescription,
                 modifier = Modifier
                     .fillMaxSize()
                     .clip(CircleShape),
@@ -396,15 +419,16 @@ private fun ProfileAvatar(user: UserResponse?, onClick: () -> Unit) {
         } else {
             Box(
                 modifier = Modifier
+                    .fillMaxSize()
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary)
-                    .matchParentSize(),
+                    .background(MaterialTheme.colorScheme.primary),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = initials ?: "U",
                     color = MaterialTheme.colorScheme.onPrimary,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.labelLarge
                 )
             }
         }

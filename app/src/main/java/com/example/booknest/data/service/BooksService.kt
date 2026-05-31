@@ -5,16 +5,17 @@ import com.example.booknest.data.constants.PathConstants
 import com.example.booknest.data.constants.QueryConstants
 import com.example.booknest.domain.model.request.CreateBookRequest
 import com.example.booknest.domain.model.request.UpdateBookRequest
+import com.example.booknest.domain.model.response.BookLeakFingerprintResponse
 import com.example.booknest.domain.model.response.BookResponse
 import com.example.booknest.domain.model.response.BookStatsResponse
 import com.example.booknest.domain.model.response.DetailedBookAnalyticsResponse
 import com.example.booknest.domain.model.response.AuthorAnalyticsResponse
 import com.example.booknest.domain.model.response.RecommendedBookResponse
 import com.example.booknest.domain.model.response.UploadBookFileResponse
-import com.example.booknest.domain.model.response.DownloadBookResponse
 import com.example.booknest.domain.model.response.PaginatedResponse
 import com.example.booknest.domain.model.response.ReviewResponse
 import okhttp3.MultipartBody
+import okhttp3.ResponseBody
 import okhttp3.RequestBody
 import retrofit2.Response
 import retrofit2.http.Body
@@ -27,43 +28,31 @@ import retrofit2.http.PUT
 import retrofit2.http.Part
 import retrofit2.http.Path
 import retrofit2.http.Query
+import retrofit2.http.Streaming
 
 interface BooksService {
     @GET(Books.LIST)
     suspend fun browseBooks(
+        @Query(QueryConstants.PAGE) page: Int? = null,
+        @Query(QueryConstants.LIMIT) limit: Int? = null,
         @Query(QueryConstants.SEARCH) search: String? = null,
-        @Query(QueryConstants.GENRES) genres: List<Int>? = null,
-        @Query(QueryConstants.TITLE) title: String? = null,
-        @Query(QueryConstants.AUTHOR_NAME) authorName: String? = null,
-        @Query(QueryConstants.AUTHOR_ID) authorId: String? = null,
-        @Query(QueryConstants.SERIES_NAME) seriesName: String? = null,
-        @Query(QueryConstants.SERIES_ID) seriesId: String? = null,
-        @Query(QueryConstants.AGE_RATING) ageRating: String? = null,
-        @Query(QueryConstants.DISTRIBUTION_TYPE) distributionType: String? = null,
-        @Query(QueryConstants.PUBLISHED_FROM) publishedFrom: String? = null,
-        @Query(QueryConstants.PUBLISHED_TO) publishedTo: String? = null,
-        @Query(QueryConstants.CREATED_FROM) createdFrom: String? = null,
-        @Query(QueryConstants.CREATED_TO) createdTo: String? = null,
-        @Query(QueryConstants.MIN_AVG_RATING) minAvgRating: Double? = null,
-        @Query(QueryConstants.MAX_AVG_RATING) maxAvgRating: Double? = null,
-        @Query(QueryConstants.SKIP) skip: Int? = null,
-        @Query(QueryConstants.TAKE) take: Int? = null,
-        @Query(QueryConstants.STATUS) status: String? = null,
-        @Query(QueryConstants.APPLICATION_STATUS) applicationStatus: String? = null,
-        @Query(QueryConstants.DEADLINE_FILTER) deadlineFilter: String? = null,
-        @Query(QueryConstants.SORT_BY) sortBy: String? = null
-    ): Response<PaginatedResponse<RecommendedBookResponse>>
-
-    @GET(Books.SEARCH)
-    suspend fun searchBooks(
-        @Query(QueryConstants.QUERY) query: String,
-        @Query(QueryConstants.SKIP) skip: Int?,
-        @Query(QueryConstants.TAKE) take: Int?
+        @Query(QueryConstants.SORT_BY) sortBy: String? = null,
+        @Query("filter.bookGenres.genreId") filterBookGenresGenreId: String? = null,
+        @Query("filter.ageRating") filterAgeRating: String? = null,
+        @Query("filter.distributionType") filterDistributionType: String? = null,
+        @Query("filter.averageRating") filterAverageRating: String? = null,
+        @Query("filter.availableCopies") filterAvailableCopies: String? = null,
+        @Query("filter.applicationDeadline") filterApplicationDeadline: String? = null,
+        @Query("filter.authorId") filterAuthorId: String? = null,
+        @Query("filter.seriesId") filterSeriesId: String? = null,
+        @Query("filter.publishedAt") filterPublishedAt: String? = null,
+        @Query("filter.status") filterStatus: String? = null,
     ): Response<PaginatedResponse<RecommendedBookResponse>>
 
     @GET(Books.RECOMMENDED)
     suspend fun getRecommendedBooks(
-        @Query(QueryConstants.TAKE) take: Int?
+        @Query("page") page: Int? = 1,
+        @Query(QueryConstants.LIMIT) limit: Int? = null,
     ): Response<PaginatedResponse<RecommendedBookResponse>>
 
     @GET(Books.BY_ID)
@@ -92,7 +81,10 @@ interface BooksService {
     ): Response<BookResponse>
 
     @GET(Books.MY_BOOKS)
-    suspend fun getMyBooks(): Response<List<BookResponse>>
+    suspend fun getMyBooks(
+        @Query(QueryConstants.PAGE) page: Int? = 1,
+        @Query(QueryConstants.LIMIT) limit: Int? = 100,
+    ): Response<PaginatedResponse<BookResponse>>
 
     @PATCH(Books.BY_ID)
     suspend fun updateBook(
@@ -144,7 +136,7 @@ interface BooksService {
     @POST(Books.COVER)
     suspend fun uploadBookCoverImage(
         @Path(PathConstants.BOOK_ID) bookId: String,
-        @Part file: MultipartBody.Part
+        @Part cover: MultipartBody.Part,
     ): Response<com.example.booknest.domain.model.response.UploadBookCoverResponse>
 
     @DELETE(Books.DELETE_COVER)
@@ -152,21 +144,29 @@ interface BooksService {
         @Path(PathConstants.BOOK_ID) bookId: String
     ): Response<BookResponse>
 
+    @Streaming
     @GET(Books.DOWNLOAD)
-    suspend fun getBookDownloadUrl(
+    suspend fun downloadBook(
         @Path(PathConstants.BOOK_ID) bookId: String
-    ): Response<DownloadBookResponse>
+    ): Response<ResponseBody>
+
+    @Multipart
+    @POST(Books.LEAK_FINGERPRINT)
+    suspend fun decodeLeakFingerprint(
+        @Path(PathConstants.BOOK_ID) bookId: String,
+        @Part file: MultipartBody.Part
+    ): Response<BookLeakFingerprintResponse>
 
     @GET(Books.ALL_REVIEWS)
     suspend fun getBookAllReviews(
         @Path(PathConstants.BOOK_ID) bookId: String,
-        @Query("skip") skip: Int? = null,
-        @Query("take") take: Int? = null
+        @Query(QueryConstants.SKIP) skip: Int? = null,
+        @Query(QueryConstants.TAKE) take: Int? = null,
     ): Response<PaginatedResponse<ReviewResponse>>
 
     @GET(Books.TRENDING)
     suspend fun getTrendingBooks(
-        @Query(QueryConstants.LIMIT) limit: Int? = null
+        @Query(QueryConstants.LIMIT) limit: Int? = null,
     ): Response<List<com.example.booknest.domain.model.response.TrendingBookResponse>>
 }
 

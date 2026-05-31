@@ -9,6 +9,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.booknest.domain.model.response.ApplicationResponse
+import com.example.booknest.viewmodel.applications.statusForDisplay
+
+@Composable
+fun ApplicationStatusBadge(application: ApplicationResponse) {
+    StatusBadge(status = application.statusForDisplay())
+}
 
 @Composable
 fun StatusBadge(status: String?) {

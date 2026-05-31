@@ -38,6 +38,9 @@ interface AuthService {
     @POST(Auth.LOGOUT)
     suspend fun logout(@Body body: RefreshTokenRequest): Response<MessageResponse>
 
+    @POST(Auth.LOGOUT_ALL)
+    suspend fun logoutAll(): Response<MessageResponse>
+
     @POST(Auth.VERIFY_EMAIL)
     suspend fun verifyEmail(@Body body: VerifyEmailRequest): Response<VerifyEmailDataResponse>
 

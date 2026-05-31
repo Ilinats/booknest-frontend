@@ -6,7 +6,8 @@ import com.example.booknest.domain.model.response.AuthorAnalyticsResponse
 import com.example.booknest.domain.model.response.BookResponse
 import com.example.booknest.domain.model.response.BookStatsResponse
 import com.example.booknest.domain.model.response.DetailedBookAnalyticsResponse
-import com.example.booknest.domain.model.response.DownloadBookResponse
+import com.example.booknest.domain.model.BookDownloadPayload
+import com.example.booknest.domain.model.response.BookLeakFingerprintResponse
 import com.example.booknest.domain.model.response.RecommendedBookResponse
 import com.example.booknest.domain.model.response.ReviewResponse
 import com.example.booknest.domain.model.response.TrendingBookResponse
@@ -30,8 +31,8 @@ interface BooksDataSource {
         createdTo: String? = null,
         minAvgRating: Double? = null,
         maxAvgRating: Double? = null,
-        skip: Int? = null,
-        take: Int? = null,
+        page: Int? = null,
+        limit: Int? = null,
         status: String? = null,
         applicationStatus: String? = null,
         deadlineFilter: String? = null,
@@ -40,11 +41,11 @@ interface BooksDataSource {
 
     suspend fun searchBooks(
         query: String,
-        skip: Int?,
-        take: Int?
+        page: Int?,
+        limit: Int?
     ): Result<List<RecommendedBookResponse>>
 
-    suspend fun getRecommendedBooks(take: Int?): Result<List<RecommendedBookResponse>>
+    suspend fun getRecommendedBooks(limit: Int?, page: Int? = 1): Result<List<RecommendedBookResponse>>
     suspend fun getTrendingBooks(limit: Int? = null): Result<List<com.example.booknest.domain.model.response.TrendingBookResponse>>
     suspend fun getBookDetails(bookId: String): Result<BookResponse>
     suspend fun createBook(
@@ -68,11 +69,15 @@ interface BooksDataSource {
 
     suspend fun uploadBookCoverImage(bookId: String, file: MultipartBody.Part): Result<BookResponse>
     suspend fun removeBookCoverImage(bookId: String): Result<BookResponse>
-    suspend fun getBookDownloadUrl(bookId: String): Result<DownloadBookResponse>
+    suspend fun getBookDownload(bookId: String): Result<BookDownloadPayload>
+    suspend fun decodeLeakFingerprint(
+        bookId: String,
+        file: MultipartBody.Part
+    ): Result<BookLeakFingerprintResponse>
     suspend fun getBookAllReviews(
         bookId: String,
-        skip: Int?,
-        take: Int?
+        page: Int?,
+        limit: Int?
     ): Result<List<ReviewResponse>>
 }
 

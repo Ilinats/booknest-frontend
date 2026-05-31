@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -19,6 +20,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 
 @Composable
 fun CoverImagePicker(
@@ -27,13 +32,21 @@ fun CoverImagePicker(
     onImageSelected: (Uri?, String?) -> Unit
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var isUploading by remember { mutableStateOf(false) }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let {
-            onImageSelected(it, null)
+        uri?.let { selected ->
+            isUploading = true
+            scope.launch {
+                val cachedUri = withContext(Dispatchers.IO) {
+                    copyCoverImageToCache(context, selected)
+                }
+                isUploading = false
+                onImageSelected(cachedUri ?: selected, null)
+            }
         }
     }
 
@@ -150,5 +163,25 @@ fun CoverImagePicker(
                 }
             }
         }
+    }
+}
+
+/** Copy picker URI to app cache so cover upload still works after wizard steps / process recreation. */
+private fun copyCoverImageToCache(context: android.content.Context, uri: Uri): Uri? {
+    return try {
+        val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
+        val extension = when {
+            mimeType.contains("png", ignoreCase = true) -> "png"
+            mimeType.contains("gif", ignoreCase = true) -> "gif"
+            mimeType.contains("webp", ignoreCase = true) -> "webp"
+            else -> "jpg"
+        }
+        val dest = File(context.cacheDir, "book_cover_pick_${System.currentTimeMillis()}.$extension")
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            dest.outputStream().use { output -> input.copyTo(output) }
+        } ?: return null
+        Uri.fromFile(dest)
+    } catch (_: Exception) {
+        null
     }
 }

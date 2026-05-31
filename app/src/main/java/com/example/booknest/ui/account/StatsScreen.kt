@@ -13,10 +13,10 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.ui.account.components.stats.StatsContent
-import com.example.booknest.viewmodel.ProfileViewModel
+import com.example.booknest.viewmodel.profile.ProfileStatsViewModel
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
-import com.example.booknest.ui.state.UiState
+import com.example.booknest.presentation.common.UiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -24,17 +24,17 @@ fun StatsScreen(
     navController: NavController,
     sessionManager: SessionManager = koinInject(),
     authorId: String? = null,
-    profileViewModel: ProfileViewModel = getViewModel()
+    profileStatsViewModel: ProfileStatsViewModel = getViewModel()
 ) {
     val currentUser by sessionManager.currentUser.collectAsState()
-    val statsState by profileViewModel.statsState.collectAsState()
-    val currentStats by profileViewModel.currentStats.collectAsState()
+    val statsState by profileStatsViewModel.statsState.collectAsState()
+    val currentStats by profileStatsViewModel.currentStats.collectAsState()
 
     LaunchedEffect(authorId) {
         if (authorId != null) {
-            profileViewModel.loadAuthorStats(authorId)
+            profileStatsViewModel.loadAuthorStats(authorId)
         } else {
-            profileViewModel.loadMyStats()
+            profileStatsViewModel.loadMyStats()
         }
     }
 
@@ -85,9 +85,9 @@ fun StatsScreen(
                         )
                         Button(onClick = {
                             if (authorId != null) {
-                                profileViewModel.loadAuthorStats(authorId)
+                                profileStatsViewModel.loadAuthorStats(authorId)
                             } else {
-                                profileViewModel.loadMyStats()
+                                profileStatsViewModel.loadMyStats()
                             }
                         }) {
                             Text("Retry")

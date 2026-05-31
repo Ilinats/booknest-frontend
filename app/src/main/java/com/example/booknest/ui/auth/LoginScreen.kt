@@ -13,7 +13,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.shadow
+import com.example.booknest.ui.testing.UiTestTags
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -27,11 +29,11 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.navigation.NavController
 import com.example.booknest.data.session.SessionManager
-import com.example.booknest.navigation.Screen
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.ui.auth.components.dialogs.ForgotPasswordDialog
-import com.example.booknest.navigation.NavigationEvent
-import com.example.booknest.viewmodel.LoginViewModel
-import com.example.booknest.ui.state.UiState
+import com.example.booknest.presentation.navigation.applyAuthUiEffect
+import com.example.booknest.viewmodel.auth.LoginViewModel
+import com.example.booknest.presentation.common.UiState
 import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,29 +60,8 @@ fun LoginScreen(
     var hasInteracted by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        viewModel.navigationEvent.collectLatest { event ->
-            when (event) {
-                is NavigationEvent.NavigateTo -> {
-                    navController.navigate(event.route) {
-                        event.popUpTo?.let { popUpTo ->
-                            popUpTo(popUpTo) { inclusive = event.inclusive }
-                        }
-                        launchSingleTop = event.launchSingleTop
-                    }
-                }
-                is NavigationEvent.NavigateBack -> {
-                    navController.popBackStack()
-                }
-                is NavigationEvent.PopBackTo -> {
-                    navController.popBackStack(event.route, event.inclusive)
-                }
-                is NavigationEvent.NavigateAndClearStack -> {
-                    navController.navigate(event.route) {
-                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
-                        launchSingleTop = true
-                    }
-                }
-            }
+        viewModel.authUiEffect.collectLatest { effect ->
+            navController.applyAuthUiEffect(effect)
         }
     }
 
@@ -213,7 +194,8 @@ fun LoginScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(60.dp)
-                            .padding(horizontal = 5.dp),
+                            .padding(horizontal = 5.dp)
+                            .testTag(UiTestTags.LOGIN_IDENTIFIER_FIELD),
                         shape = RoundedCornerShape(28.dp),
                         colors = TextFieldDefaults.colors(
                             focusedTextColor = Color.Black,
@@ -256,7 +238,8 @@ fun LoginScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(60.dp)
-                            .padding(horizontal = 5.dp),
+                            .padding(horizontal = 5.dp)
+                            .testTag(UiTestTags.LOGIN_PASSWORD_FIELD),
                         shape = RoundedCornerShape(28.dp),
                         visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         colors = TextFieldDefaults.colors(
@@ -288,6 +271,7 @@ fun LoginScreen(
                     modifier = Modifier
                         .align(Alignment.End)
                         .padding(top = 4.dp)
+                        .testTag(UiTestTags.LOGIN_FORGOT_PASSWORD),
                 ) {
                     Text(
                         "Forgot Password?",
@@ -309,6 +293,7 @@ fun LoginScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp)
+                        .testTag(UiTestTags.LOGIN_SUBMIT_BUTTON)
                         .shadow(
                             elevation = 4.dp,
                             shape = RoundedCornerShape(28.dp)

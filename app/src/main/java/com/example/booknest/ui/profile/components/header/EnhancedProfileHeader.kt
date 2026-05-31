@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.booknest.domain.model.response.UserProfileResponse
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.ui.profile.utils.formatDate
 
 @Composable
@@ -83,7 +84,7 @@ fun EnhancedProfileHeader(
                 }
                 if (isOwnProfile) {
                     IconButton(
-                        onClick = { navController.navigate("profile_edit") },
+                        onClick = { navController.navigate(Screen.ProfileEdit.route) },
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
                             .size(36.dp)
@@ -277,7 +278,7 @@ fun EnhancedProfileHeader(
 
             } else {
                 Button(
-                    onClick = { navController.navigate("profile_edit") },
+                    onClick = { navController.navigate(Screen.ProfileEdit.route) },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(

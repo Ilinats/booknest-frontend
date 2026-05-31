@@ -14,10 +14,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.booknest.domain.validation.BookFormRules
+import com.example.booknest.ui.author.components.bookedit.REVIEW_DEADLINE_MIN_OFFSET_MESSAGE
+import com.example.booknest.ui.author.components.bookedit.validateDeadlines
+import com.example.booknest.ui.author.components.common.bookFormFieldSupportingText
 import com.example.booknest.ui.author.components.common.DatePickerDialog
 import com.example.booknest.ui.author.components.common.SelectionMethod
-import java.text.SimpleDateFormat
-import java.util.*
+import com.example.booknest.utils.BookDateUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,36 +35,20 @@ fun ReviewConfigStep(
     reviewDatePickerState: DatePickerState,
     applicationDeadlineError: String? = null,
     reviewDeadlineError: String? = null,
+    selectionCriteriaError: String? = null,
     onUpdate: (String?, String?, SelectionMethod?, String) -> Unit,
     onShowApplicationDatePicker: () -> Unit,
     onShowReviewDatePicker: () -> Unit,
     onDismissApplicationDatePicker: () -> Unit,
     onDismissReviewDatePicker: () -> Unit,
-    onValidationChange: ((String?, String?) -> Unit)? = null
+    onValidationChange: ((String?, String?, String?) -> Unit)? = null
 ) {
-    val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
-    val inputDateFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
-
     val formattedApplicationDeadline = remember(applicationDeadline) {
-        applicationDeadline?.let {
-            try {
-                val date = inputDateFormat.parse(it)
-                date?.let { dateFormat.format(it) } ?: it
-            } catch (e: Exception) {
-                it
-            }
-        } ?: ""
+        applicationDeadline?.let { BookDateUtils.formatDateOnlyForDisplay(it) } ?: ""
     }
 
     val formattedReviewDeadline = remember(reviewDeadline) {
-        reviewDeadline?.let {
-            try {
-                val date = inputDateFormat.parse(it)
-                date?.let { dateFormat.format(it) } ?: it
-            } catch (e: Exception) {
-                it
-            }
-        } ?: ""
+        reviewDeadline?.let { BookDateUtils.formatDateOnlyForDisplay(it) } ?: ""
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -98,12 +85,10 @@ fun ReviewConfigStep(
                     )
                 }
             } ?: {
-                if (applicationDeadline.isNullOrBlank()) {
-                    Text(
-                        "Application deadline is required",
-                        color = MaterialTheme.colorScheme.error
-                    )
-                } else null
+                Text(
+                    "Must be at least tomorrow",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         )
 
@@ -133,6 +118,11 @@ fun ReviewConfigStep(
                         color = MaterialTheme.colorScheme.error
                     )
                 }
+            } ?: {
+                Text(
+                    REVIEW_DEADLINE_MIN_OFFSET_MESSAGE,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         )
 
@@ -206,18 +196,18 @@ fun ReviewConfigStep(
                     selectedSelectionMethod,
                     it
                 )
+                onValidationChange?.invoke(
+                    applicationDeadlineError,
+                    reviewDeadlineError,
+                    BookFormRules.validateSelectionCriteria(it),
+                )
             },
             label = { Text("Selection Criteria") },
             modifier = Modifier.fillMaxWidth(),
             maxLines = 4,
             placeholder = { Text("Describe what you're looking for in reviewers (optional)") },
-            supportingText = {
-                Text(
-                    text = "Help reviewers understand what you're looking for",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            isError = selectionCriteriaError != null,
+            supportingText = bookFormFieldSupportingText(selectionCriteriaError),
         )
     }
 
@@ -225,30 +215,21 @@ fun ReviewConfigStep(
         DatePickerDialog(
             onDateSelected = { selectedDateMillis: Long? ->
                 selectedDateMillis?.let { millis: Long ->
-                    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                    val selectedDate = Date(millis)
-                    val newDeadline = dateFormat.format(selectedDate)
-
-                    val calendar = Calendar.getInstance()
-                    calendar.set(Calendar.HOUR_OF_DAY, 0)
-                    calendar.set(Calendar.MINUTE, 0)
-                    calendar.set(Calendar.SECOND, 0)
-                    calendar.set(Calendar.MILLISECOND, 0)
-                    val today = calendar.time
-
-                    val selectedCalendar = Calendar.getInstance()
-                    selectedCalendar.time = selectedDate
-                    selectedCalendar.set(Calendar.HOUR_OF_DAY, 0)
-                    selectedCalendar.set(Calendar.MINUTE, 0)
-                    selectedCalendar.set(Calendar.SECOND, 0)
-                    selectedCalendar.set(Calendar.MILLISECOND, 0)
-
-                    if (selectedCalendar.timeInMillis <= calendar.timeInMillis) {
-                        onValidationChange?.invoke("Application deadline must be at least tomorrow", reviewDeadlineError)
+                    val newDeadline = BookDateUtils.pickerMillisToDateOnly(millis)
+                    if (!BookDateUtils.isDateAtLeastTomorrow(newDeadline)) {
+                        onValidationChange?.invoke(
+                            "Application deadline must be at least tomorrow",
+                            reviewDeadlineError,
+                            BookFormRules.validateSelectionCriteria(selectionCriteria),
+                        )
                     } else {
                         onUpdate(newDeadline, reviewDeadline, selectedSelectionMethod, selectionCriteria)
                         val (appErr, revErr) = validateDeadlines(newDeadline, reviewDeadline)
-                        onValidationChange?.invoke(appErr, revErr)
+                        onValidationChange?.invoke(
+                            appErr,
+                            revErr,
+                            BookFormRules.validateSelectionCriteria(selectionCriteria),
+                        )
                     }
                 }
                 onDismissApplicationDatePicker()
@@ -262,11 +243,14 @@ fun ReviewConfigStep(
         DatePickerDialog(
             onDateSelected = { selectedDateMillis: Long? ->
                 selectedDateMillis?.let { millis: Long ->
-                    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                    val newDeadline = dateFormat.format(Date(millis))
+                    val newDeadline = BookDateUtils.pickerMillisToDateOnly(millis)
                     onUpdate(applicationDeadline, newDeadline, selectedSelectionMethod, selectionCriteria)
                     val (appErr, revErr) = validateDeadlines(applicationDeadline, newDeadline)
-                    onValidationChange?.invoke(appErr, revErr)
+                    onValidationChange?.invoke(
+                        appErr,
+                        revErr,
+                        BookFormRules.validateSelectionCriteria(selectionCriteria),
+                    )
                 }
                 onDismissReviewDatePicker()
             },
@@ -276,24 +260,3 @@ fun ReviewConfigStep(
     }
 }
 
-private fun validateDeadlines(applicationDeadline: String?, reviewDeadline: String?): Pair<String?, String?> {
-    val appError = if (applicationDeadline.isNullOrBlank()) {
-        "Application deadline is required"
-    } else null
-
-    val revError = if (!reviewDeadline.isNullOrBlank()) {
-        try {
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-            val appDate = dateFormat.parse(applicationDeadline!!)
-            val revDate = dateFormat.parse(reviewDeadline)
-            
-            if (appDate != null && revDate != null && revDate.before(appDate)) {
-                "Review deadline must be after application deadline"
-            } else null
-        } catch (e: Exception) {
-            "Invalid date format"
-        }
-    } else null
-
-    return Pair(appError, revError)
-}

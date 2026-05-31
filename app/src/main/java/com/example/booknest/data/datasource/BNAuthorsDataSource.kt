@@ -2,33 +2,31 @@ package com.example.booknest.data.datasource
 
 import com.example.booknest.data.service.AuthorsService
 import com.example.booknest.domain.model.response.AuthorFollowResponse
-import com.example.booknest.domain.model.response.AuthorFollowWithStatsResponse
 import com.example.booknest.domain.model.response.RecommendedBookResponse
 
 class BNAuthorsDataSource(private val authorsService: AuthorsService) : AuthorsDataSource {
 
     override suspend fun followAuthor(authorId: String): Result<AuthorFollowResponse> {
-        return requestBody(authorsService.followAuthor(authorId))
+        return runSuspendRequest { authorsService.followAuthor(authorId) }
     }
 
     override suspend fun unfollowAuthor(authorId: String): Result<Unit> {
-        return requestBodyUnit(authorsService.unfollowAuthor(authorId))
+        return runSuspendRequestUnit { authorsService.unfollowAuthor(authorId) }
     }
 
     override suspend fun getFollowedAuthors(): Result<List<AuthorFollowResponse>> {
-        return requestBody(authorsService.getFollowedAuthors())
+        return runSuspendRequest { authorsService.getFollowedAuthors() }
     }
 
     override suspend fun getAuthorFollowers(authorId: String): Result<List<AuthorFollowResponse>> {
-        return requestBody(authorsService.getAuthorFollowers(authorId))
+        return runSuspendRequest { authorsService.getAuthorFollowers(authorId) }
     }
 
     override suspend fun checkIfFollowingAuthor(authorId: String): Result<Map<String, Boolean>> {
-        return requestBody(authorsService.checkIfFollowingAuthor(authorId))
+        return runSuspendRequest { authorsService.checkIfFollowingAuthor(authorId) }
     }
 
     override suspend fun getBooksFromFollowedAuthors(limit: Int?): Result<List<RecommendedBookResponse>> {
-        return requestBody(authorsService.getBooksFromFollowedAuthors(limit))
+        return runSuspendRequest { authorsService.getBooksFromFollowedAuthors(limit) }
     }
 }
-

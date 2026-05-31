@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
@@ -38,6 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import androidx.navigation.NavController
@@ -46,11 +48,11 @@ import com.example.booknest.domain.model.response.ApplicationResponse
 import com.example.booknest.domain.model.response.BookResponse
 import com.example.booknest.domain.model.response.ReaderAddressResponse
 import com.example.booknest.domain.model.response.ReviewResponse
-import com.example.booknest.navigation.Screen
+import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.ui.applications.utils.formatDate
 
 @Composable
-fun ReviewCard(
+fun ApplicationReaderReviewCard(
     application: ApplicationResponse,
     navController: NavController
 ) {
@@ -77,12 +79,14 @@ fun ReviewCard(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable(onClick = onProfileClick)
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable(onClick = onProfileClick)
                 ) {
                     if (application.reader?.profilePictureUrl.isNullOrBlank()) {
                         Box(
@@ -128,9 +132,26 @@ fun ReviewCard(
                 }
 
                 OutlinedButton(
-                    onClick = { showReviewDialog = true }
+                    onClick = { showReviewDialog = true },
+                    modifier = Modifier.widthIn(min = 80.dp)
                 ) {
-                    Text("View Review")
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "View",
+                            style = MaterialTheme.typography.labelMedium,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1
+                        )
+                        Text(
+                            text = "Review",
+                            style = MaterialTheme.typography.labelMedium,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1
+                        )
+                    }
                 }
             }
 

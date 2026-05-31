@@ -49,7 +49,7 @@ fun ReviewsSection(
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 reviews.take(3).forEach { review ->
-                    ReviewCard(review = review)
+                    BookDetailsReviewCard(review = review)
                 }
 
                 if (reviews.size > 3) {

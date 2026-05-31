@@ -1,6 +1,5 @@
 package com.example.booknest.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -21,6 +20,13 @@ private val DarkColorScheme = darkColorScheme(
     tertiaryContainer = LightBlueGray.copy(alpha = 0.3f),
     background = VeryDarkNavy,
     surface = DarkTealSlate,
+    surfaceDim = VeryDarkNavy,
+    surfaceBright = DarkTealSlate,
+    surfaceContainerLowest = VeryDarkNavy,
+    surfaceContainerLow = DarkTealSlate,
+    surfaceContainer = DarkTealSlate,
+    surfaceContainerHigh = DarkTealSlate,
+    surfaceContainerHighest = DarkTealSlate,
     surfaceVariant = DarkTealSlate.copy(alpha = 0.8f),
     onPrimary = Color.White,
     onSecondary = VeryDarkNavy,
@@ -42,6 +48,13 @@ private val LightColorScheme = lightColorScheme(
     tertiaryContainer = LightBlueGray.copy(alpha = 0.3f),
     background = BackgroundWhite,
     surface = BackgroundWhite,
+    surfaceDim = LightGray,
+    surfaceBright = BackgroundWhite,
+    surfaceContainerLowest = LightGray,
+    surfaceContainerLow = LightGray,
+    surfaceContainer = LightGray,
+    surfaceContainerHigh = LightGray,
+    surfaceContainerHighest = LightGray,
     surfaceVariant = LightGray,
     onPrimary = Color.White,
     onSecondary = Color.White,

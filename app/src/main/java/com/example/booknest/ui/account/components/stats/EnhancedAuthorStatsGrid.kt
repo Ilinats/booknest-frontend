@@ -11,20 +11,11 @@ import com.example.booknest.ui.components.stats.StatCard
 
 @Composable
 fun EnhancedAuthorStatsGrid(stats: UserStatsDataResponse) {
-    val approvalRate = if (stats.totalApplications > 0) {
-        (stats.approvedApplications.toDouble() / stats.totalApplications * 100).toInt()
-    } else 0
+    AuthorStatsGridContent(statItems = authorProfileStatItems(stats))
+}
 
-    val statItems = listOf(
-        "Total Books" to (stats.totalBooks ?: 0),
-        "Published Books" to (stats.publishedBooks ?: 0),
-        "Draft Books" to (stats.draftBooks ?: 0),
-        "Total Applications" to stats.totalApplications,
-        "Approval Rate" to approvalRate,
-        "Average Rating" to (stats.averageRating ?: 0.0),
-        "Total Reviews" to (stats.totalReviews ?: 0)
-    )
-
+@Composable
+internal fun AuthorStatsGridContent(statItems: List<Pair<String, Any>>) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -40,15 +31,7 @@ fun EnhancedAuthorStatsGrid(stats: UserStatsDataResponse) {
                     StatCard(
                         title = title,
                         color = MaterialTheme.colorScheme.surface,
-                        value = when {
-                            title == "Average Rating" -> String.format(
-                                "%.1f",
-                                (value as? Number)?.toDouble() ?: 0.0
-                            )
-
-                            title == "Approval Rate" -> "${(value as? Number)?.toInt() ?: 0}%"
-                            else -> value.toString()
-                        },
+                        value = formatAuthorStatValue(title, value),
                         modifier = Modifier
                             .weight(1f)
                             .padding(horizontal = 4.dp)
@@ -59,4 +42,3 @@ fun EnhancedAuthorStatsGrid(stats: UserStatsDataResponse) {
         }
     }
 }
-

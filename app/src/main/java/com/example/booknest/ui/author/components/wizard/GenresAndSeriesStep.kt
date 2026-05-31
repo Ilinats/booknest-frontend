@@ -19,6 +19,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.booknest.domain.model.response.GenreResponse
+import com.example.booknest.domain.validation.BookFormRules
+import com.example.booknest.ui.author.components.common.bookFormFieldSupportingText
 import com.example.booknest.domain.model.response.SeriesResponse
 
 @Composable
@@ -178,7 +180,7 @@ fun GenresAndSeriesStep(
                 onValueChange = { newValue ->
                     if (newValue.all { it.isDigit() }) {
                         onUpdate(selectedGenres, selectedSeries, newValue)
-                        onValidationChange?.invoke(validateSeriesOrder(newValue))
+                        onValidationChange?.invoke(BookFormRules.validateSeriesOrder(newValue))
                     }
                 },
                 label = { Text("Order in Series") },
@@ -186,16 +188,7 @@ fun GenresAndSeriesStep(
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 isError = seriesOrderError != null,
-                supportingText = seriesOrderError?.let {
-                    {
-                        Text(
-                            it,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
-                } ?: {
-                    Text("Optional: Minimum 1")
-                }
+                supportingText = bookFormFieldSupportingText(seriesOrderError),
             )
         }
     }
@@ -211,14 +204,3 @@ fun GenresAndSeriesStep(
     }
 }
 
-private fun validateSeriesOrder(order: String): String? {
-    val trimmed = order.trim()
-    return if (trimmed.isNotBlank()) {
-        trimmed.toIntOrNull()?.let { num ->
-            when {
-                num < 1 -> "Series order must be at least 1"
-                else -> null
-            }
-        }
-    } else null
-}

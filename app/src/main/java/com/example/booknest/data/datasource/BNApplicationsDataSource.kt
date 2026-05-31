@@ -15,75 +15,86 @@ class BNApplicationsDataSource(private val applicationsService: ApplicationsServ
     ApplicationsDataSource {
 
     override suspend fun createApplication(application: CreateApplicationRequest): Result<ApplicationResponse> {
-        return requestBody(applicationsService.createApplication(application))
+        return runSuspendRequest { applicationsService.createApplication(application) }
     }
 
     override suspend fun getMyApplications(): Result<List<ApplicationResponse>> {
-        return requestPaginatedBody(applicationsService.getMyApplications())
+        return runSuspendRequestPaginated { applicationsService.getMyApplications() }
     }
 
     override suspend fun checkApplication(bookId: String): Result<ApplicationCheckResponse> {
-        return requestBody(applicationsService.checkApplication(bookId))
+        return runSuspendRequest { applicationsService.checkApplication(bookId) }
     }
 
     override suspend fun getApplication(applicationId: String): Result<ApplicationResponse> {
-        return requestBody(applicationsService.getApplication(applicationId))
+        return runSuspendRequest { applicationsService.getApplication(applicationId) }
     }
 
     override suspend fun updateApplication(
         applicationId: String,
         application: UpdateApplicationRequest
     ): Result<ApplicationResponse> {
-        return requestBody(applicationsService.updateApplication(applicationId, application))
+        return runSuspendRequest { applicationsService.updateApplication(applicationId, application) }
     }
 
     override suspend fun updateApplicationComplete(
         applicationId: String,
         dto: UpdateApplicationCompleteRequest
     ): Result<ApplicationResponse> {
-        return requestBody(applicationsService.updateApplicationComplete(applicationId, dto))
+        return runSuspendRequest { applicationsService.updateApplicationComplete(applicationId, dto) }
     }
 
     override suspend fun withdrawApplication(applicationId: String): Result<Unit> {
-        return requestBodyUnit(applicationsService.withdrawApplication(applicationId))
+        return runSuspendRequestUnit { applicationsService.withdrawApplication(applicationId) }
     }
 
     override suspend fun markCopyReceived(applicationId: String): Result<ApplicationResponse> {
-        return requestBody(applicationsService.markCopyReceived(applicationId))
+        return runSuspendRequest { applicationsService.markCopyReceived(applicationId) }
     }
 
     override suspend fun updateReadingStatus(
         applicationId: String,
         status: UpdateReadingStatusRequest
     ): Result<ApplicationResponse> {
-        return requestBody(applicationsService.updateReadingStatus(applicationId, status))
+        return runSuspendRequest { applicationsService.updateReadingStatus(applicationId, status) }
     }
 
     override suspend fun getReadingProgress(): Result<List<ApplicationResponse>> {
-        return requestBody(applicationsService.getReadingProgress())
+        return runSuspendRequestPaginated {
+            applicationsService.getMyApplications(page = 1, limit = 100)
+        }.map { list ->
+            list.filter { it.isActiveReadingProgress() }
+        }
+    }
+
+    private fun ApplicationResponse.isActiveReadingProgress(): Boolean {
+        if (!status.equals("approved", ignoreCase = true)) return false
+        if (readingStatus.equals("reviewed", ignoreCase = true)) return false
+        return true
     }
 
     override suspend fun getBookApplications(bookId: String): Result<List<ApplicationResponse>> {
-        return requestPaginatedBody(applicationsService.getBookApplications(bookId))
+        return runSuspendRequestPaginated {
+            applicationsService.getBookApplications(bookId, page = 1, limit = 100)
+        }
     }
 
     override suspend fun bulkActionApplications(
         bookId: String,
         action: BulkActionRequest
     ): Result<BulkActionResponse> {
-        return requestBody(applicationsService.bulkActionApplications(bookId, action))
+        return runSuspendRequest { applicationsService.bulkActionApplications(bookId, action) }
     }
 
     override suspend fun markCopySent(applicationId: String): Result<ApplicationResponse> {
-        return requestBody(applicationsService.markCopySent(applicationId))
+        return runSuspendRequest { applicationsService.markCopySent(applicationId) }
     }
 
     override suspend fun getOverdueReviews(): Result<List<ApplicationResponse>> {
-        return requestBody(applicationsService.getOverdueReviews())
+        return runSuspendRequest { applicationsService.getOverdueReviews() }
     }
 
     override suspend fun runLotterySelection(bookId: String): Result<LotteryResponse> {
-        return requestBody(applicationsService.runLottery(bookId))
+        return runSuspendRequest { applicationsService.runLottery(bookId) }
     }
 }
-

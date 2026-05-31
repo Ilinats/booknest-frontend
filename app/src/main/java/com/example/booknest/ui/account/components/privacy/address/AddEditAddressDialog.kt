@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.booknest.domain.model.response.ReaderAddressResponse
+import com.example.booknest.domain.validation.AddressFormRules
 
 @Composable
 fun AddEditAddressDialog(
@@ -27,15 +28,27 @@ fun AddEditAddressDialog(
     onDismiss: () -> Unit,
     onSave: (String, String, String, String, Boolean) -> Unit
 ) {
-    var streetAddress by remember { mutableStateOf(address?.streetAddress ?: "") }
-    var city by remember { mutableStateOf(address?.city ?: "") }
-    var postalCode by remember { mutableStateOf(address?.postalCode ?: "") }
-    var country by remember { mutableStateOf(address?.country ?: "") }
+    val isNewAddress = address == null
+    var streetAddress by remember {
+        mutableStateOf(address?.streetAddress?.trim().orEmpty())
+    }
+    var city by remember { mutableStateOf(address?.city?.trim().orEmpty()) }
+    var postalCode by remember { mutableStateOf(address?.postalCode?.trim().orEmpty()) }
+    var country by remember {
+        mutableStateOf(
+            address?.country?.trim().orEmpty().ifBlank {
+                if (isNewAddress) AddressFormRules.DEFAULT_COUNTRY else ""
+            }
+        )
+    }
     var isPrimary by remember { mutableStateOf(address?.isPrimary ?: false) }
+    var showErrors by remember { mutableStateOf(false) }
+
+    val formValid = AddressFormRules.isFormValid(streetAddress, city, postalCode, country)
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (address == null) "Add Address" else "Edit Address") },
+        title = { Text(if (isNewAddress) "Add Address" else "Edit Address") },
         containerColor = MaterialTheme.colorScheme.surfaceVariant,
         text = {
             Column(
@@ -43,31 +56,60 @@ fun AddEditAddressDialog(
             ) {
                 OutlinedTextField(
                     value = streetAddress,
-                    onValueChange = { streetAddress = it },
+                    onValueChange = {
+                        if (it.length <= AddressFormRules.STREET_MAX) streetAddress = it
+                    },
                     label = { Text("Street Address *") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
+                    isError = showErrors && AddressFormRules.streetError(streetAddress) != null,
+                    supportingText = {
+                        AddressFormRules.streetError(streetAddress)?.let { Text(it) }
+                    }
                 )
                 OutlinedTextField(
                     value = city,
-                    onValueChange = { city = it },
+                    onValueChange = {
+                        if (it.length <= AddressFormRules.CITY_MAX) city = it
+                    },
                     label = { Text("City *") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
+                    isError = showErrors && AddressFormRules.cityError(city) != null,
+                    supportingText = {
+                        AddressFormRules.cityError(city)?.let { Text(it) }
+                    }
                 )
                 OutlinedTextField(
                     value = postalCode,
-                    onValueChange = { postalCode = it },
+                    onValueChange = {
+                        if (it.length <= AddressFormRules.POSTAL_MAX) postalCode = it
+                    },
                     label = { Text("Postal Code *") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
+                    isError = showErrors && AddressFormRules.postalError(postalCode) != null,
+                    supportingText = {
+                        AddressFormRules.postalError(postalCode)?.let { Text(it) }
+                    }
                 )
                 OutlinedTextField(
                     value = country,
-                    onValueChange = { country = it },
-                    label = { Text("Country") },
+                    onValueChange = {
+                        if (it.length <= AddressFormRules.COUNTRY_MAX) country = it
+                    },
+                    label = { Text("Country *") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
+                    isError = showErrors && AddressFormRules.countryError(country) != null,
+                    supportingText = {
+                        val error = AddressFormRules.countryError(country)
+                        when {
+                            error != null -> Text(error)
+                            isNewAddress && country == AddressFormRules.DEFAULT_COUNTRY ->
+                                Text("Defaults to ${AddressFormRules.DEFAULT_COUNTRY} if unchanged")
+                        }
+                    }
                 )
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -84,11 +126,19 @@ fun AddEditAddressDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    if (streetAddress.isNotBlank() && city.isNotBlank() && postalCode.isNotBlank()) {
-                        onSave(streetAddress, city, postalCode, country, isPrimary)
+                    if (formValid) {
+                        onSave(
+                            streetAddress.trim(),
+                            city.trim(),
+                            postalCode.trim(),
+                            country.trim(),
+                            isPrimary
+                        )
+                    } else {
+                        showErrors = true
                     }
                 },
-                enabled = streetAddress.isNotBlank() && city.isNotBlank() && postalCode.isNotBlank()
+                enabled = formValid
             ) {
                 Text("Save")
             }
@@ -100,4 +150,3 @@ fun AddEditAddressDialog(
         }
     )
 }
-

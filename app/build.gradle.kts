@@ -17,13 +17,9 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "com.example.booknest.BookNestAndroidTestRunner"
     }
 
-    buildFeatures {
-        buildConfig = true
-    }
-    
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -41,8 +37,17 @@ android {
         jvmTarget = "11"
     }
     buildFeatures {
+        buildConfig = true
         compose = true
         viewBinding = true
+    }
+    packaging {
+        resources {
+            pickFirsts += listOf(
+                "META-INF/LICENSE.md",
+                "META-INF/LICENSE-notice.md",
+            )
+        }
     }
 }
 
@@ -50,6 +55,7 @@ dependencies {
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
@@ -70,6 +76,7 @@ dependencies {
     implementation(libs.squareup.okhttp3.loggingInterceptor)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.security.crypto)
     implementation(libs.kotlinx.serialization.json)
     implementation("com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter:1.0.0")
 
@@ -91,13 +98,35 @@ dependencies {
     implementation("com.google.firebase:firebase-messaging")
     implementation(libs.androidx.ui)
     implementation(libs.androidx.compose.foundation)
-    implementation(libs.androidx.compose.testing)
 
     testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.androidx.arch.core.testing)
+    testImplementation(libs.squareup.okhttp3.mockwebserver)
     androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    androidTestImplementation("androidx.compose.ui:ui-test-manifest")
+    androidTestImplementation(libs.mockk.android)
+    androidTestImplementation(libs.androidx.navigation.compose)
+    androidTestImplementation("androidx.navigation:navigation-testing:${libs.versions.androidxNavigation.get()}")
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+}
+
+configurations.configureEach {
+    if (name.contains("androidTest", ignoreCase = true)) {
+        val espresso = libs.versions.espressoCore.get()
+        resolutionStrategy {
+            force(
+                "androidx.test.ext:junit:${libs.versions.junitVersion.get()}",
+                "androidx.test.espresso:espresso-core:$espresso",
+                "androidx.test.espresso:espresso-idling-resource:$espresso",
+                "androidx.test:runner:${libs.versions.testRunner.get()}",
+            )
+        }
+    }
 }

@@ -38,7 +38,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.booknest.domain.model.response.RecommendedBookResponse
-import com.example.booknest.navigation.Screen
+import com.example.booknest.ui.author.components.books.formatDistributionType
+import com.example.booknest.presentation.navigation.Screen
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -175,7 +176,7 @@ fun BookItem(
                                         color = MaterialTheme.colorScheme.surfaceVariant
                                     ) {
                                         Text(
-                                            text = distType.replaceFirstChar { it.uppercase() },
+                                            text = formatDistributionType(distType),
                                             style = MaterialTheme.typography.labelMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.padding(
@@ -369,7 +370,7 @@ fun BookItem(
                                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                             ) {
                                 Text(
-                                    text = distType.replaceFirstChar { it.uppercase() },
+                                    text = formatDistributionType(distType),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.padding(
