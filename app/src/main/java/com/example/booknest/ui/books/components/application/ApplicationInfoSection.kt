@@ -7,17 +7,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
-import androidx.compose.material3.Icon
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -25,7 +21,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -42,7 +37,10 @@ import com.example.booknest.ui.books.utils.isFullyBooked
 import com.example.booknest.viewmodel.profile.AddressViewModel
 import com.example.booknest.viewmodel.applications.ApplicationViewModel
 import com.example.booknest.viewmodel.profile.ProfileViewModel
-import org.koin.androidx.compose.getViewModel
+import org.koin.androidx.compose.koinViewModel
+
+private fun String?.isApplicationStatus(status: String): Boolean =
+    this?.equals(status, ignoreCase = true) == true
 
 @Composable
 fun ApplicationInfoSection(
@@ -50,14 +48,15 @@ fun ApplicationInfoSection(
     userApplication: ApplicationCheckApplicationResponse?,
     onApplyClick: () -> Unit,
     onWithdrawClick: () -> Unit,
+    isApplicationDeadlinePassed: Boolean = false,
     showApplyButton: Boolean,
     showWithdrawButton: Boolean,
     navController: NavController? = null,
     sessionReader: SessionReader? = null,
-    applicationViewModel: ApplicationViewModel = getViewModel()
+    applicationViewModel: ApplicationViewModel = koinViewModel(),
 ) {
-    val profileViewModel: ProfileViewModel = getViewModel()
-    val addressViewModel: AddressViewModel = getViewModel()
+    val profileViewModel: ProfileViewModel = koinViewModel()
+    val addressViewModel: AddressViewModel = koinViewModel()
     val myProfile by profileViewModel.myProfile.collectAsState()
     val addresses by addressViewModel.addresses.collectAsState()
     val currentUser = if (sessionReader != null) {
@@ -68,7 +67,6 @@ fun ApplicationInfoSection(
     }
 
     val requiresPhysicalCopy = book.distributionType?.lowercase() in listOf("physical", "both")
-
     val isEmailVerified = currentUser?.emailVerified == true
 
     LaunchedEffect(requiresPhysicalCopy, profileViewModel) {
@@ -81,13 +79,16 @@ fun ApplicationInfoSection(
     }
 
     val hasAddresses = (myProfile?.addresses?.isNotEmpty() == true) || addresses.isNotEmpty()
+    val applicationStatus = userApplication?.status
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Card(
             modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -117,7 +118,7 @@ fun ApplicationInfoSection(
                 )
 
                 if (book.distributionType != null || book.selectionMethod != null || book.status != null) {
-                    Divider(
+                    HorizontalDivider(
                         modifier = Modifier.padding(vertical = 4.dp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                     )
@@ -183,144 +184,74 @@ fun ApplicationInfoSection(
         }
 
         when {
-            userApplication?.status == "approved" -> {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "✅ Application Approved! Check your books for the copy.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+            applicationStatus.isApplicationStatus("approved") -> {
+                ApplicationApprovedMessageCard()
             }
 
-            userApplication?.status == "rejected" -> {
-                Text(
-                    text = "❌ Application Rejected",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.fillMaxWidth()
-                )
+            applicationStatus.isApplicationStatus("rejected") -> {
+                ApplicationRejectedMessageCard()
             }
 
-            userApplication?.status == "withdrawn" -> {
-                Text(
-                    text = "Application Withdrawn",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.fillMaxWidth()
-                )
+            applicationStatus.isApplicationStatus("withdrawn") -> {
+                ApplicationWithdrawnMessageCard()
             }
 
             book.isFullyBooked() && userApplication == null -> {
-                Text(
-                    text = "Fully booked — no review copies available.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                ApplicationFullyBookedMessageCard()
+            }
+
+            isApplicationDeadlinePassed &&
+                userApplication == null &&
+                !book.isFullyBooked() -> {
+                ApplicationDeadlinePassedMessageCard()
             }
 
             showWithdrawButton -> {
-                OutlinedButton(
-                    onClick = onWithdrawClick,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Withdraw Application")
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ApplicationPendingMessageCard()
+                    OutlinedButton(
+                        onClick = onWithdrawClick,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                    ) {
+                        Text("Withdraw application")
+                    }
                 }
             }
 
             showApplyButton -> {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (!isEmailVerified) {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.errorContainer
+                        if (navController != null) {
+                            EmailVerificationRequiredMessageCard(
+                                onVerifyClick = {
+                                    navController.navigate(
+                                        Screen.EmailVerification.createRoute(currentUser?.email)
+                                    )
+                                },
                             )
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(12.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Filled.Warning,
-                                        contentDescription = "Warning",
-                                        tint = MaterialTheme.colorScheme.onErrorContainer
-                                    )
-                                    Text(
-                                        text = "Email verification required to apply for books. Please verify your email address first.",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onErrorContainer
-                                    )
-                                }
-                                if (navController != null) {
-                                    Button(
-                                        onClick = {
-                                            navController.navigate(
-                                                Screen.EmailVerification.createRoute(
-                                                    currentUser?.email
-                                                )
-                                            )
-                                        },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = MaterialTheme.colorScheme.error
-                                        )
-                                    ) {
-                                        Text("Verify Email")
-                                    }
-                                }
-                            }
+                        } else {
+                            ApplicationStatusMessageCard(
+                                title = "Verify your email",
+                                message = "Email verification is required before you can apply for books.",
+                                variant = ApplicationStatusMessageVariant.Warning,
+                            )
                         }
                     }
 
                     if (requiresPhysicalCopy && !hasAddresses) {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.errorContainer
+                        if (navController != null) {
+                            ShippingAddressRequiredMessageCard(
+                                onAddAddressClick = {
+                                    navController.navigate(Screen.PrivacySettings.route)
+                                },
                             )
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(12.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Filled.Warning,
-                                        contentDescription = "Warning",
-                                        tint = MaterialTheme.colorScheme.onErrorContainer
-                                    )
-                                    Text(
-                                        text = "A shipping address is required to apply for physical copies.",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onErrorContainer
-                                    )
-                                }
-                                if (navController != null) {
-                                    Button(
-                                        onClick = {
-                                            navController.navigate(Screen.PrivacySettings.route)
-                                        },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = MaterialTheme.colorScheme.error
-                                        )
-                                    ) {
-                                        Text("Add Address")
-                                    }
-                                }
-                            }
+                        } else {
+                            ApplicationStatusMessageCard(
+                                title = "Shipping address required",
+                                message = "Add a delivery address in your profile to apply for physical review copies.",
+                                variant = ApplicationStatusMessageVariant.Warning,
+                            )
                         }
                     }
 
@@ -344,12 +275,8 @@ fun ApplicationInfoSection(
                             )
                         } else {
                             Text(
-                                text = if (userApplication?.status == "approved") {
-                                    "Read Now"
-                                } else {
-                                    "Apply"
-                                },
-                                style = MaterialTheme.typography.titleLarge,
+                                text = "Apply for review copy",
+                                style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -359,4 +286,3 @@ fun ApplicationInfoSection(
         }
     }
 }
-
