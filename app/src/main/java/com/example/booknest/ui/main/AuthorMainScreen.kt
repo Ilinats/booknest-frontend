@@ -29,6 +29,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.booknest.data.session.SessionManager
 import com.example.booknest.navigation.AuthorBottomBarScreen
 import com.example.booknest.navigation.AuthorNavGraph
+import com.example.booknest.navigation.NotificationLaunchEffect
 import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.viewmodel.main.MainViewModel
 import org.koin.androidx.compose.getViewModel
@@ -72,6 +73,12 @@ fun AuthorMainScreen(
             mainViewModel.fetchCurrentUser()
         }
     }
+
+    NotificationLaunchEffect(
+        navController = navController,
+        isLoggedIn = isLoggedIn,
+        popUpToRoute = AuthorBottomBarScreen.Home.route,
+    )
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),

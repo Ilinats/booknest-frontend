@@ -1,40 +1,62 @@
 package com.example.booknest.ui.notifications.utils
 
 import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.navigation.NavController
 import com.example.booknest.domain.model.enums.NotificationType
 import com.example.booknest.domain.model.response.NotificationResponse
 import com.example.booknest.navigation.BottomBarScreen
 import com.example.booknest.presentation.navigation.Screen
-import java.time.Instant
-import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
+import java.util.concurrent.TimeUnit
 
-@RequiresApi(Build.VERSION_CODES.O)
 fun formatNotificationTime(createdAt: String): String {
-    return try {
-        val instant = Instant.parse(createdAt)
-        val now = Instant.now()
-        val minutesAgo = ChronoUnit.MINUTES.between(instant, now)
-        val hoursAgo = ChronoUnit.HOURS.between(instant, now)
-        val daysAgo = ChronoUnit.DAYS.between(instant, now)
+    val createdAtMillis = parseCreatedAtMillis(createdAt) ?: return createdAt
+    val now = System.currentTimeMillis()
+    val minutesAgo = TimeUnit.MILLISECONDS.toMinutes(now - createdAtMillis)
+    val hoursAgo = TimeUnit.MILLISECONDS.toHours(now - createdAtMillis)
+    val daysAgo = TimeUnit.MILLISECONDS.toDays(now - createdAtMillis)
 
-        when {
-            minutesAgo < 1 -> "Just now"
-            minutesAgo < 60 -> "$minutesAgo ${if (minutesAgo == 1L) "minute" else "minutes"} ago"
-            hoursAgo < 24 -> "$hoursAgo ${if (hoursAgo == 1L) "hour" else "hours"} ago"
-            daysAgo < 7 -> "$daysAgo ${if (daysAgo == 1L) "day" else "days"} ago"
-            else -> {
-                val formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy")
-                java.time.LocalDateTime.ofInstant(instant, java.time.ZoneId.systemDefault())
-                    .format(formatter)
-            }
-        }
-    } catch (e: Exception) {
-        createdAt
+    return when {
+        minutesAgo < 1 -> "Just now"
+        minutesAgo < 60 -> "$minutesAgo ${if (minutesAgo == 1L) "minute" else "minutes"} ago"
+        hoursAgo < 24 -> "$hoursAgo ${if (hoursAgo == 1L) "hour" else "hours"} ago"
+        daysAgo < 7 -> "$daysAgo ${if (daysAgo == 1L) "day" else "days"} ago"
+        else -> displayDateFormat().format(createdAtMillis)
     }
 }
+
+private fun parseCreatedAtMillis(createdAt: String): Long? {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        try {
+            return java.time.Instant.parse(createdAt).toEpochMilli()
+        } catch (_: Exception) {
+        }
+    }
+    return isoInstantPatterns().firstNotNullOfOrNull { pattern ->
+        try {
+            pattern.parse(createdAt)?.time
+        } catch (_: Exception) {
+            null
+        }
+    }
+}
+
+private fun isoInstantPatterns(): List<SimpleDateFormat> {
+    val utc = TimeZone.getTimeZone("UTC")
+    val patterns = listOf(
+        "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+        "yyyy-MM-dd'T'HH:mm:ss'Z'",
+        "yyyy-MM-dd'T'HH:mm:ss.SSSX",
+    )
+    return patterns.map { pattern ->
+        SimpleDateFormat(pattern, Locale.US).apply { timeZone = utc }
+    }
+}
+
+private fun displayDateFormat(): SimpleDateFormat =
+    SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
 
 fun handleNotificationNavigation(
     navController: NavController,
@@ -78,4 +100,3 @@ fun handleNotificationNavigation(
         }
     }
 }
-

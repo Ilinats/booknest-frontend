@@ -2,9 +2,11 @@ package com.example.booknest.ui.author.components.bookedit
 
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.SelectableDates
+import com.example.booknest.utils.BookDateUtils
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import java.util.TimeZone
 
 private const val MIN_REVIEW_DAYS_AFTER_APPLICATION = 1
 
@@ -34,12 +36,16 @@ private fun validateReviewDeadlineOffset(
         return "Application deadline is required before setting a review deadline"
     }
 
+    val appDateOnly = BookDateUtils.apiDeadlineToDateOnly(applicationDeadline) ?: applicationDeadline
+    val revDateOnly = BookDateUtils.apiDeadlineToDateOnly(reviewDeadline) ?: reviewDeadline
+
     return try {
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).apply {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
             isLenient = false
+            timeZone = TimeZone.getTimeZone("UTC")
         }
-        val appCal = parseDateOnly(dateFormat, applicationDeadline) ?: return "Invalid date format"
-        val revCal = parseDateOnly(dateFormat, reviewDeadline) ?: return "Invalid date format"
+        val appCal = parseDateOnly(dateFormat, appDateOnly) ?: return "Invalid date format"
+        val revCal = parseDateOnly(dateFormat, revDateOnly) ?: return "Invalid date format"
         val minReviewCal = (appCal.clone() as Calendar).apply {
             add(Calendar.DAY_OF_MONTH, MIN_REVIEW_DAYS_AFTER_APPLICATION)
         }
@@ -51,6 +57,18 @@ private fun validateReviewDeadlineOffset(
         }
     } catch (_: Exception) {
         "Invalid date format"
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+fun applicationDeadlineSelectableDates(): SelectableDates {
+    return object : SelectableDates {
+        override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+            val dateOnly = BookDateUtils.pickerMillisToDateOnly(utcTimeMillis)
+            return BookDateUtils.isDateAtLeastTomorrow(dateOnly)
+        }
+
+        override fun isSelectableYear(year: Int): Boolean = true
     }
 }
 
@@ -77,11 +95,13 @@ fun reviewDeadlineSelectableDates(applicationDeadline: String?): SelectableDates
 
 internal fun minReviewDeadlineMillis(applicationDeadline: String?): Long? {
     if (applicationDeadline.isNullOrBlank()) return null
+    val appDateOnly = BookDateUtils.apiDeadlineToDateOnly(applicationDeadline) ?: applicationDeadline
     return try {
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).apply {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
             isLenient = false
+            timeZone = TimeZone.getTimeZone("UTC")
         }
-        val appCal = parseDateOnly(dateFormat, applicationDeadline) ?: return null
+        val appCal = parseDateOnly(dateFormat, appDateOnly) ?: return null
         (appCal.clone() as Calendar).apply {
             add(Calendar.DAY_OF_MONTH, MIN_REVIEW_DAYS_AFTER_APPLICATION)
         }.timeInMillis

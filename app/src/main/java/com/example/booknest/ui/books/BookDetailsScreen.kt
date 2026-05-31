@@ -50,6 +50,7 @@ import com.example.booknest.ui.books.components.details.GenreTagsSection
 import com.example.booknest.ui.books.components.dialogs.ApplicationFormDialog
 import com.example.booknest.ui.books.components.dialogs.WithdrawApplicationDialog
 import com.example.booknest.ui.books.components.reviews.ReviewsSection
+import com.example.booknest.ui.books.utils.isApplicationDeadlinePassed
 import com.example.booknest.ui.books.utils.isFullyBooked
 import com.example.booknest.viewmodel.applications.ApplicationViewModel
 import com.example.booknest.viewmodel.books.BookDetailsViewModel
@@ -237,15 +238,7 @@ fun BookDetailsContent(
     }
 
     val isApplicationDeadlinePassed = remember(book.applicationDeadline) {
-        try {
-            val deadlineFormat =
-                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
-            val deadline = book.applicationDeadline?.let { deadlineFormat.parse(it) }
-            val now = Date()
-            deadline?.before(now) ?: true
-        } catch (e: Exception) {
-            true
-        }
+        isApplicationDeadlinePassed(book.applicationDeadline)
     }
 
     val coverWidth = 130.dp
@@ -442,6 +435,7 @@ fun BookDetailsContent(
                             userApplication = userApplication,
                             onApplyClick = onApplyClick,
                             onWithdrawClick = onWithdrawClick,
+                            isApplicationDeadlinePassed = isApplicationDeadlinePassed,
                             showApplyButton = !isApplicationDeadlinePassed &&
                                 !book.isFullyBooked() &&
                                 (userApplication == null || userApplication.status == "withdrawn") &&

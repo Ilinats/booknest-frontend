@@ -26,7 +26,7 @@ class ApiErrorMessagesTest {
             ApiErrorMessages.forCode("INVALID_CREDENTIALS"),
         )
         assertEquals(
-            "Please sign in to continue.",
+            "Your session expired. Please sign in again.",
             ApiErrorMessages.forCode("MISSING_TOKEN"),
         )
     }

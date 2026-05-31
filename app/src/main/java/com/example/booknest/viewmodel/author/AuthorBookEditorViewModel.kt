@@ -15,6 +15,7 @@ import com.example.booknest.domain.usecase.files.RemoveBookCoverImageUseCase
 import com.example.booknest.domain.usecase.files.UploadBookCoverImageUseCase
 import com.example.booknest.domain.usecase.files.UploadBookFileUseCase
 import com.example.booknest.presentation.common.UiState
+import com.example.booknest.utils.BookDateUtils
 import com.example.booknest.utils.DebugLog
 import com.example.booknest.viewmodel.common.UserFeedback
 import kotlinx.coroutines.CancellationException
@@ -172,7 +173,11 @@ class AuthorBookEditorViewModel(
                     uploadManager.createMultipartBody(file)
                 }
 
-                val bookWithoutCover = book.copy(coverImageUrl = null)
+                val bookWithoutCover = book.copy(
+                    coverImageUrl = null,
+                    applicationDeadline = BookDateUtils.normalizeDeadlineForApi(book.applicationDeadline),
+                    reviewDeadline = book.reviewDeadline?.let { BookDateUtils.normalizeDeadlineForApi(it) },
+                )
                 createBookUseCase(bookWithoutCover, filePart)
                     .onSuccess { createdBook ->
                         val bookWithCover = if (coverImageUri != null) {
@@ -209,7 +214,15 @@ class AuthorBookEditorViewModel(
     fun updateBook(bookId: String, book: UpdateBookRequest) {
         viewModelScope.launch {
             try {
-                updateBookUseCase(bookId, book)
+                val normalized = book.copy(
+                    applicationDeadline = book.applicationDeadline?.let {
+                        BookDateUtils.normalizeDeadlineForApi(it)
+                    },
+                    reviewDeadline = book.reviewDeadline?.let {
+                        BookDateUtils.normalizeDeadlineForApi(it)
+                    },
+                )
+                updateBookUseCase(bookId, normalized)
                     .onSuccess {
                         notifySuccess("Book updated successfully!")
                         catalogRefresher.requestRefresh()

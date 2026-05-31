@@ -64,17 +64,17 @@ class BookApplicationViewModel(
         }
     }
 
-    fun approveApplication(applicationId: String, authorNotes: String? = null) {
+    fun approveApplication(bookId: String, applicationId: String, authorNotes: String? = null) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
                 val request = UpdateApplicationCompleteRequest(status = "approved", authorNotes = authorNotes)
                 val result = updateApplicationCompleteUseCase(applicationId, request)
                 result
-                    .onSuccess {
+                    .onSuccess { updated ->
+                        applyApplicationUpdate(updated)
                         notifySuccess("Application approved!")
-                        val currentBookId = _bookApplications.value.firstOrNull()?.bookId
-                        if (currentBookId != null) loadBookApplications(currentBookId)
+                        loadBookApplications(bookId)
                     }
                     .onFailure { e -> notifyError(e.message ?: "Failed to approve application") }
             } catch (e: Exception) {
@@ -85,17 +85,17 @@ class BookApplicationViewModel(
         }
     }
 
-    fun rejectApplication(applicationId: String, authorNotes: String? = null) {
+    fun rejectApplication(bookId: String, applicationId: String, authorNotes: String? = null) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
                 val request = UpdateApplicationCompleteRequest(status = "rejected", authorNotes = authorNotes)
                 val result = updateApplicationCompleteUseCase(applicationId, request)
                 result
-                    .onSuccess {
+                    .onSuccess { updated ->
+                        applyApplicationUpdate(updated)
                         notifySuccess("Application rejected!")
-                        val currentBookId = _bookApplications.value.firstOrNull()?.bookId
-                        if (currentBookId != null) loadBookApplications(currentBookId)
+                        loadBookApplications(bookId)
                     }
                     .onFailure { e -> notifyError(e.message ?: "Failed to reject application") }
             } catch (e: Exception) {
@@ -106,7 +106,14 @@ class BookApplicationViewModel(
         }
     }
 
+    private fun applyApplicationUpdate(updated: ApplicationResponse) {
+        _bookApplications.value = _bookApplications.value.map { app ->
+            if (app.id == updated.id) updated else app
+        }
+    }
+
     fun bulkActionApplications(
+        bookId: String,
         applicationIds: List<String>,
         action: String,
         authorNotes: String? = null
@@ -114,22 +121,16 @@ class BookApplicationViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val currentBookId = _bookApplications.value.firstOrNull()?.bookId
-                if (currentBookId == null) {
-                    notifyError("Error: Book ID not found")
-                    _isLoading.value = false
-                    return@launch
-                }
                 val request = BulkActionRequest(
                     applicationIds = applicationIds,
                     action = action,
                     authorNotes = authorNotes
                 )
-                val result = bulkActionApplicationsUseCase(currentBookId, request)
+                val result = bulkActionApplicationsUseCase(bookId, request)
                 result
                     .onSuccess {
                         notifySuccess("Bulk action completed!")
-                        loadBookApplications(currentBookId)
+                        loadBookApplications(bookId)
                     }
                     .onFailure { e -> notifyError(e.message ?: "Failed to perform bulk action") }
             } catch (e: Exception) {
@@ -140,16 +141,16 @@ class BookApplicationViewModel(
         }
     }
 
-    fun markCopySent(applicationId: String) {
+    fun markCopySent(bookId: String, applicationId: String) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
                 val result = markCopySentUseCase(applicationId)
                 result
-                    .onSuccess {
+                    .onSuccess { updated ->
+                        applyApplicationUpdate(updated)
                         notifySuccess("Copy marked as sent!")
-                        val currentBookId = _bookApplications.value.firstOrNull()?.bookId
-                        if (currentBookId != null) loadBookApplications(currentBookId)
+                        loadBookApplications(bookId)
                     }
                     .onFailure { e -> notifyError(e.message ?: "Failed to mark copy as sent") }
             } catch (e: Exception) {

@@ -9,8 +9,11 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.example.booknest.MainActivity
 import com.example.booknest.R
+import com.example.booknest.navigation.EXTRA_APPLICATION_ID
+import com.example.booknest.navigation.EXTRA_BOOK_ID
 import com.example.booknest.navigation.EXTRA_NOTIFICATION_ID
 import com.example.booknest.navigation.EXTRA_NOTIFICATION_TYPE
+import com.example.booknest.navigation.EXTRA_RELATED_USER_ID
 import com.example.booknest.utils.DebugLog
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
@@ -59,17 +62,19 @@ class BookNestMessagingService : FirebaseMessagingService() {
         relatedUserId: String?
     ) {
         val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             notificationId?.let { putExtra(EXTRA_NOTIFICATION_ID, it) }
             type?.let { putExtra(EXTRA_NOTIFICATION_TYPE, it) }
-            bookId?.let { putExtra("bookId", it) }
-            applicationId?.let { putExtra("applicationId", it) }
-            relatedUserId?.let { putExtra("relatedUserId", it) }
+            bookId?.let { putExtra(EXTRA_BOOK_ID, it) }
+            applicationId?.let { putExtra(EXTRA_APPLICATION_ID, it) }
+            relatedUserId?.let { putExtra(EXTRA_RELATED_USER_ID, it) }
         }
 
+        val pendingIntentRequestCode = notificationId?.hashCode()
+            ?: (type?.hashCode() ?: System.currentTimeMillis().toInt())
         val pendingIntent = PendingIntent.getActivity(
             this,
-            0,
+            pendingIntentRequestCode,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )

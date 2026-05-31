@@ -41,7 +41,7 @@ object GlobalErrorHandler {
         errorScope.launch {
             val message = when (exception) {
                 is BNError.Generic -> {
-                    val msg = exception.messageString ?: exception.error ?: "An error occurred"
+                    val msg = exception.message
                     if (msg.startsWith("[") && msg.endsWith("]")) {
                         try {
                             val messages = msg.removeSurrounding("[", "]")

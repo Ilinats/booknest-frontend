@@ -10,7 +10,7 @@ class ApplicationDateUtilsTest {
 
     @Test
     fun formatDate_parsesIsoTimestamp() {
-        assertEquals("06/15/2024", formatDate("2024-06-15T10:30:00.000Z"))
+        assertEquals("Jun 15, 2024", formatDate("2024-06-15T23:59:59.999Z"))
     }
 
     @Test
@@ -29,7 +29,8 @@ class ApplicationDateUtilsTest {
         val future = Calendar.getInstance().apply {
             add(Calendar.DAY_OF_YEAR, 10)
         }
-        val iso = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(future.time)
+        val dateOnly = java.text.SimpleDateFormat("yyyy-MM-dd").format(future.time)
+        val iso = com.example.booknest.utils.BookDateUtils.dateOnlyToApiDeadlineEndOfDay(dateOnly)
 
         val status = getApplicationDeadlineStatus(iso)
 

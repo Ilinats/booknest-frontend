@@ -1,7 +1,5 @@
 package com.example.booknest.ui.notifications.components.item
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -30,7 +28,6 @@ import com.example.booknest.domain.model.enums.NotificationType
 import com.example.booknest.domain.model.response.NotificationResponse
 import com.example.booknest.ui.notifications.utils.formatNotificationTime
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun NotificationItem(
     notification: NotificationResponse,
