@@ -29,8 +29,6 @@ import androidx.core.content.ContextCompat
 import androidx.core.util.Consumer
 import androidx.navigation.compose.rememberNavController
 import com.example.booknest.data.session.SessionManager
-import com.example.booknest.navigation.EXTRA_NOTIFICATION_ID
-import com.example.booknest.navigation.EXTRA_NOTIFICATION_TYPE
 import com.example.booknest.navigation.NavGraph
 import com.example.booknest.navigation.readNotificationLaunchExtras
 import com.example.booknest.network.NetworkConnectivityMonitor
@@ -104,7 +102,7 @@ class MainActivity : ComponentActivity() {
 
                 LaunchedEffect(isLoggedIn, pendingNotificationOpen) {
                     if (isLoggedIn == true && pendingNotificationOpen) {
-                        navController.navigate(Screen.Notifications.route) {
+                        navController.navigate(Screen.Main.route) {
                             launchSingleTop = true
                         }
                         pendingNotificationOpen = false
@@ -138,10 +136,8 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                         }
-                        if (newIntent.hasExtra(EXTRA_NOTIFICATION_ID) ||
-                            newIntent.hasExtra(EXTRA_NOTIFICATION_TYPE)
-                        ) {
-                            navController.navigate(Screen.Notifications.route) {
+                        if (readNotificationLaunchExtras(newIntent).hasNotificationDeepLink) {
+                            navController.navigate(Screen.Main.route) {
                                 launchSingleTop = true
                             }
                         }

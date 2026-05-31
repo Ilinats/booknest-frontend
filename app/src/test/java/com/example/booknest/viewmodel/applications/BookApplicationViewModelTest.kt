@@ -1,5 +1,6 @@
 package com.example.booknest.viewmodel.applications
 
+import com.example.booknest.domain.model.response.BulkActionResponse
 import com.example.booknest.domain.usecase.applications.BulkActionApplicationsUseCase
 import com.example.booknest.domain.usecase.applications.GetBookApplicationsUseCase
 import com.example.booknest.domain.usecase.applications.GetOverdueReviewsUseCase
@@ -70,10 +71,11 @@ class BookApplicationViewModelTest {
         val viewModel = createViewModel()
         viewModel.loadBookApplications("book-1")
         advanceUntilIdle()
-        viewModel.approveApplication("a-1")
+        viewModel.approveApplication("book-1", "a-1")
         advanceUntilIdle()
 
         assertEquals("Application approved!", viewModel.successMessage.first())
+        assertEquals("approved", viewModel.bookApplications.first().first().status)
         coVerify(atLeast = 2) { getBookApplicationsUseCase("book-1") }
     }
 
@@ -108,12 +110,18 @@ class BookApplicationViewModelTest {
     }
 
     @Test
-    fun bulkActionApplications_requiresBookId() = runTest(testDispatcher) {
+    fun bulkActionApplications_reloadsBookApplications() = runTest(testDispatcher) {
+        coEvery {
+            bulkActionApplicationsUseCase("book-1", any())
+        } returns Result.success(BulkActionResponse(updated = 1))
+        coEvery { getBookApplicationsUseCase("book-1") } returns Result.success(emptyList())
+
         val viewModel = createViewModel()
-        viewModel.bulkActionApplications(listOf("a-1"), action = "approve")
+        viewModel.bulkActionApplications("book-1", listOf("a-1"), action = "approved")
         advanceUntilIdle()
 
-        assertEquals("Error: Book ID not found", viewModel.error.first())
+        assertEquals("Bulk action completed!", viewModel.successMessage.first())
+        coVerify { bulkActionApplicationsUseCase("book-1", any()) }
     }
 
     @Test

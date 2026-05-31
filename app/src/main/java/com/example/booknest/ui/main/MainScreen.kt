@@ -46,7 +46,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
@@ -62,8 +61,7 @@ import com.example.booknest.data.session.SessionManager
 import com.example.booknest.domain.repository.AuthRepository
 import com.example.booknest.navigation.BottomBarScreen
 import com.example.booknest.navigation.HomeNavGraph
-import com.example.booknest.navigation.consumeNotificationLaunchExtras
-import com.example.booknest.navigation.readNotificationLaunchExtras
+import com.example.booknest.navigation.NotificationLaunchEffect
 import com.example.booknest.presentation.navigation.Screen
 import com.example.booknest.domain.model.response.UserResponse
 import com.example.booknest.viewmodel.main.MainViewModel
@@ -99,23 +97,11 @@ fun MainScreen(
         // Consume system back at tab root so the outer graph never reveals login/landing.
     }
 
-    val context = LocalContext.current
-
-    androidx.compose.runtime.LaunchedEffect(isLoggedIn) {
-        if (isLoggedIn != true) return@LaunchedEffect
-        val intent = (context as? android.app.Activity)?.intent ?: return@LaunchedEffect
-        val extras = readNotificationLaunchExtras(intent)
-        if (!extras.hasNotificationDeepLink) return@LaunchedEffect
-        kotlinx.coroutines.delay(500)
-        try {
-            navController.navigate(Screen.Notifications.route) {
-                popUpTo(BottomBarScreen.Home.route) { inclusive = false }
-                launchSingleTop = true
-            }
-            intent.consumeNotificationLaunchExtras()
-        } catch (_: Exception) {
-        }
-    }
+    NotificationLaunchEffect(
+        navController = navController,
+        isLoggedIn = isLoggedIn,
+        popUpToRoute = BottomBarScreen.Home.route,
+    )
 
     androidx.compose.runtime.LaunchedEffect(isLoggedIn, currentRoute) {
         if (isLoggedIn == true && currentRoute != null) {

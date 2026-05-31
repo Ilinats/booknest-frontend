@@ -24,6 +24,7 @@ import com.example.booknest.ui.author.MyBooksScreen
 import com.example.booknest.ui.author.SeriesManagementScreen
 import com.example.booknest.ui.books.BookDetailsScreen
 import com.example.booknest.ui.books.SeriesBooksScreen
+import com.example.booknest.ui.notifications.NotificationsScreen
 import com.example.booknest.ui.profile.ProfileEditScreen
 import com.example.booknest.ui.profile.ProfileScreen
 import com.example.booknest.ui.reviews.UserReviewsScreen
@@ -125,6 +126,9 @@ fun AuthorNavGraph(
             val seriesId = backStackEntry.arguments?.getString("seriesId") ?: ""
             val seriesName = backStackEntry.arguments?.getString("seriesName")
             SeriesBooksScreen(navController, seriesId, seriesName)
+        }
+        composable(Screen.Notifications.route) {
+            NotificationsScreen(navController, sessionManager)
         }
         composable(Screen.PrivacySettings.route) {
             PrivacySettingsScreen(navController, sessionManager)

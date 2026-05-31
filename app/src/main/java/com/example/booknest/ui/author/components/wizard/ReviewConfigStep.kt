@@ -20,8 +20,7 @@ import com.example.booknest.ui.author.components.bookedit.validateDeadlines
 import com.example.booknest.ui.author.components.common.bookFormFieldSupportingText
 import com.example.booknest.ui.author.components.common.DatePickerDialog
 import com.example.booknest.ui.author.components.common.SelectionMethod
-import java.text.SimpleDateFormat
-import java.util.*
+import com.example.booknest.utils.BookDateUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,29 +43,12 @@ fun ReviewConfigStep(
     onDismissReviewDatePicker: () -> Unit,
     onValidationChange: ((String?, String?, String?) -> Unit)? = null
 ) {
-    val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
-    val inputDateFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
-
     val formattedApplicationDeadline = remember(applicationDeadline) {
-        applicationDeadline?.let {
-            try {
-                val date = inputDateFormat.parse(it)
-                date?.let { dateFormat.format(it) } ?: it
-            } catch (e: Exception) {
-                it
-            }
-        } ?: ""
+        applicationDeadline?.let { BookDateUtils.formatDateOnlyForDisplay(it) } ?: ""
     }
 
     val formattedReviewDeadline = remember(reviewDeadline) {
-        reviewDeadline?.let {
-            try {
-                val date = inputDateFormat.parse(it)
-                date?.let { dateFormat.format(it) } ?: it
-            } catch (e: Exception) {
-                it
-            }
-        } ?: ""
+        reviewDeadline?.let { BookDateUtils.formatDateOnlyForDisplay(it) } ?: ""
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -233,25 +215,8 @@ fun ReviewConfigStep(
         DatePickerDialog(
             onDateSelected = { selectedDateMillis: Long? ->
                 selectedDateMillis?.let { millis: Long ->
-                    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                    val selectedDate = Date(millis)
-                    val newDeadline = dateFormat.format(selectedDate)
-
-                    val calendar = Calendar.getInstance()
-                    calendar.set(Calendar.HOUR_OF_DAY, 0)
-                    calendar.set(Calendar.MINUTE, 0)
-                    calendar.set(Calendar.SECOND, 0)
-                    calendar.set(Calendar.MILLISECOND, 0)
-                    val today = calendar.time
-
-                    val selectedCalendar = Calendar.getInstance()
-                    selectedCalendar.time = selectedDate
-                    selectedCalendar.set(Calendar.HOUR_OF_DAY, 0)
-                    selectedCalendar.set(Calendar.MINUTE, 0)
-                    selectedCalendar.set(Calendar.SECOND, 0)
-                    selectedCalendar.set(Calendar.MILLISECOND, 0)
-
-                    if (selectedCalendar.timeInMillis <= calendar.timeInMillis) {
+                    val newDeadline = BookDateUtils.pickerMillisToDateOnly(millis)
+                    if (!BookDateUtils.isDateAtLeastTomorrow(newDeadline)) {
                         onValidationChange?.invoke(
                             "Application deadline must be at least tomorrow",
                             reviewDeadlineError,
@@ -278,8 +243,7 @@ fun ReviewConfigStep(
         DatePickerDialog(
             onDateSelected = { selectedDateMillis: Long? ->
                 selectedDateMillis?.let { millis: Long ->
-                    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                    val newDeadline = dateFormat.format(Date(millis))
+                    val newDeadline = BookDateUtils.pickerMillisToDateOnly(millis)
                     onUpdate(applicationDeadline, newDeadline, selectedSelectionMethod, selectionCriteria)
                     val (appErr, revErr) = validateDeadlines(applicationDeadline, newDeadline)
                     onValidationChange?.invoke(

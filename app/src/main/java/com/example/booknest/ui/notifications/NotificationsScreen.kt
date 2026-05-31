@@ -1,7 +1,5 @@
 package com.example.booknest.ui.notifications
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -63,7 +61,6 @@ import com.example.booknest.ui.notifications.components.item.NotificationItem
 import com.example.booknest.ui.notifications.utils.handleNotificationNavigation
 import com.example.booknest.ui.components.BackgroundDecoration
 
-@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationsScreen(

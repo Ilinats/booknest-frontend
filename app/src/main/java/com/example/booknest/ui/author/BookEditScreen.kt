@@ -26,8 +26,10 @@ import com.example.booknest.port.ToastNotifier
 import com.example.booknest.ui.author.components.bookedit.BookEditPublishedWarningCard
 import com.example.booknest.ui.author.components.bookedit.BookEditSaveErrorBanner
 import com.example.booknest.ui.author.components.bookedit.bookEditWizardSteps
+import com.example.booknest.ui.author.components.bookedit.applicationDeadlineSelectableDates
 import com.example.booknest.ui.author.components.bookedit.reviewDeadlineSelectableDates
 import com.example.booknest.ui.author.components.bookedit.validateDeadlines
+import com.example.booknest.utils.BookDateUtils
 import com.example.booknest.ui.author.components.BookEditNavigation
 import com.example.booknest.ui.author.components.common.AgeRating
 import com.example.booknest.ui.author.components.common.DatePickerDialog
@@ -48,9 +50,6 @@ import com.example.booknest.presentation.common.UiState
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.getViewModel
 import org.koin.compose.koinInject
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -172,18 +171,17 @@ fun BookEditScreen(
     val scope = rememberCoroutineScope()
 
     val applicationDatePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = null
+        initialSelectedDateMillis = null,
+        selectableDates = applicationDeadlineSelectableDates(),
     )
     val reviewDatePickerState = key(applicationDeadline) {
         rememberDatePickerState(
             initialSelectedDateMillis = reviewDeadline?.let {
-                try {
-                    SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(it)?.time
-                } catch (e: Exception) {
-                    null
-                }
+                BookDateUtils.parseDeadlineInstant(
+                    BookDateUtils.dateOnlyToApiDeadlineEndOfDay(it),
+                )?.toEpochMilli()
             },
-            selectableDates = reviewDeadlineSelectableDates(applicationDeadline)
+            selectableDates = reviewDeadlineSelectableDates(applicationDeadline),
         )
     }
 
@@ -227,57 +225,23 @@ fun BookEditScreen(
             totalCopies = book.totalCopies?.toString() ?: "1"
 
             book.applicationDeadline?.let { dateStr ->
-                try {
-                    val isoFormat =
-                        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
-                    val date = isoFormat.parse(dateStr) ?: SimpleDateFormat(
-                        "yyyy-MM-dd",
-                        Locale.getDefault()
-                    ).parse(dateStr)
-                    date?.let {
-                        val formattedDate =
-                            SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(it)
-                        applicationDeadline = formattedDate
-                        applicationDatePickerState.selectedDateMillis = it.time
-                    }
-                } catch (e: Exception) {
-                    try {
-                        val date =
-                            SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(dateStr)
-                        date?.let {
-                            applicationDeadline = dateStr
-                            applicationDatePickerState.selectedDateMillis = it.time
-                        }
-                    } catch (e2: Exception) {
-                        applicationDeadline = dateStr
+                BookDateUtils.apiDeadlineToDateOnly(dateStr)?.let { dateOnly ->
+                    applicationDeadline = dateOnly
+                    BookDateUtils.parseDeadlineInstant(
+                        BookDateUtils.dateOnlyToApiDeadlineEndOfDay(dateOnly),
+                    )?.toEpochMilli()?.let { millis ->
+                        applicationDatePickerState.selectedDateMillis = millis
                     }
                 }
             }
 
             book.reviewDeadline?.let { dateStr ->
-                try {
-                    val isoFormat =
-                        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
-                    val date = isoFormat.parse(dateStr) ?: SimpleDateFormat(
-                        "yyyy-MM-dd",
-                        Locale.getDefault()
-                    ).parse(dateStr)
-                    date?.let {
-                        val formattedDate =
-                            SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(it)
-                        reviewDeadline = formattedDate
-                        reviewDatePickerState.selectedDateMillis = it.time
-                    }
-                } catch (e: Exception) {
-                    try {
-                        val date =
-                            SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(dateStr)
-                        date?.let {
-                            reviewDeadline = dateStr
-                            reviewDatePickerState.selectedDateMillis = it.time
-                        }
-                    } catch (e2: Exception) {
-                        reviewDeadline = dateStr
+                BookDateUtils.apiDeadlineToDateOnly(dateStr)?.let { dateOnly ->
+                    reviewDeadline = dateOnly
+                    BookDateUtils.parseDeadlineInstant(
+                        BookDateUtils.dateOnlyToApiDeadlineEndOfDay(dateOnly),
+                    )?.toEpochMilli()?.let { millis ->
+                        reviewDatePickerState.selectedDateMillis = millis
                     }
                 }
             }
@@ -624,13 +588,16 @@ fun BookEditScreen(
     if (showApplicationDatePicker) {
         DatePickerDialog(
             onDateSelected = { selectedDateMillis ->
-                selectedDateMillis?.let {
-                    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                    val newDeadline = dateFormat.format(Date(it))
-                    applicationDeadline = newDeadline
-                    val (appErr, revErr) = validateDeadlines(newDeadline, reviewDeadline)
-                    applicationDeadlineError = appErr
-                    reviewDeadlineError = revErr
+                selectedDateMillis?.let { millis ->
+                    val newDeadline = BookDateUtils.pickerMillisToDateOnly(millis)
+                    if (!BookDateUtils.isDateAtLeastTomorrow(newDeadline)) {
+                        applicationDeadlineError = "Application deadline must be at least tomorrow"
+                    } else {
+                        applicationDeadline = newDeadline
+                        val (appErr, revErr) = validateDeadlines(newDeadline, reviewDeadline)
+                        applicationDeadlineError = appErr
+                        reviewDeadlineError = revErr
+                    }
                 }
                 showApplicationDatePicker = false
             },
@@ -642,9 +609,8 @@ fun BookEditScreen(
     if (showReviewDatePicker) {
         DatePickerDialog(
             onDateSelected = { selectedDateMillis ->
-                selectedDateMillis?.let {
-                    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                    val newDeadline = dateFormat.format(Date(it))
+                selectedDateMillis?.let { millis ->
+                    val newDeadline = BookDateUtils.pickerMillisToDateOnly(millis)
                     reviewDeadline = newDeadline
                     val (appErr, revErr) = validateDeadlines(applicationDeadline, newDeadline)
                     applicationDeadlineError = appErr

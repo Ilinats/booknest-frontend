@@ -30,7 +30,9 @@ import com.example.booknest.navigation.rememberAuthorBooksViewModel
 import com.example.booknest.viewmodel.author.AuthorBookEditorViewModel
 import com.example.booknest.viewmodel.author.AuthorBooksViewModel
 import com.example.booknest.ui.author.components.bookedit.validateDeadlines
+import com.example.booknest.ui.author.components.bookedit.applicationDeadlineSelectableDates
 import com.example.booknest.ui.author.components.bookedit.reviewDeadlineSelectableDates
+import com.example.booknest.utils.BookDateUtils
 import com.example.booknest.viewmodel.author.AuthorSeriesViewModel
 import com.example.booknest.presentation.common.UiState
 import kotlinx.coroutines.launch
@@ -80,22 +82,19 @@ fun BookCreationWizard(
 
     val applicationDatePickerState = rememberDatePickerState(
         initialSelectedDateMillis = applicationDeadline?.let {
-            try {
-                SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(it)?.time
-            } catch (e: Exception) {
-                null
-            }
+            BookDateUtils.parseDeadlineInstant(
+                BookDateUtils.dateOnlyToApiDeadlineEndOfDay(it),
+            )?.toEpochMilli()
         },
-        initialDisplayedMonthMillis = tomorrowMillis
+        initialDisplayedMonthMillis = tomorrowMillis,
+        selectableDates = applicationDeadlineSelectableDates(),
     )
     val reviewDatePickerState = key(applicationDeadline) {
         rememberDatePickerState(
             initialSelectedDateMillis = reviewDeadline?.let {
-                try {
-                    SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(it)?.time
-                } catch (e: Exception) {
-                    null
-                }
+                BookDateUtils.parseDeadlineInstant(
+                    BookDateUtils.dateOnlyToApiDeadlineEndOfDay(it),
+                )?.toEpochMilli()
             },
             selectableDates = reviewDeadlineSelectableDates(applicationDeadline)
         )

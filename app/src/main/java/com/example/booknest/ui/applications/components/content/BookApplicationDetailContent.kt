@@ -42,6 +42,8 @@ import com.example.booknest.navigation.rememberAuthorBookEditorViewModel
 import com.example.booknest.ui.author.components.LeakFingerprintDecodeSection
 import com.example.booknest.ui.author.components.books.formatBookStatus
 import com.example.booknest.viewmodel.applications.BookApplicationViewModel
+import com.example.booknest.utils.BookDateUtils
+import com.example.booknest.viewmodel.applications.isPending
 import com.example.booknest.viewmodel.books.BookDetailsViewModel
 import com.example.booknest.viewmodel.author.AuthorBookEditorViewModel
 import com.example.booknest.viewmodel.analytics.ReviewViewModel
@@ -86,16 +88,9 @@ fun BookApplicationDetailContent(
     } ?: false
 
     val lotteryDeadlinePassed = book?.applicationDeadline?.let { deadline ->
-        try {
-            val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
-            inputFormat.timeZone = TimeZone.getTimeZone("UTC")
-            val deadlineDate = inputFormat.parse(deadline)
-            deadlineDate?.before(Date()) ?: false
-        } catch (e: Exception) {
-            false
-        }
+        BookDateUtils.isApplicationDeadlinePassed(deadline)
     } ?: false
-    val lotteryHasPending = bookApplications.any { it.status == "pending" }
+    val lotteryHasPending = bookApplications.any { it.isPending() }
     val lotteryHasProcessed = bookApplications.any { it.status in listOf("approved", "rejected") }
     var showLotteryDialog by remember { mutableStateOf(false) }
 
@@ -133,10 +128,10 @@ fun BookApplicationDetailContent(
 
     val applicationStats = remember(applicationsWithReviews) {
         val total = applicationsWithReviews.size
-        val pending = applicationsWithReviews.count { it.status == "pending" }
-        val approved = applicationsWithReviews.count { it.status == "approved" }
-        val rejected = applicationsWithReviews.count { it.status == "rejected" }
-        val withdrawn = applicationsWithReviews.count { it.status == "withdrawn" }
+        val pending = applicationsWithReviews.count { it.isPending() }
+        val approved = applicationsWithReviews.count { it.status.equals("approved", ignoreCase = true) }
+        val rejected = applicationsWithReviews.count { it.status.equals("rejected", ignoreCase = true) }
+        val withdrawn = applicationsWithReviews.count { it.status.equals("withdrawn", ignoreCase = true) }
         ApplicationStats(
             total = total,
             pending = pending,
@@ -156,9 +151,9 @@ fun BookApplicationDetailContent(
         remember(selectedTab, applicationsWithReviews, sortOption) {
             val filtered = when (selectedTab) {
                 0 -> applicationsWithReviews
-                1 -> applicationsWithReviews.filter { it.status == "pending" }
-                2 -> applicationsWithReviews.filter { it.status == "approved" }
-                3 -> applicationsWithReviews.filter { it.status == "rejected" }
+                1 -> applicationsWithReviews.filter { it.isPending() }
+                2 -> applicationsWithReviews.filter { it.status.equals("approved", ignoreCase = true) }
+                3 -> applicationsWithReviews.filter { it.status.equals("rejected", ignoreCase = true) }
                 else -> applicationsWithReviews
             }
 
@@ -343,6 +338,7 @@ fun BookApplicationDetailContent(
                         availableSlots = availableSlots,
                         onApproveSelected = {
                             bookApplicationViewModel.bulkActionApplications(
+                                bookId,
                                 selectedApplicationIds.toList(),
                                 "approved"
                             )
@@ -351,6 +347,7 @@ fun BookApplicationDetailContent(
                         },
                         onRejectSelected = {
                             bookApplicationViewModel.bulkActionApplications(
+                                bookId,
                                 selectedApplicationIds.toList(),
                                 "rejected"
                             )
@@ -359,7 +356,7 @@ fun BookApplicationDetailContent(
                         },
                         onMarkSentSelected = {
                             selectedApplicationIds.forEach { id ->
-                                bookApplicationViewModel.markCopySent(id)
+                                bookApplicationViewModel.markCopySent(bookId, id)
                             }
                             selectedApplicationIds = emptySet()
                             isSelectionMode = false
@@ -433,12 +430,14 @@ fun BookApplicationDetailContent(
                                     navController = navController,
                                     onApprove = { app, notes ->
                                         bookApplicationViewModel.approveApplication(
+                                            bookId,
                                             app.id,
                                             notes
                                         )
                                     },
                                     onReject = { app, notes ->
                                         bookApplicationViewModel.rejectApplication(
+                                            bookId,
                                             app.id,
                                             notes
                                         )
@@ -492,12 +491,14 @@ fun BookApplicationDetailContent(
                                     navController = navController,
                                     onApprove = { app, notes ->
                                         bookApplicationViewModel.approveApplication(
+                                            bookId,
                                             app.id,
                                             notes
                                         )
                                     },
                                     onReject = { app, notes ->
                                         bookApplicationViewModel.rejectApplication(
+                                            bookId,
                                             app.id,
                                             notes
                                         )
@@ -549,7 +550,9 @@ fun BookApplicationDetailContent(
                                             }
                                     },
                                     navController = navController,
-                                    onMarkSent = { app -> bookApplicationViewModel.markCopySent(app.id) }
+                                    onMarkSent = { app ->
+                                        bookApplicationViewModel.markCopySent(bookId, app.id)
+                                    }
                                 )
                             }
                         }

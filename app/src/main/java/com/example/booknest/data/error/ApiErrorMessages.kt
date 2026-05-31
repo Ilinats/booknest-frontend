@@ -41,11 +41,10 @@ object ApiErrorMessages {
         put("READER_ACCESS_REQUIRED", "This action is only available to readers.")
 
         // AuthGuardErrorCode
-        put("MISSING_TOKEN", "Please sign in to continue.")
+        put("MISSING_TOKEN", "Your session expired. Please sign in again.")
         put("INVALID_TOKEN", "Your session expired. Please sign in again.")
 
-        // AuthErrorCode
-        put("UNAUTHORIZED", "Please sign in to continue.")
+        // AuthErrorCode — omit generic UNAUTHORIZED; Nest often sends it with a specific code in message
         put("INVALID_OWNERSHIP_RESOURCE_TYPE", "Invalid resource.")
 
         // AuthorFollowErrorCode
@@ -159,7 +158,7 @@ object ApiErrorMessages {
             return trimmedMessage
         }
 
-        forCode(errorCode)?.let { return it }
+        // Prefer the specific code in message (e.g. INVALID_CREDENTIALS) over the HTTP wrapper (e.g. UNAUTHORIZED).
         trimmedMessage?.let { forCode(it) }?.let { return it }
         forCode(errorCode)?.let { return it }
 
